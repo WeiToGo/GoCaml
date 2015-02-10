@@ -1,3 +1,5 @@
+open Scan
+
 let filename = Sys.argv.(1)
 
 let main () =

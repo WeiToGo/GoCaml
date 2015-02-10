@@ -57,14 +57,14 @@ rule scan = parse
   | '.' { TDOT }
   | ';' { TSEMCOL}
   | ':' { TCOL }
-  | '"'   { read_string (Buffer.create 15) lexbuf } (* interp string token *)
+(*  | '"'   { read_string (Buffer.create 15) lexbuf } (* interp string token *) *)
   | "[^]*"    { TRWSTR }
   | ''' { TRUNE }
   | [' ' '\t' '\n' '\r']	{ scan lexbuf }	(* ignore whitespace and newlines *)
-  | eof   { EOF}
+  | eof   { TEOF}
 
-and scan_string buf = parse
-  | '"' { STR (Buffer.contents buf) }
+(* and read_string buf = parse
+  | '"' { TSTR (Buffer.contents buf) }
   | '\\' 'b' { Buffer.add_char buf '\b'; read_string buf lexbuf}
   | '\\' 'f' { Buffer.add_char buf '\012'; read_string buf lexbuf}
   | '\\' 'n' { Buffer.add_char buf '\n'; read_string buf lexbuf}
@@ -77,3 +77,4 @@ and scan_string buf = parse
                     read_string buf lexbuf }
   | _ as c { raise (Error (Printf.sprintf "Scanner: Unrecognized character: %c\n" c))
   }
+  *)
