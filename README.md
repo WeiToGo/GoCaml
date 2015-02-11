@@ -1,13 +1,14 @@
-cs520_group9
+cs520: Group 9
+==============
 
-# Dependencies
+## Dependencies
     - menhir
     - Make
 
 
-# How to build
+## How to build
     cd src
     Make
 
-This should produce an executable gocaml in the root directory (parent of src).
+This should produce an executable `gocaml` in the root directory (parent of src).
 
