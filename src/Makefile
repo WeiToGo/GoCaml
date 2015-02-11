@@ -14,7 +14,7 @@ directories:
 
 # Link and produce executable
 gocaml: main.ml $(build_dir)/scan.cmo $(build_dir)/token.cmo $(build_dir)/main.cmo
-	ocamlc -o $(executable) -I $(build_dir)/token.cmo $(build_dir)/scan.cmo $(build_dir)/main.cmo  
+	ocamlc -o $(executable) $(build_dir)/token.cmo $(build_dir)/scan.cmo $(build_dir)/main.cmo  
 
 # Compile main
 $(build_dir)/main.cmo: main.ml
