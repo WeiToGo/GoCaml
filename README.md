@@ -8,7 +8,7 @@ cs520: Group 9
 
 ## How to build
     cd src
-    Make
+    make
 
 This should produce an executable `gocaml` in the root directory (parent of src).
 
