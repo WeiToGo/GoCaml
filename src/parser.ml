@@ -40,11 +40,11 @@ typ :
 	| cust_typ { }
 
 basic_typ :
-	| INT_TYP	{ }
-	| FL_TYP	{ }
-	| BOOL_TYP	{ }
-	| RUNE_TYP	{ }
-	| STR_TYP 	{ }
+	| KINT_TYP	{ }
+	| KFL_TYP	{ }
+	| KBOOL_TYP	{ }
+	| KRUNE_TYP	{ }
+	| KSTR_TYP 	{ }
 
 slice_typ :
 	| TLBR TRBR typ { }

@@ -11,57 +11,90 @@ let newline = '\r' | '\n' | "\r\n"
 
 (* operators + delimeters *)
 rule scan = parse
-  | white { scan lexbuf }
-  | '+' { TPLUS }
-  | '-' { TMINUS }
-  | '*' { TMULT }
-  | '/' { TDIV }
-  | '%' { TMOD }
-  | '&' { TBITAND }
-  | '|' { TBITOR }
-  | '^' { TBITXOR }
-  | "<<" { TLSFT }
-  | ">>" { TRSFT }
-  | "&^" { TANOT }
-  | "+=" { TADDAS }
-  | "-=" { TSUBAS }
-  | "*=" { TMULAS }
-  | "/=" { TDIVAS }
-  | "%=" { TMODAS }
-  | "&=" { TANDAS }
-  | "|=" { TORAS }
-  | "^=" { TXORAS }
+  | white         { scan lexbuf }
+  | newline       { scan lexbuf } 
+  | "break"       { BREAK }
+  | "case"        { CASE }
+  | "chan"        { CHAN }
+  | "const"       { CONST }
+  | "continue"    { CONT }
+  | "default"     { DEFAULT }
+  | "defer"       { DEF }
+  | "else"        { ELSE }
+  | "fallthrough" { FT }
+  | "for"         { FOR }
+  | "func"        { FUNC }
+  | "go"          { GO }
+  | "goto"        { GOTO }
+  | "if"          { IF }
+  | "import"      { IMPORT }
+  | "interface"   { INTERF }
+  | "map"         { MAP }
+  | "package"     { PAC }
+  | "range"       { RANGE }
+  | "return"      { RETURN }
+  | "select"      { SELECT }
+  | "struct"      { STRUCT }
+  | "switch"      { SWITCH }
+  | "type"        { TYPE }
+  | "var"         { VAR }
+  | "int"         { INT_TYP }
+  | "float64"     { FL_TYP }
+  | "bool"        { BOOL_TYP }
+  | "rune"        { RUNE_TYP }
+  | "string"      { STR_TYP }
+  | "print"       { PRINT }
+  | "println"     { PRINTLN }
+  | "append"      { APPEND }
+  | '+'   { TPLUS }
+  | '-'   { TMINUS }
+  | '*'   { TMULT }
+  | '/'   { TDIV }
+  | '%'   { TMOD }
+  | '&'   { TBITAND }
+  | '|'   { TBITOR }
+  | '^'   { TBITXOR }
+  | "<<"  { TLSFT }
+  | ">>"  { TRSFT }
+  | "&^"  { TANOT }
+  | "+="  { TADDAS }
+  | "-="  { TSUBAS }
+  | "*="  { TMULAS }
+  | "/="  { TDIVAS }
+  | "%="  { TMODAS }
+  | "&="  { TANDAS }
+  | "|="  { TORAS }
+  | "^="  { TXORAS }
   | "<<=" { TLAS }
   | ">>=" { TRAS }
   | "&^=" { TANEQ}
-  | "&&" { TAND }
-  | "||" { TOR }
-  | "<-" { TREC }
-  | "++" { TINC }
-  | "==" { TEQ }
-  | '<' { TLS }
-  | '>' { TGR }
-  | '=' { TASSIGN }
-  | '!' { TNOT}
-  | "!=" { TNEQ }
-  | "<=" { TLSEQ }
-  | ">=" { TGREQ}  
-  | ":=" { TCOLEQ }
+  | "&&"  { TAND }
+  | "||"  { TOR }
+  | "<-"  { TREC }
+  | "++"  { TINC }
+  | "=="  { TEQ }
+  | '<'   { TLS }
+  | '>'   { TGR }
+  | '='   { TASSIGN }
+  | '!'   { TNOT}
+  | "!="  { TNEQ }
+  | "<="  { TLSEQ }
+  | ">="  { TGREQ}  
+  | ":="  { TCOLEQ }
   | "..." { TTD }
-  | '(' { TLPAR }
-  | ')' { TRPAR }
-  | '[' { TLBR }
-  | ']' { TRBR }
-  | '{' { TLCUR }
-  | '}' { TRCUR }
-  | ',' { TCOM }
-  | '.' { TDOT }
-  | ';' { TSEMCOL}
-  | ':' { TCOL }
+  | '('   { TLPAR }
+  | ')'   { TRPAR }
+  | '['   { TLBR }
+  | ']'   { TRBR }
+  | '{'   { TLCUR }
+  | '}'   { TRCUR }
+  | ','   { TCOM }
+  | '.'   { TDOT }
+  | ';'   { TSEMCOL}
+  | ':'   { TCOL }
   | '`'   { read_raw_str (Buffer.create 15) lexbuf } (* raw string token *) 
   | '"'   { read_string (Buffer.create 15) lexbuf } (* interpreted string token *) 
   | '''   { read_rune (Buffer.create 2) lexbuf } (* raw string token *) 
-  | [' ' '\t' '\n' '\r']	{ scan lexbuf }	(* ignore whitespace and newlines *)
   | eof   { TEOF}
 
 
@@ -75,6 +108,7 @@ and read_rune buf = parse
   | '\\' 't' { Buffer.add_char buf '\t'; read_rune buf lexbuf}
   | '\\' 'v' { Buffer.add_char buf '\013'; read_rune buf lexbuf}
   | '\\' '\\' { Buffer.add_char buf '\\'; read_rune buf lexbuf}
+  | '\\' '\'' { Buffer.add_char buf '\''; read_rune buf lexbuf}
   | '\\' '"' { Buffer.add_char buf '"'; read_rune buf lexbuf}
   | [^''' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf);
                     Buffer.output_buffer stdout buf; read_rune buf lexbuf}
