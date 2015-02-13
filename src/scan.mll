@@ -78,7 +78,7 @@ and read_rune buf = parse
   | '\\' '"' { Buffer.add_char buf '"'; read_rune buf lexbuf}
   | [^''' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf);
                     Buffer.output_buffer stdout buf; read_rune buf lexbuf}
-  | _ as c { raise (Error (Printf.sprintf "Scanner: Unrecognized character: %c\n" c))}
+  | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
 
   
 and read_raw_str buf = parse
@@ -98,5 +98,5 @@ and read_string buf = parse
   | '\\' '"' { Buffer.add_char buf '"'; read_string buf lexbuf}
   | [^'"' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf);
                     Buffer.output_buffer stdout buf; read_string buf lexbuf}
-  | _ as c { raise (Error (Printf.sprintf "Scanner: Unrecognized character: %c\n" c))}
+  | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
 
