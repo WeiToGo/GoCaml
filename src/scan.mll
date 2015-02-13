@@ -8,6 +8,7 @@
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
 
+
 (* operators + delimeters *)
 rule scan = parse
   | white { scan lexbuf }
@@ -57,24 +58,45 @@ rule scan = parse
   | '.' { TDOT }
   | ';' { TSEMCOL}
   | ':' { TCOL }
-(*  | '"'   { read_string (Buffer.create 15) lexbuf } (* interp string token *) *)
-  | "[^]*"    { TRWSTR }
-  | ''' { TRUNE }
+  | '`'   { read_raw_str (Buffer.create 15) lexbuf } (* raw string token *) 
+  | '"'   { read_string (Buffer.create 15) lexbuf } (* interpreted string token *) 
+  | '''   { read_rune (Buffer.create 2) lexbuf } (* raw string token *) 
   | [' ' '\t' '\n' '\r']	{ scan lexbuf }	(* ignore whitespace and newlines *)
   | eof   { TEOF}
 
-(* and read_string buf = parse
-  | '"' { TSTR (Buffer.contents buf) }
-  | '\\' 'b' { Buffer.add_char buf '\b'; read_string buf lexbuf}
-  | '\\' 'f' { Buffer.add_char buf '\012'; read_string buf lexbuf}
+
+and read_rune buf = parse
+  | ''' { TRUNE (Buffer.contents buf)}
+  | '\\' 'a' { Buffer.add_char buf '\007'; read_rune buf lexbuf}
+  | '\\' 'b' { Buffer.add_char buf '\010'; read_rune buf lexbuf}
+  | '\\' 'f' { Buffer.add_char buf '\014'; read_rune buf lexbuf}
+  | '\\' 'n' { Buffer.add_char buf '\n'; read_rune buf lexbuf}
+  | '\\' 'r' { Buffer.add_char buf '\r'; read_rune buf lexbuf}
+  | '\\' 't' { Buffer.add_char buf '\t'; read_rune buf lexbuf}
+  | '\\' 'v' { Buffer.add_char buf '\013'; read_rune buf lexbuf}
+  | '\\' '\\' { Buffer.add_char buf '\\'; read_rune buf lexbuf}
+  | '\\' '"' { Buffer.add_char buf '"'; read_rune buf lexbuf}
+  | [^''' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf);
+                    Buffer.output_buffer stdout buf; read_rune buf lexbuf}
+  | _ as c { raise (Error (Printf.sprintf "Scanner: Unrecognized character: %c\n" c))}
+
+  
+and read_raw_str buf = parse
+  | '`' { TRWSTR (Buffer.contents buf)}
+  | [^'`' '\r']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); Buffer.output_buffer stdout buf; read_raw_str buf lexbuf}
+
+and read_string buf = parse
+  | '"' { TSTR (Buffer.contents buf)}
+  | '\\' 'a' { Buffer.add_char buf '\007'; read_string buf lexbuf}
+  | '\\' 'b' { Buffer.add_char buf '\010'; read_string buf lexbuf}
+  | '\\' 'f' { Buffer.add_char buf '\014'; read_string buf lexbuf}
   | '\\' 'n' { Buffer.add_char buf '\n'; read_string buf lexbuf}
   | '\\' 'r' { Buffer.add_char buf '\r'; read_string buf lexbuf}
   | '\\' 't' { Buffer.add_char buf '\t'; read_string buf lexbuf}
+  | '\\' 'v' { Buffer.add_char buf '\013'; read_string buf lexbuf}
   | '\\' '\\' { Buffer.add_char buf '\\'; read_string buf lexbuf}
-  | '\\' ''' { Buffer.add_char buf '\''; read_string buf lexbuf}
-  | '\\' '"' { Buffer.add_char buf '\"'; read_string buf lexbuf}
-  | [^'"' '\\']+ { Buffer.add_char buf (Lexing.lexeme lexbuf);
-                    read_string buf lexbuf }
-  | _ as c { raise (Error (Printf.sprintf "Scanner: Unrecognized character: %c\n" c))
-  }
-  *)
+  | '\\' '"' { Buffer.add_char buf '"'; read_string buf lexbuf}
+  | [^'"' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf);
+                    Buffer.output_buffer stdout buf; read_string buf lexbuf}
+  | _ as c { raise (Error (Printf.sprintf "Scanner: Unrecognized character: %c\n" c))}
+
