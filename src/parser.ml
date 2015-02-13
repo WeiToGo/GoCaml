@@ -2,15 +2,18 @@
 %%
 
 program :  			
-	| decl_list stmt_list EOF   { }
+	| top_decl_list stmt_list EOF   { }
 
-decl_list :
-	| list(declaration) { }
+top_decl_list :
+	| list(top_decl) { }
+
+top_decl :
+	| declaration { }
+	| func_decl { }
 
 declaration :
 	| var_decl { }
 	| typ_decl { }
-	| func_decl { }
 	
 var_decl:
 	| VAR var_spec { }
