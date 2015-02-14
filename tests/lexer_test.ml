@@ -37,6 +37,14 @@ let check_lexer test_string tklist =
     tklist
     lexed_tokens
 
+let rec batch_check_lexer test_string_list output_list = 
+  (* Both the argument lists should of course be of the same size.
+     I wish ocaml had dictionaries like Python *)
+  match test_string_list, output_list with 
+  | h::t, h'::t' -> check_lexer h h'; batch_check_lexer t t'
+  | [], [] -> ()
+  | _ -> failwith "Fatal: Mismatched list length in test case"
+
 let lots_of_semicolon_test test_ctxt = 
   let code_snippets = 
     [  "()\n\n\n";
@@ -50,13 +58,7 @@ let lots_of_semicolon_test test_ctxt =
     [ID("x"); TINC; TSEMCOL]
   ]
   in
-  let rec aux codes outputs = 
-    match codes, outputs with 
-    | h::t, h'::t' -> check_lexer h h'; aux t t'
-    | [], [] -> ()
-    | _ -> failwith "Fatal: Mismatched list length in test case"
-  in
-  aux code_snippets expected_outputs
+  batch_check_lexer code_snippets expected_outputs
 
 let string_test test_ctxt = 
   let code_snippets = 
@@ -74,20 +76,17 @@ let string_test test_ctxt =
     [TRUNE("rune \n newline")]
   ]
   in
-  let rec aux1 codes outputs = 
-    match codes, outputs with 
-    | h::t, h'::t' -> check_lexer h h'; aux t t'
-    | [], [] -> ()
-    | _ -> failwith "Fatal: Mismatched list length in test case"
-  in
-  aux1 code_snippets expected_outputs
+  batch_check_lexer code_snippets expected_outputs
 
 
 let suite = 
 "suite">:::
-  ["Insert semicolon after break!">:: test1;
-   "Hello is an id">:: hello_test;
-   "Lots of semicolon test">:: lots_of_semicolon_test]
+  [
+    "Insert semicolon after break!">:: test1;
+     "Hello is an id">:: hello_test;
+     "Lots of semicolon test">:: lots_of_semicolon_test;
+     "String test">:: string_test
+   ]
 
 let () = 
   run_test_tt_main suite

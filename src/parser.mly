@@ -27,7 +27,7 @@ program :
 	| package_decl top_decl_list TEOF   { }
 
 package_decl:
-	| PACKAGE ID
+	| PACKAGE ID { }
 
 top_decl_list :
 	| list(top_decl) { }
@@ -80,9 +80,10 @@ slice_typ :
 array_typ:
 	| TLBR INT TRBR typ { }
 
-struct_typ:
+(* struct_typ:
 	| STRUCT TLCUR list(id_list typ) TRCUR { }
-
+*)
+struct_typ: {}
 
 func_decl: 
 	| FUNC ID signature func_body { }
@@ -91,8 +92,11 @@ signature:
 	| TLPAR param TRPAR typ	{ }
 	| param	{ }
 
+(*
 param:
 	| list(id_list typ) { }
+*)
+param: {} 
 
 func_body:
 	| stmt_list term_stmt { }
@@ -103,5 +107,8 @@ term_stmt:
 	| return_stmt { }
 	| if_else_stmt { } 
 	| TEOF { }
+
+return_stmt: {}
+if_else_stmt: {}
 
 %%
