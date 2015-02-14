@@ -11,7 +11,9 @@
 %token BREAK CASE CHAN CONST CONT DEFAULT DEFER ELSE FALLTHROUGH FOR FUNC GO
 %token GOTO IF IMPORT INTERFACE MAP PACKAGE RANGE RETURN SELECT STRUCT SWITCH
 %token TYPE VAR INT_TYP FL_TYP BOOL_TYP RUNE_TYP STR_TYP PRINT PRINTLN APPEND 
-%token<string> ID INT FLOAT64 
+%token<string> ID 
+%token <int> INT 
+%token <float> FLOAT64 
 
 %left TOR
 %left TAND
@@ -29,30 +31,35 @@ program :
 package_decl:
 	| PACKAGE ID { }
 
-top_decl_list :
-	| list(top_decl) { }
+id_list: 
+	| list(ID) { }
 
-top_decl :
-	| declaration { }
-	| func_decl { }
+pair_list:
+	| pair_list id_list typ { }
+	| id_list typ 	{ }
 
-declaration :
-	| var_decl { }
-	| typ_decl { }
-	
-var_decl:
-	| VAR var_spec { }
-	| VAR TLPAR var_spec TRPAR	{ }
+expr_list: { }
 
 var_spec:
 	| id_list typ 	{ }
 	| id_list TASSIGN expr_list 	{ }
 	| id_list typ TASSIGN expr_list { }
 
+var_decl:
+	| VAR var_spec { }
+	| VAR TLPAR var_spec TRPAR	{ }
 
-id_list: 	{ }
+declaration :
+	| var_decl { }
+	| typ_decl { }
 
-expr_list:  { }
+top_decl :
+	| declaration { }
+	| func_decl { }
+
+top_decl_list :
+	| list(top_decl) { }
+
 
 typ_decl :
 	| TYPE typ_spec { }
@@ -80,10 +87,9 @@ slice_typ :
 array_typ:
 	| TLBR INT TRBR typ { }
 
-(* struct_typ:
-	| STRUCT TLCUR list(id_list typ) TRCUR { }
-*)
-struct_typ: {}
+struct_typ:
+	| STRUCT TLCUR pair_list TRCUR { }
+
 
 func_decl: 
 	| FUNC ID signature func_body { }
@@ -92,11 +98,9 @@ signature:
 	| TLPAR param TRPAR typ	{ }
 	| param	{ }
 
-(*
-param:
-	| list(id_list typ) { }
-*)
 param: {} 
+	| pair_list { }
+
 
 func_body:
 	| stmt_list term_stmt { }
