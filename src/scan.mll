@@ -1,36 +1,49 @@
 
 {
-  open Token
+  open Parser
 
   exception Error of string
+
+  let last_token: (token option ref) = ref None
+
 }
 
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
+let letter = ['A'-'Z' 'a'-'z' '_']
+let digit = ['0'-'9']
 
 
 (* operators + delimeters *)
-rule scan = parse
-  | white         { scan lexbuf }
-  | newline       { scan lexbuf } 
+rule scan last_token = parse
+  | white         { scan last_token lexbuf }
+  | newline       { match last_token with
+                    | Some(BREAK)
+                    | Some(ID _)
+                    (* Add cases for int, float imaginary, rune and string here *)
+                    | Some(TINC) | Some(TDECR)
+                    | Some(TRBR) | Some(TRPAR) | Some(TRCUR)
+                      -> TSEMCOL
+                    | _ -> scan None lexbuf 
+                  } 
   | "break"       { BREAK }
   | "case"        { CASE }
   | "chan"        { CHAN }
   | "const"       { CONST }
   | "continue"    { CONT }
   | "default"     { DEFAULT }
-  | "defer"       { DEF }
+  | "defer"       { DEFER }
   | "else"        { ELSE }
-  | "fallthrough" { FT }
+  | "fallthrough" { FALLTHROUGH }
   | "for"         { FOR }
   | "func"        { FUNC }
   | "go"          { GO }
   | "goto"        { GOTO }
   | "if"          { IF }
   | "import"      { IMPORT }
-  | "interface"   { INTERF }
+  | "interface"   { INTERFACE }
   | "map"         { MAP }
-  | "package"     { PAC }
+  | "package"     { PACKAGE }
   | "range"       { RANGE }
   | "return"      { RETURN }
   | "select"      { SELECT }
@@ -46,6 +59,7 @@ rule scan = parse
   | "print"       { PRINT }
   | "println"     { PRINTLN }
   | "append"      { APPEND }
+  | letter (letter|digit)* as id_string  { ID(id_string) }
   | '+'   { TPLUS }
   | '-'   { TMINUS }
   | '*'   { TMULT }
@@ -72,6 +86,7 @@ rule scan = parse
   | "||"  { TOR }
   | "<-"  { TREC }
   | "++"  { TINC }
+  | "--"  { TDECR }
   | "=="  { TEQ }
   | '<'   { TLS }
   | '>'   { TGR }
@@ -134,3 +149,8 @@ and read_string buf = parse
                     Buffer.output_buffer stdout buf; read_string buf lexbuf}
   | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
 
+{
+  let wrapped_scan lexbuf = 
+    let new_token = scan (!last_token) lexbuf in 
+    last_token := Some(new_token); new_token
+}

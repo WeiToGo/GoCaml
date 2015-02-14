@@ -6,7 +6,7 @@ let main () =
 	let input = open_in filename in
 	let filebuf = Lexing.from_channel input in
 	try
-		ignore(Scan.scan filebuf);
+		ignore(Scan.wrapped_scan filebuf);
   		Printf.eprintf "VALID \n "
 	with
 	| Scan.Error msg ->
