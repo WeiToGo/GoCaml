@@ -58,7 +58,29 @@ let lots_of_semicolon_test test_ctxt =
   in
   aux code_snippets expected_outputs
 
+let string_test test_ctxt = 
+  let code_snippets = 
+    [  "\"this is a
+        string \"";
+       "`a raw  +-
+        string`";
+       "' rune
+       newline'"
 
+    ] in 
+  let expected_outputs = [
+    [TSTR("this is a \n string")];
+    [TRWSTR("a raw \\t string")];
+    [TRUNE("rune \n newline")]
+  ]
+  in
+  let rec aux1 codes outputs = 
+    match codes, outputs with 
+    | h::t, h'::t' -> check_lexer h h'; aux t t'
+    | [], [] -> ()
+    | _ -> failwith "Fatal: Mismatched list length in test case"
+  in
+  aux1 code_snippets expected_outputs
 
 
 let suite = 

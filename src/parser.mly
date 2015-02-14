@@ -24,7 +24,10 @@
 %%
 
 program :  			
-	| top_decl_list stmt_list TEOF   { }
+	| package_decl top_decl_list TEOF   { }
+
+package_decl:
+	| PACKAGE ID
 
 top_decl_list :
 	| list(top_decl) { }
@@ -39,7 +42,7 @@ declaration :
 	
 var_decl:
 	| VAR var_spec { }
-	| VAR TLPAR var_spec TSEMCOL TRPAR	{ }
+	| VAR TLPAR var_spec TRPAR	{ }
 
 var_spec:
 	| id_list typ 	{ }
@@ -53,7 +56,7 @@ expr_list:  { }
 
 typ_decl :
 	| TYPE typ_spec { }
-	| TYPE TLPAR typ_spec TSEMCOL TRPAR	{ }
+	| TYPE TLPAR typ_spec TRPAR	{ }
 
 typ_spec:
 	| ID typ 	{ }
@@ -63,7 +66,6 @@ typ :
 	| slice_typ { }
 	| array_typ { }
 	| struct_typ { }
-	| cust_typ { }
 
 basic_typ :
 	| INT_TYP	{ }
@@ -79,11 +81,27 @@ array_typ:
 	| TLBR INT TRBR typ { }
 
 struct_typ:
-	| (* STRUCT TLCUR list(id_list typ) TSEMCOL TRCUR *){ }
+	| STRUCT TLCUR list(id_list typ) TRCUR { }
 
 
-cust_typ :  TEOF { }
+func_decl: 
+	| FUNC ID signature func_body { }
 
-func_decl: TEOF { }
+signature:
+	| TLPAR param TRPAR typ	{ }
+	| param	{ }
+
+param:
+	| list(id_list typ) { }
+
+func_body:
+	| stmt_list term_stmt { }
+
 stmt_list: TEOF { }
+
+term_stmt: 
+	| return_stmt { }
+	| if_else_stmt { } 
+	| TEOF { }
+
 %%
