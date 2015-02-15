@@ -86,10 +86,13 @@ typ :
 
 stmt_list: TEOF { }
 
-term_stmt: 
+term_stmt:
+    | empty_stmt { }
+    | expression_stmt { }
     | assign_stmt { }
+    | declaration_stmt { }
 	| return_stmt { }
-	| if_else_stmt { } 
+	| if_else_stmt { }
 	| TEOF { }
 
 (*-----------*)
@@ -119,10 +122,18 @@ array_typ:
 struct_typ:
 	| STRUCT TLCUR pair_list TRCUR { }
 
+empty_stmt: {}
+
+expression_stmt:
+    | expr { }
+
 assign_stmt: 
 	| expr assign_op expr { }
-	| expr_list TASSIGN expr_list { }
+	| expr_list TASSIGN expr_list { } (* Must make left expr_list an lValue *)
 	| blank_id TASSIGN expr { }
+
+declaration_stmt:
+    | declaration { }
 
 return_stmt: {}
 
@@ -135,6 +146,8 @@ assign_op:
 	| TORAS | TXORAS | TLAS | TRAS  { }
 
 expr: { }
+
+lvalue: { }
 
 
 
