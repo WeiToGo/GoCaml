@@ -112,7 +112,7 @@ stmt_list: TEOF { }
 
 assign_op:
 	| TADDAS | TSUBAS | TMULAS | TDIVAS | TMODAS | TANDAS
-	| TORAS | TXORAS | TLAS | TRAS
+	| TORAS | TXORAS | TLAS | TRAS  { }
 
 assign_stmt: 
 	| expr assign_op expr { }
@@ -143,4 +143,5 @@ hex_lit: x = HEX_INT { HexInt(x) }
 *)
 
 int_literal: {} 
+blank_id: {}
 %%

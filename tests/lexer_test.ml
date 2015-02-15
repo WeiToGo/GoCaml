@@ -28,20 +28,20 @@ let hello_test test_ctxt =
     [ID("hello")]
     lexed_tokens
 
-let check_lexer test_string tklist = 
+let check_lexer test_string tklist ~msg = 
   let lexbuf = Lexing.from_string test_string in 
   let lexed_tokens = tokenizer Scan.wrapped_scan lexbuf in 
-  assert_equal 
-    ~msg: "Semicolon insertion not working properly"
+  assert_equal
+    ~msg: msg
     ~printer: Printer.string_of_token_list
     tklist
     lexed_tokens
 
-let rec batch_check_lexer test_string_list output_list = 
+let rec batch_check_lexer test_string_list output_list ~msg = 
   (* Both the argument lists should of course be of the same size.
      I wish ocaml had dictionaries like Python *)
   match test_string_list, output_list with 
-  | h::t, h'::t' -> check_lexer h h'; batch_check_lexer t t'
+  | h::t, h'::t' -> check_lexer h h' ~msg: msg; batch_check_lexer t t' ~msg: msg
   | [], [] -> ()
   | _ -> failwith "Fatal: Mismatched list length in test case"
 
@@ -58,7 +58,7 @@ let lots_of_semicolon_test test_ctxt =
     [ID("x"); TINC; TSEMCOL]
   ]
   in
-  batch_check_lexer code_snippets expected_outputs
+  batch_check_lexer code_snippets expected_outputs ~msg: "Semicolon insertion not working properly"
 
 let string_test test_ctxt = 
   let code_snippets = 
@@ -73,7 +73,7 @@ let string_test test_ctxt =
     [TRUNE("rune \n newline")]
   ]
   in
-  batch_check_lexer code_snippets expected_outputs
+  batch_check_lexer code_snippets expected_outputs ~msg: "Strings not working properly"
 
 
 
@@ -84,12 +84,12 @@ let suite =
     "Insert semicolon after break!">:: test1;
      "Hello is an id">:: hello_test;
      "Lots of semicolon test">:: lots_of_semicolon_test;
-     "String test">:: string_test
+     "String test">:: string_test;
 
-     "dec_int_test">:: 
+(*      "dec_int_test">::
         (fun test_ctxt -> batch_check_lexer
-          [ "45"; "123" ] [ DEC_INT("45"); DEC_INT("123")]
-        )
+          [ "45"; "123" ] [ [DEC_INT("45")]; [DEC_INT("123")]] "blah"
+        ) *)
       
    ]
 

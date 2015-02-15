@@ -90,6 +90,9 @@ let string_of_token tk = match tk with
 | PRINT ->  "PRINT"
 | PRINTLN ->  "PRINTLN"
 | APPEND  ->  "APPEND"
+| DEC_INT(s) -> "DEC_INT<" ^ s ^ ">"
+| OCTAL_INT(s) -> "OCTAL_INT<" ^ s ^ ">"
+| HEX_INT(s) -> "HEX_INT<" ^ s ^ ">" 
 
 let print_token tk = print_endline (string_of_token tk)
 
