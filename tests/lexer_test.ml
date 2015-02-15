@@ -82,16 +82,28 @@ let suite =
 "suite">:::
   [
     "Insert semicolon after break!">:: test1;
-     "Hello is an id">:: hello_test;
-     "Lots of semicolon test">:: lots_of_semicolon_test;
-     "String test">:: string_test;
+    "Hello is an id">:: hello_test;
+    "Lots of semicolon test">:: lots_of_semicolon_test;
+    "String test">:: string_test;
 
-     "dec_int_test">::
+    (
+      "dec_int_test">::
         fun test_ctxt -> batch_check_lexer
           [ "45"; "123"] [ [DEC_INT("45")]; [DEC_INT("123")]]
           ~msg: "Decimal int lexing failed"
-      ;
-      
+    );
+    (
+      "octal_int_test">::
+        fun test_ctxt -> batch_check_lexer 
+          [ "0234"; "0"] [ [OCTAL_INT("0234")]; [OCTAL_INT("0")]]
+          ~msg: "Octal int lexing failed"
+    );
+    (
+      "hex_int_test">::
+        fun test_ctxt -> batch_check_lexer
+          [ "0xabcdef"; "0x0"] [ [HEX_INT("0xabcdef")]; [HEX_INT("0x0")]]
+          ~msg: "Hex int lexing failed"
+    );
    ]
 
 let () = 

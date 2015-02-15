@@ -16,7 +16,7 @@ let digit = ['0'-'9']
 let decimal_digit = ['0'-'9'] 
 let nz_digit = ['1'-'9']  (* Non-zero digit *) 
 let octal_digit = ['0' - '7']
-let hex_digit = ['0'-'9']['A'-'F']['a'-'f']
+let hex_digit = ['0'-'9' 'A'-'F' 'a'-'f']
 
 
 (* operators + delimeters *)
