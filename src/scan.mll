@@ -78,7 +78,7 @@ rule scan last_token = parse
   | '%'   { TMOD }
   | '&'   { TBITAND }
   | '|'   { TBITOR }
-  | '^'   { TBITXOR }
+  | '^'   { TCARET }
   | "<<"  { TLSFT }
   | ">>"  { TRSFT }
   | "&^"  { TANOT }

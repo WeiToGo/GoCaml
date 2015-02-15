@@ -1,9 +1,9 @@
 %{
-	exception NotImplemented
-	open Ast
+  exception NotImplemented
+  open Ast
 %}
 
-%token TPLUS TMINUS TMULT TDIV TMOD TBITAND TBITOR TBITXOR TLSFT TRSFT TANOT
+%token TPLUS TMINUS TMULT TDIV TMOD TBITAND TBITOR TCARET TLSFT TRSFT TANOT
 %token  TADDAS TSUBAS TMULAS TDIVAS TMODAS TANDAS TORAS TXORAS TLAS TRAS TANEQ
 %token TAND TOR TREC TINC TDECR TEQ TLS TGR TASSIGN TNOT TNEQ TLSEQ TGREQ TCOLEQ
 %token TTD TLPAR TRPAR TLBR TRBR TLCUR TRCUR TCOM TDOT TSEMCOL TCOL 
@@ -27,121 +27,167 @@
 (* %start <unit> expression *)
 %%
 
-program :  			
-	| package_decl top_decl_list TEOF   { }
+program :       
+  | package_decl top_decl_list TEOF   { }
 
 package_decl:
-	| PACKAGE ID { }
-
-id_list: 
-	| list(ID) { }
-
-pair_list:
-	| pair_list id_list typ { }
-	| id_list typ 	{ }
-
-expr: { }
-
-expr_list: { }
-
-var_spec:
-	| id_list typ 	{ }
-	| id_list TASSIGN expr_list 	{ }
-	| id_list typ TASSIGN expr_list { }
-
-var_decl:
-	| VAR var_spec { }
-	| VAR TLPAR var_spec TRPAR	{ }
-
-declaration :
-	| var_decl { }
-	| typ_decl { }
-
-top_decl :
-	| declaration { }
-	| func_decl { }
+  | PACKAGE ID { }
 
 top_decl_list :
-	| list(top_decl) { }
+  | list(top_decl) { }
 
+top_decl :
+  | declaration { }
+  | func_decl { }
 
-typ_decl :
-	| TYPE typ_spec { }
-	| TYPE TLPAR typ_spec TRPAR	{ }
+(*-----------*)
 
-typ_spec:
-	| ID typ 	{ }
-
-typ :
-	| basic_typ  { }
-	| slice_typ { }
-	| array_typ { }
-	| struct_typ { }
-
-basic_typ :
-	| INT_TYP	{ }
-	| FL_TYP	{ }
-	| BOOL_TYP	{ }
-	| RUNE_TYP	{ }
-	| STR_TYP 	{ }
-
-slice_typ :
-	| TLBR TRBR typ { }
-
-array_typ:
-	| TLBR int_literal TRBR typ { }
-
-struct_typ:
-	| STRUCT TLCUR pair_list TRCUR { }
-
+declaration :
+  | var_decl { }
+  | typ_decl { }
 
 func_decl: 
-	| FUNC ID signature func_body { }
+  | FUNC ID signature func_body { }
+
+(*-----------*)
+
+var_decl:
+  | VAR var_spec { }
+  | VAR TLPAR var_spec TRPAR  { }
+
+typ_decl :
+  | TYPE typ_spec { }
+  | TYPE TLPAR typ_spec TRPAR { }
 
 signature:
-	| TLPAR param TRPAR typ	{ }
-	| param	{ }
-
-param: {} 
-	| pair_list { }
-
+  | TLPAR param TRPAR typ { }
+  | param { }
 
 func_body:
-	| stmt_list term_stmt { }
+  | stmt_list term_stmt { }
+
+(*-----------*)
+
+var_spec:
+  | id_list typ   { }
+  | id_list TASSIGN expr_list   { }
+  | id_list typ TASSIGN expr_list { }
+
+typ_spec:
+  | ID typ  { }
+
+param: {} 
+  | pair_list { }
+
+typ :
+  | basic_typ  { }
+  | slice_typ { }
+  | array_typ { }
+  | struct_typ { }
 
 stmt_list: TEOF { }
 
-assign_op:
-	| TADDAS | TSUBAS | TMULAS | TDIVAS | TMODAS | TANDAS
-	| TORAS | TXORAS | TLAS | TRAS  { }
+term_stmt: 
+    | assign_stmt { }
+  | return_stmt { }
+  | if_else_stmt { } 
+  | TEOF { }
+
+(*-----------*)
+
+id_list: 
+  | list(ID) { }
+
+expr_list: { }
+
+pair_list:
+  | pair_list id_list typ { }
+  | id_list typ   { }
+
+basic_typ :
+  | INT_TYP { }
+  | FL_TYP  { }
+  | BOOL_TYP  { }
+  | RUNE_TYP  { }
+  | STR_TYP   { }
+
+slice_typ :
+  | TLBR TRBR typ { }
+
+array_typ:
+  | TLBR int_literal TRBR typ { }
+
+struct_typ:
+  | STRUCT TLCUR pair_list TRCUR { }
 
 assign_stmt: 
-	| expr assign_op expr { }
-	| expr_list TASSIGN expr_list { }
-	| blank_id TASSIGN expr { }
-
-
-term_stmt: 
-	| return_stmt { }
-	| if_else_stmt { } 
-	| TEOF { }
+  | expr assign_op expr { }
+  | expr_list TASSIGN expr_list { }
+  | blank_id TASSIGN expr { }
 
 return_stmt: {}
+
 if_else_stmt: {}
 
+(*-----------*)
 
-expression: identifier | literal | unary_exp | binary_exp | func_call | append_exp | type_cast_exp  { }
+assign_op:
+  | TADDAS | TSUBAS | TMULAS | TDIVAS | TMODAS | TANDAS
+  | TORAS | TXORAS | TLAS | TRAS  { }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+expr: identifier | literal | unary_exp | binary_exp | append_exp | type_cast_exp  { }
 
 identifier: id_name = ID; { } 
 
-literal: int_literal | float_literal | rune_literal | string_literal  { }
+literal: int_literal | float_literal| rune_literal | string_literal  { }
 
 int_literal: decimal_lit | octal_lit | hex_lit { }
 
 decimal_lit: x = DEC_INT { DecInt(x) }
 octal_lit: x = OCTAL_INT { OctalInt(x) }
 hex_lit: x = HEX_INT { HexInt(x) }
-float_lit: x = FLOAT64 { FloatValue(x) }
+
+float_literal: x = FLOAT64 { FloatLit(x) }
+rune_literal: x = TRUNE { RuneLit(x) }
+string_literal: x = TRWSTR | x = TSTR { StringLit(x) }
+
+unary_exp: primary_expression | unary_op unary_exp {}
+
+primary_expression: function_call | index_exp | append_exp | type_cast_exp { }
+unary_op:  TPLUS | TMINUS | TNOT | TCARET { }
+
+function_call: identifier; TLPAR; function_arguments; TRPAR { }
+function_arguments: expr | function_arguments TCOM expr { }
+
+index_exp: primary_expression TLBR expr TRBR { } 
+
+append_exp: APPEND TLPAR identifier TCOM expr TRPAR { }
+
+type_cast_exp: castable_type TLPAR expr TRPAR {}
+castable_type: INT_TYP | FL_TYP | RUNE_TYP | BOOL_TYP { } 
+
+binary_exp: expr binary_op unary_exp { }
+
+binary_op: TOR | TAND | rel_op | add_op | mul_op {}
+rel_op: TEQ | TNEQ | TLS | TGR | TLSEQ | TGREQ { }
+add_op: TPLUS | TMINUS | TBITOR | TCARET { }
+mul_op: TMULT | TDIV | TMOD | TLSFT | TRSFT | TBITAND | TANOT { }
 
 blank_id: {}
+
+
 %%

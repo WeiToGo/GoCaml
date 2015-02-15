@@ -13,7 +13,7 @@ let string_of_token tk = match tk with
 | TMOD ->  "TMOD"
 | TBITAND ->  "TBITAND"
 | TBITOR ->  "TBITOR"
-| TBITXOR ->  "TBITXOR"
+| TCARET ->  "TCARET"
 | TLSFT ->  "TLSFT"
 | TRSFT ->  "TRSFT"
 | TANOT ->  "TANOT"
@@ -93,6 +93,8 @@ let string_of_token tk = match tk with
 | DEC_INT(s) -> "DEC_INT<" ^ s ^ ">"
 | OCTAL_INT(s) -> "OCTAL_INT<" ^ s ^ ">"
 | HEX_INT(s) -> "HEX_INT<" ^ s ^ ">" 
+| TDECR -> "TDECR"
+| FLOAT64(s) -> "FLOAT64<" ^ s ^ ">" 
 
 let print_token tk = print_endline (string_of_token tk)
 
