@@ -32,6 +32,19 @@ program :
 package_decl:
 	| PACKAGE ID { }
 
+top_decl_list :
+	| list(top_decl) { }
+
+top_decl :
+	| declaration { }
+	| func_decl { }
+
+declaration :
+	| var_decl { }
+	| typ_decl { }
+
+
+
 id_list: 
 	| list(ID) { }
 
@@ -51,18 +64,6 @@ var_spec:
 var_decl:
 	| VAR var_spec { }
 	| VAR TLPAR var_spec TRPAR	{ }
-
-declaration :
-	| var_decl { }
-	| typ_decl { }
-
-top_decl :
-	| declaration { }
-	| func_decl { }
-
-top_decl_list :
-	| list(top_decl) { }
-
 
 typ_decl :
 	| TYPE typ_spec { }
