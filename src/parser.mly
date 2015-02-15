@@ -12,8 +12,8 @@
 %token GOTO IF IMPORT INTERFACE MAP PACKAGE RANGE RETURN SELECT STRUCT SWITCH
 %token TYPE VAR INT_TYP FL_TYP BOOL_TYP RUNE_TYP STR_TYP PRINT PRINTLN APPEND 
 %token<string> ID 
-%token <int> INT 
-%token <float> FLOAT64 
+%token <string> DEC_INT OCTAL_INT HEX_INT 
+%token <string> FLOAT64 
 
 %left TOR
 %left TAND
@@ -23,6 +23,7 @@
 %nonassoc UMINUS
 
 %start <unit> program
+(* %start <unit> expression *)
 %%
 
 program :  			
@@ -85,7 +86,7 @@ slice_typ :
 	| TLBR TRBR typ { }
 
 array_typ:
-	| TLBR INT TRBR typ { }
+	| TLBR int_literal TRBR typ { }
 
 struct_typ:
 	| STRUCT TLCUR pair_list TRCUR { }
@@ -115,4 +116,19 @@ term_stmt:
 return_stmt: {}
 if_else_stmt: {}
 
+(*
+expression: identifier | literal | unary_exp | binary_exp | func_call | append_exp | type_cast_exp  { }
+
+identifier: id_name = ID; { } 
+
+literal: int_literal | float_literal | rune_literal | string_literal)
+
+int_literal: decimal_lit | octal_lit | hex_lit { INT(something)}
+
+decimal_lit: x = DEC_INT { DecInt(x) }
+octal_lit: x = OCTAL_INT { OctalInt(x) }
+hex_lit: x = HEX_INT { HexInt(x) }
+*)
+
+int_literal: {} 
 %%

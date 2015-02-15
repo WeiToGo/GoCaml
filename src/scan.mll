@@ -4,6 +4,7 @@
 
   exception Error of string
 
+  (* Hah sneaking in a reference variable here. Not so pure are we. *)
   let last_token: (token option ref) = ref None
 
 }
@@ -12,10 +13,16 @@ let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
 let letter = ['A'-'Z' 'a'-'z' '_']
 let digit = ['0'-'9']
+let decimal_digit = ['0'-'9'] 
+let nz_digit = ['1'-'9']  (* Non-zero digit *) 
+let octal_digit = ['0' - '7']
+let hex_digit = ['0'-'9']['A'-'F']['a'-'f']
 
 
 (* operators + delimeters *)
 rule scan last_token = parse
+
+  (* Whitespace and comments *)
   | white         { scan last_token lexbuf }
   | newline       { match last_token with
                     | Some(BREAK)
@@ -26,6 +33,8 @@ rule scan last_token = parse
                       -> TSEMCOL
                     | _ -> scan None lexbuf 
                   } 
+
+  (* Keywords *)
   | "break"       { BREAK }
   | "case"        { CASE }
   | "chan"        { CHAN }
@@ -60,6 +69,8 @@ rule scan last_token = parse
   | "println"     { PRINTLN }
   | "append"      { APPEND }
   | letter (letter|digit)* as id_string  { ID(id_string) }
+
+  (* Symbols and operators *)
   | '+'   { TPLUS }
   | '-'   { TMINUS }
   | '*'   { TMULT }
@@ -107,9 +118,14 @@ rule scan last_token = parse
   | '.'   { TDOT }
   | ';'   { TSEMCOL}
   | ':'   { TCOL }
+
+  (* Literals *)
   | '`'   { read_raw_str (Buffer.create 15) lexbuf } (* raw string token *) 
   | '"'   { read_string (Buffer.create 15) lexbuf } (* interpreted string token *) 
   | '''   { read_rune (Buffer.create 2) lexbuf } (* raw string token *) 
+  | nz_digit decimal_digit as st { DEC_INT(st)}
+  | "0" octal_digit as st { OCTAL_INT(st) }
+  | "0" ("x" | "X" ) hex_digit as st { HEX_INT(st) }
   | eof   { TEOF}
 
 
@@ -150,6 +166,7 @@ and read_string buf = parse
   | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
 
 {
+  (* wrapped_scan keeps track of the last token returned by scan. *)
   let wrapped_scan lexbuf = 
     let new_token = scan (!last_token) lexbuf in 
     last_token := Some(new_token); new_token
