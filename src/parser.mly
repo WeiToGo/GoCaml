@@ -39,27 +39,16 @@ top_decl :
 	| declaration { }
 	| func_decl { }
 
+(*-----------*)
+
 declaration :
 	| var_decl { }
 	| typ_decl { }
 
+func_decl: 
+	| FUNC ID signature func_body { }
 
-
-id_list: 
-	| list(ID) { }
-
-pair_list:
-	| pair_list id_list typ { }
-	| id_list typ 	{ }
-
-expr: { }
-
-expr_list: { }
-
-var_spec:
-	| id_list typ 	{ }
-	| id_list TASSIGN expr_list 	{ }
-	| id_list typ TASSIGN expr_list { }
+(*-----------*)
 
 var_decl:
 	| VAR var_spec { }
@@ -69,14 +58,50 @@ typ_decl :
 	| TYPE typ_spec { }
 	| TYPE TLPAR typ_spec TRPAR	{ }
 
+signature:
+	| TLPAR param TRPAR typ	{ }
+	| param	{ }
+
+func_body:
+	| stmt_list term_stmt { }
+
+(*-----------*)
+
+var_spec:
+	| id_list typ 	{ }
+	| id_list TASSIGN expr_list 	{ }
+	| id_list typ TASSIGN expr_list { }
+
 typ_spec:
 	| ID typ 	{ }
+
+param: {} 
+	| pair_list { }
 
 typ :
 	| basic_typ  { }
 	| slice_typ { }
 	| array_typ { }
 	| struct_typ { }
+
+stmt_list: TEOF { }
+
+term_stmt: 
+    | assign_stmt { }
+	| return_stmt { }
+	| if_else_stmt { } 
+	| TEOF { }
+
+(*-----------*)
+
+id_list: 
+	| list(ID) { }
+
+expr_list: { }
+
+pair_list:
+	| pair_list id_list typ { }
+	| id_list typ 	{ }
 
 basic_typ :
 	| INT_TYP	{ }
@@ -94,40 +119,33 @@ array_typ:
 struct_typ:
 	| STRUCT TLCUR pair_list TRCUR { }
 
-
-func_decl: 
-	| FUNC ID signature func_body { }
-
-signature:
-	| TLPAR param TRPAR typ	{ }
-	| param	{ }
-
-param: {} 
-	| pair_list { }
-
-
-func_body:
-	| stmt_list term_stmt { }
-
-stmt_list: TEOF { }
-
-assign_op:
-	| TADDAS | TSUBAS | TMULAS | TDIVAS | TMODAS | TANDAS
-	| TORAS | TXORAS | TLAS | TRAS  { }
-
 assign_stmt: 
 	| expr assign_op expr { }
 	| expr_list TASSIGN expr_list { }
 	| blank_id TASSIGN expr { }
 
-
-term_stmt: 
-	| return_stmt { }
-	| if_else_stmt { } 
-	| TEOF { }
-
 return_stmt: {}
+
 if_else_stmt: {}
+
+(*-----------*)
+
+assign_op:
+	| TADDAS | TSUBAS | TMULAS | TDIVAS | TMODAS | TANDAS
+	| TORAS | TXORAS | TLAS | TRAS  { }
+
+expr: { }
+
+
+
+
+
+
+
+
+
+
+
 
 (*
 expression: identifier | literal | unary_exp | binary_exp | func_call | append_exp | type_cast_exp  { }
