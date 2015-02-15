@@ -1,5 +1,6 @@
 %{
 	exception NotImplemented
+	open Ast
 %}
 
 %token TPLUS TMINUS TMULT TDIV TMOD TBITAND TBITOR TBITXOR TLSFT TRSFT TANOT
@@ -128,20 +129,19 @@ term_stmt:
 return_stmt: {}
 if_else_stmt: {}
 
-(*
+
 expression: identifier | literal | unary_exp | binary_exp | func_call | append_exp | type_cast_exp  { }
 
 identifier: id_name = ID; { } 
 
-literal: int_literal | float_literal | rune_literal | string_literal)
+literal: int_literal | float_literal | rune_literal | string_literal  { }
 
-int_literal: decimal_lit | octal_lit | hex_lit { INT(something)}
+int_literal: decimal_lit | octal_lit | hex_lit { }
 
 decimal_lit: x = DEC_INT { DecInt(x) }
 octal_lit: x = OCTAL_INT { OctalInt(x) }
 hex_lit: x = HEX_INT { HexInt(x) }
-*)
+float_lit: x = FLOAT64 { FloatValue(x) }
 
-int_literal: {} 
 blank_id: {}
 %%
