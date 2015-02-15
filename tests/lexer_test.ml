@@ -86,10 +86,11 @@ let suite =
      "Lots of semicolon test">:: lots_of_semicolon_test;
      "String test">:: string_test;
 
-(*      "dec_int_test">::
-        (fun test_ctxt -> batch_check_lexer
-          [ "45"; "123" ] [ [DEC_INT("45")]; [DEC_INT("123")]] "blah"
-        ) *)
+     "dec_int_test">::
+        fun test_ctxt -> batch_check_lexer
+          [ "45"; "123"] [ [DEC_INT("45")]; [DEC_INT("123")]]
+          ~msg: "Decimal int lexing failed"
+      ;
       
    ]
 

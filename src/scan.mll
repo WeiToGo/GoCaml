@@ -123,9 +123,9 @@ rule scan last_token = parse
   | '`'   { read_raw_str (Buffer.create 15) lexbuf } (* raw string token *) 
   | '"'   { read_string (Buffer.create 15) lexbuf } (* interpreted string token *) 
   | '''   { read_rune (Buffer.create 2) lexbuf } (* raw string token *) 
-  | nz_digit decimal_digit as st { DEC_INT(st)}
-  | "0" octal_digit as st { OCTAL_INT(st) }
-  | "0" ("x" | "X" ) hex_digit as st { HEX_INT(st) }
+  | nz_digit decimal_digit* as st { DEC_INT(st)}
+  | "0" octal_digit* as st { OCTAL_INT(st) }
+  | "0" ("x" | "X" ) hex_digit* as st { HEX_INT(st) }
   | eof   { TEOF}
 
 
