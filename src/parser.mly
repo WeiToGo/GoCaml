@@ -39,6 +39,8 @@ pair_list:
 	| pair_list id_list typ { }
 	| id_list typ 	{ }
 
+expr: { }
+
 expr_list: { }
 
 var_spec:
@@ -107,6 +109,16 @@ func_body:
 	| stmt_list term_stmt { }
 
 stmt_list: TEOF { }
+
+assign_op:
+	| TADDAS | TSUBAS | TMULAS | TDIVAS | TMODAS | TANDAS
+	| TORAS | TXORAS | TLAS | TRAS
+
+assign_stmt: 
+	| expr assign_op expr { }
+	| expr_list TASSIGN expr_list { }
+	| blank_id TASSIGN expr { }
+
 
 term_stmt: 
 	| return_stmt { }

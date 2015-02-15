@@ -62,17 +62,14 @@ let lots_of_semicolon_test test_ctxt =
 
 let string_test test_ctxt = 
   let code_snippets = 
-    [  "\"this is a
-        string \"";
-       "`a raw  +-
-        string`";
-       "' rune
-       newline'"
+    ["\"this is a \t string\"";
+       "`a raw  +- \\n string`";
+       "'rune \n newline'"
 
     ] in 
   let expected_outputs = [
-    [TSTR("this is a \n string")];
-    [TRWSTR("a raw \\t string")];
+    [TSTR("this is a \t string")];
+    [TRWSTR("a raw  +- \\n string")];
     [TRUNE("rune \n newline")]
   ]
   in
