@@ -17,7 +17,7 @@ and struct_definition = StructDefinition of (struct_field_list list)
 and struct_field_list = StructFieldList of (struct_field list)
 and struct_field = StructField of (identifier * type_spec) 
 and basic_type = IntType | FloatType | BoolType | RuneType | StringType
-and identifier = IdName of string
+and identifier = IdName of string | BlankID
 and function_decl = Function of ((function_arg list) * (type_spec option) * (statement list))
 and function_arg = FunctionArg of (identifier * type_spec)
 and expression =
@@ -39,7 +39,7 @@ and int_literal = DecInt of string | HexInt of string | OctalInt of string
 and unary_op = UPlus | UMinus | UNot | UCaret
 and binary_op = 
     | BinOr | BinAnd 
-    | BinEq | BinNotEq | BinLess | BinLessEq | BinGreater | BinGreaterEqual
+    | BinEq | BinNotEq | BinLess | BinLessEq | BinGreater | BinGreaterEq
     | BinPlus | BinMinus | BinBitOr | BinBitXor
     | BinMult | BinDiv | BinMod | BinShiftLeft | BinShiftRight | BinBitAnd | BinBitAndNot
 and statement = 
@@ -61,3 +61,8 @@ and lvalue =
     | LId of identifier
     | LIndex of (lvalue * int)
     | LSelector of (lvalue * identifier)
+
+let rec exp_of_lvalue lval = match lval with
+  | LId(idn) -> IdExp(idn)
+  | LIndex(l', x) -> IndexExp(exp_of_lvalue l', x)
+  | LSelector(l', idn) -> SelectExp(exp_of_lvalue l', idn) 
