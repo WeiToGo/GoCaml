@@ -118,6 +118,7 @@ rule scan last_token = parse
   | '.'   { TDOT }
   | ';'   { TSEMCOL}
   | ':'   { TCOL }
+  | '_'   { TBLANKID }
 
   (* Literals *)
   | '`'   { read_raw_str (Buffer.create 15) lexbuf } (* raw string token *) 
