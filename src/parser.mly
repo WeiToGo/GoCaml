@@ -93,6 +93,9 @@ term_stmt:
     | assign_stmt { }
     | declaration_stmt { }
     | shortvardecl_stmt { }
+    | incdec_stmt { }
+    | print_stmt { }
+    | println_stmt { }
 	| return_stmt { }
 	| if_else_stmt { }
 	| TEOF { }
@@ -143,7 +146,21 @@ declaration_stmt:
 shortvardecl_stmt:
     | id_list TCOLEQ expr_list { }
 
-return_stmt: { }
+incdec_stmt:
+    | lvalue TINC { }
+    | lvalue TDECR { }
+
+print_stmt:
+    | PRINT TLPAR TRPAR { }
+    | PRINT TLPAR expr_list TRPAR { }
+
+println_stmt:
+    | PRINTLN TLPAR TRPAR { }
+    | PRINTLN TLPAR expr_list TRPAR { }
+
+return_stmt:
+    | RETURN { }
+    | RETURN expr { }
 
 if_else_stmt: { }
 
