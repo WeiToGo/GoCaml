@@ -62,7 +62,7 @@ typ_decl :
 
 signature:
   | TLPAR param TRPAR typ { }
-  | param { }
+  | TLPAR param TRPAR     { }
 
 func_body:
   | stmt_list term_stmt { }
@@ -112,9 +112,9 @@ expr_list:
     | expr_list TCOM expr { }
 
 pair_list:
-  | pair_list id_list typ { }
+  | pair_list TCOM id_list typ { }
   | id_list typ   { }
-  | { }
+  | (* empty *) { }
 
 basic_typ :
   | INT_TYP { }
