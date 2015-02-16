@@ -180,7 +180,8 @@ lvalue_list:
 
 lvalue:
     | ID { } (* TODO *)
-
+    | ID TLBR int_literal TRBR { } (* array indexing *)
+    | ID TDOT ID { } (* struct field access *)
 
 
 
