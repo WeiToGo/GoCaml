@@ -125,9 +125,11 @@ basic_typ :
 
 slice_typ :
   | TLBR TRBR typ { }
+  | TLBR TRBR slice_typ { }
 
 array_typ:
   | TLBR int_literal TRBR typ { }
+  | TLBR int_literal TRBR array_typ { }
 
 struct_typ:
   | STRUCT TLCUR pair_list TRCUR { }
