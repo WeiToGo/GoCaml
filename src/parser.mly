@@ -20,7 +20,7 @@
 %left TOR
 %left TAND
 %left TEQ TNEQ TLS TLSEQ TGR TGREQ
-%left TPLUS TMINUS TBITOR TBITXOR
+%left TPLUS TMINUS TBITOR TCARET
 %left TMULT TDIV TMOD TLSFT TRSFT TBITAND TANOT
 
 %start <unit> program
@@ -61,8 +61,8 @@ typ_decl :
   | TYPE TLPAR typ_spec TSEMCOL TRPAR { }
 
 signature:
-  | TLPAR param TRPAR typ { }
-  | TLPAR param TRPAR     { }
+  | TLPAR pair_list TRPAR typ { }
+  | TLPAR pair_list TRPAR     { }
 
 func_body:
   | stmt_list { }
@@ -74,6 +74,7 @@ var_spec:
   | id_list TASSIGN expr_list   { }
   | id_list typ TASSIGN expr_list { }
 
+
 var_spec_list:
   | (* empty *) { }
   | var_spec_list var_spec TSEMCOL { } 
@@ -81,8 +82,6 @@ var_spec_list:
 typ_spec:
   | ID typ  { }
 
-param: {} 
-  | pair_list { }
 
 typ :
   | basic_typ  { }
@@ -156,7 +155,7 @@ declaration_stmt:
     | declaration { }
 
 shortvardecl_stmt:
-    | id_list TCOLEQ expr_list { }
+    | lvalue_list TCOLEQ expr_list { (* make sure expr is id*)}
 
 incdec_stmt:
     | lvalue TINC { }
@@ -175,13 +174,18 @@ return_stmt:
     | RETURN expr { }
 
 if_stmt:
-    | IF simple_stmt_option expr TLCUR stmt_list TRCUR { }
-    | IF simple_stmt_option expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
-    | IF simple_stmt_option expr TLCUR stmt_list TRCUR ELSE if_stmt { }
+    | IF expr TLCUR stmt_list TRCUR { }
+    | IF expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
+    | IF expr TLCUR stmt_list TRCUR ELSE if_stmt { }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR { }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE if_stmt { }
 
 switch_stmt:
-    | SWITCH simple_stmt_option TLCUR switch_clause_list TRCUR { }
-    | SWITCH simple_stmt_option expr TLCUR switch_clause_list TRCUR { }
+    | SWITCH TLCUR switch_clause_list TRCUR { }
+    | SWITCH expr TLCUR switch_clause_list TRCUR { }
+    | SWITCH simple_stmt TSEMCOL TLCUR switch_clause_list TRCUR { }
+    | SWITCH simple_stmt TSEMCOL expr TLCUR switch_clause_list TRCUR { }
 
 for_stmt:
     | FOR TLCUR stmt_list TRCUR { }
@@ -206,8 +210,8 @@ lvalue_list:
 
 lvalue:
     | ID { }
-    | lvalue TLBR expr TRBR { } (* array indexing *)
-    | lvalue TDOT ID { } (* struct field access *)
+    | primary_expression TLBR expr TRBR { } (* array indexing *)
+    | primary_expression TDOT ID { } (* struct field access *)
 
 switch_clause_list:
     | switch_clause { }
@@ -235,7 +239,7 @@ simple_stmt:
 
 
 
-expr: ID | literal | unary_exp | binary_exp | append_exp | type_cast_exp  { }
+expr:  unary_exp | binary_exp  { }
 
 literal: int_literal | float_literal| rune_literal | string_literal  { }
 
@@ -251,7 +255,7 @@ string_literal: x = TRWSTR | x = TSTR { StringLit(x) }
 
 unary_exp: primary_expression | unary_op unary_exp {}
 
-primary_expression: function_call | index_exp | append_exp | type_cast_exp { }
+primary_expression: ID | literal | function_call | index_exp | append_exp | type_cast_exp { }
 unary_op:  TPLUS | TMINUS | TNOT | TCARET { }
 
 function_call: ID; TLPAR; function_arguments; TRPAR { }
@@ -264,12 +268,28 @@ append_exp: APPEND TLPAR ID TCOM expr TRPAR { }
 type_cast_exp: castable_type TLPAR expr TRPAR {}
 castable_type: INT_TYP | FL_TYP | RUNE_TYP | BOOL_TYP { } 
  
-binary_exp: expr binary_op expr { }
+binary_exp: expr binary_op expr {}
 
-binary_op: TOR | TAND | rel_op | add_op | mul_op {}
-rel_op: TEQ | TNEQ | TLS | TGR | TLSEQ | TGREQ { }
-add_op: TPLUS | TMINUS | TBITOR | TCARET { }
-mul_op: TMULT | TDIV | TMOD | TLSFT | TRSFT | TBITAND | TANOT { } 
+%inline binary_op: 
+| TOR {} 
+| TAND {} 
+| TEQ {} 
+| TNEQ {} 
+| TLS {} 
+| TGR {} 
+| TLSEQ {} 
+| TGREQ {} 
+| TPLUS {} 
+| TMINUS {} 
+| TMULT {} 
+| TDIV {} 
+| TMOD {} 
+| TBITOR {} 
+| TCARET {} 
+| TLSFT {} 
+| TRSFT {} 
+| TBITAND {} 
+| TANOT {} 
 
 blank_id: TBLANKID {}
 
