@@ -89,6 +89,7 @@ typ :
   | slice_typ { }
   | array_typ { }
   | struct_typ { }
+  | ID { }
 
 stmt_list:
     | stmt { }
