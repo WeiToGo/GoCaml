@@ -256,7 +256,7 @@ rel_op: TEQ | TNEQ | TLS | TGR | TLSEQ | TGREQ { }
 add_op: TPLUS | TMINUS | TBITOR | TCARET { }
 mul_op: TMULT | TDIV | TMOD | TLSFT | TRSFT | TBITAND | TANOT { }
 
-blank_id: {}
+blank_id: TBLANKID {}
 
 
 %%
