@@ -6,13 +6,14 @@
 %token TPLUS TMINUS TMULT TDIV TMOD TBITAND TBITOR TCARET TLSFT TRSFT TANOT
 %token  TADDAS TSUBAS TMULAS TDIVAS TMODAS TANDAS TORAS TXORAS TLAS TRAS TANEQ
 %token TAND TOR TREC TINC TDECR TEQ TLS TGR TASSIGN TNOT TNEQ TLSEQ TGREQ TCOLEQ
-%token TTD TLPAR TRPAR TLBR TRBR TLCUR TRCUR TCOM TDOT TSEMCOL TCOL 
+%token TTD TLPAR TRPAR TLBR TRBR TLCUR TRCUR TCOM TDOT TSEMCOL TCOL
+%token TBLANKID
 %token<string> TSTR TRWSTR TRUNE
 %token TEOF
 %token BREAK CASE CHAN CONST CONT DEFAULT DEFER ELSE FALLTHROUGH FOR FUNC GO
 %token GOTO IF IMPORT INTERFACE MAP PACKAGE RANGE RETURN SELECT STRUCT SWITCH
 %token TYPE VAR INT_TYP FL_TYP BOOL_TYP RUNE_TYP STR_TYP PRINT PRINTLN APPEND 
-%token<string> ID 
+%token<string> ID
 %token <string> DEC_INT OCTAL_INT HEX_INT 
 %token <string> FLOAT64 
 
@@ -87,18 +88,28 @@ typ :
 
 stmt_list: TEOF { }
 
-term_stmt: 
+term_stmt:
+    | empty_stmt { }
+    | expression_stmt { }
     | assign_stmt { }
-  | return_stmt { }
-  | if_else_stmt { } 
-  | TEOF { }
+    | declaration_stmt { }
+    | shortvardecl_stmt { }
+    | incdec_stmt { }
+    | print_stmt { }
+    | println_stmt { }
+	| return_stmt { }
+	| if_else_stmt { }
+	| TEOF { }
 
 (*-----------*)
 
-id_list: 
-  | list(ID) { }
+id_list:
+    | ID { }
+	| id_list TCOM ID { }
 
-expr_list: { }
+expr_list:
+    | expr { }
+    | expr_list TCOM expr { }
 
 pair_list:
   | pair_list id_list typ { }
@@ -120,14 +131,39 @@ array_typ:
 struct_typ:
   | STRUCT TLCUR pair_list TRCUR { }
 
+empty_stmt: { }
+
+expression_stmt:
+    | expr { }
+
 assign_stmt: 
-  | expr assign_op expr { }
-  | expr_list TASSIGN expr_list { }
-  | blank_id TASSIGN expr { }
+	| expr assign_op expr { }
+	| lvalue_list TASSIGN expr_list { }
+	| blank_id TASSIGN expr { }
 
-return_stmt: {}
+declaration_stmt:
+    | declaration { }
 
-if_else_stmt: {}
+shortvardecl_stmt:
+    | id_list TCOLEQ expr_list { }
+
+incdec_stmt:
+    | lvalue TINC { }
+    | lvalue TDECR { }
+
+print_stmt:
+    | PRINT TLPAR TRPAR { }
+    | PRINT TLPAR expr_list TRPAR { }
+
+println_stmt:
+    | PRINTLN TLPAR TRPAR { }
+    | PRINTLN TLPAR expr_list TRPAR { }
+
+return_stmt:
+    | RETURN { }
+    | RETURN expr { }
+
+if_else_stmt: { }
 
 (*-----------*)
 
@@ -135,6 +171,12 @@ assign_op:
   | TADDAS | TSUBAS | TMULAS | TDIVAS | TMODAS | TANDAS
   | TORAS | TXORAS | TLAS | TRAS  { }
 
+lvalue_list:
+    | lvalue { }
+    | lvalue_list TCOM lvalue { }
+
+lvalue:
+    | ID { } (* TODO *)
 
 
 
