@@ -29,7 +29,7 @@
 %%
 
 program :       
-  | package_decl top_decl_list TEOF   { }
+  | package_decl TSEMCOL top_decl_list TEOF   { }
 
 package_decl:
   | PACKAGE ID { }
@@ -54,11 +54,11 @@ func_decl:
 
 var_decl:
   | VAR var_spec { }
-  | VAR TLPAR var_spec TRPAR  { }
+  | VAR TLPAR var_spec TSEMCOL TRPAR  { }
 
 typ_decl :
   | TYPE typ_spec { }
-  | TYPE TLPAR typ_spec TRPAR { }
+  | TYPE TLPAR typ_spec TSEMCOL TRPAR { }
 
 signature:
   | TLPAR param TRPAR typ { }
@@ -141,7 +141,7 @@ array_typ:
   | TLBR int_literal TRBR array_typ { }
 
 struct_typ:
-  | STRUCT TLCUR pair_list TRCUR { }
+  | STRUCT TLCUR pair_list TSEMCOL TRCUR { }
 
 empty_stmt: { }
 
