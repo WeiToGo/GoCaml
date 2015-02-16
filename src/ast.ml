@@ -1,10 +1,9 @@
 type program = Program of package_decl * (top_decl list)
 and package_decl = Package of string
 and top_decl = FunctionDecl of function_decl 
-      | TypeDecl of (type_declaration list)
-      | VarDecl of (var_declaration list)
+      | TypeDeclBlock of (type_declaration list)
+      | VarDeclBlock of (var_declaration list)
 and var_declaration = 
-      | SingleVarDecl of (identifier * (type_spec option) * (expression option))
       | MultipleVarDecl of ((identifier * (type_spec option) * (expression option)) list)
 and type_declaration = 
       | SingleTypeDecl of (identifier * type_spec)
@@ -12,10 +11,14 @@ and type_spec =
       | BasicType of basic_type
       | SliceType of type_spec
       | ArrayType of (int_literal * type_spec)
+      | StructType of struct_definition
       | CustomType of identifier
+and struct_definition = StructDefinition of (struct_field_list list)
+and struct_field_list = StructFieldList of (struct_field list)
+and struct_field = StructField of (identifier * type_spec) 
 and basic_type = IntType | FloatType | BoolType | RuneType | StringType
 and identifier = IdName of string
-and function_decl = Function of ((function_arg list) * (statement list))
+and function_decl = Function of ((function_arg list) * (type_spec option) * (statement list))
 and function_arg = FunctionArg of (identifier * type_spec)
 and expression =
     | IdExp of identifier 
@@ -25,7 +28,8 @@ and expression =
     | FunctionCallExp of (identifier * (expression list))
     | AppendExp of (identifier * expression)
     | TypeCastExp of (type_spec * expression)
-    | IndexExp of (identifier * int)
+    | IndexExp of (expression * int)
+    | SelectExp of (expression * identifier) 
 and literal = 
     | IntLit of int_literal
     | FloatLit of string
