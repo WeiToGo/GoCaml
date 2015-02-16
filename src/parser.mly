@@ -106,6 +106,9 @@ stmt:
 	| return_stmt { }
     | if_stmt { }
     | switch_stmt { }
+    | for_stmt { }
+    | break_stmt { }
+    | continue_stmt { }
 
 term_stmt:
 	| return_stmt { }
@@ -181,7 +184,21 @@ if_stmt:
     | IF expr TLCUR stmt_list TRCUR ELSE if_stmt { }
 
 switch_stmt:
+    | SWITCH TLCUR switch_clause_list TRCUR { }
     | SWITCH expr TLCUR switch_clause_list TRCUR { }
+    | SWITCH simple_stmt TSEMCOL TLCUR switch_clause_list TRCUR { }
+    | SWITCH simple_stmt TSEMCOL expr TLCUR switch_clause_list TRCUR { }
+
+for_stmt:
+    | FOR TLCUR stmt_list TRCUR { }
+    | FOR expr TLCUR stmt_list TRCUR { }
+    | FOR simple_stmt TSEMCOL expr TSEMCOL simple_stmt TLCUR stmt_list TRCUR { }
+
+break_stmt:
+    | BREAK { }
+
+continue_stmt:
+    | CONT { }
 
 (*-----------*)
 
@@ -207,9 +224,12 @@ switch_clause:
     | DEFAULT TCOL stmt_list { }
     | CASE expr_list TCOL stmt_list { }
 
-
-
-
+simple_stmt:
+    | empty_stmt { }
+    | expression_stmt { }
+    | assign_stmt { }
+    | shortvardecl_stmt { }
+    | incdec_stmt { }
 
 
 
