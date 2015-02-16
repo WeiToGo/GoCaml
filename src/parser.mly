@@ -102,6 +102,9 @@ stmt:
 	| return_stmt { }
     | if_stmt { }
     | switch_stmt { }
+    | for_stmt { }
+    | break_stmt { }
+    | continue_stmt { }
 
 term_stmt:
 	| return_stmt { }
@@ -186,6 +189,12 @@ for_stmt:
     | FOR TLCUR stmt_list TRCUR { }
     | FOR expr TLCUR stmt_list TRCUR { }
     | FOR simple_stmt TSEMCOL expr TSEMCOL simple_stmt TLCUR stmt_list TRCUR { }
+
+break_stmt:
+    | BREAK { }
+
+continue_stmt:
+    | CONT { }
 
 (*-----------*)
 
