@@ -54,7 +54,7 @@ func_decl:
 
 var_decl:
   | VAR var_spec { }
-  | VAR TLPAR var_spec TSEMCOL TRPAR  { }
+  | VAR TLPAR list(var_spec) TSEMCOL TRPAR  { }
 
 typ_decl :
   | TYPE typ_spec { }
@@ -73,10 +73,6 @@ var_spec:
   | id_list typ   { }
   | id_list TASSIGN expr_list   { }
   | id_list typ TASSIGN expr_list { }
-  | TLPAR id_list typ TRPAR { }
-  | TLPAR id_list TASSIGN expr_list TRPAR { }
-  | TLPAR id_list typ TASSIGN expr_list TRPAR { }
-  (* can't do TLPAR var_spec TRPAR because var (( ...)) is illegal. *)
 
 typ_spec:
   | ID typ  { }
