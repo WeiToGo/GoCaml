@@ -12,6 +12,3 @@ test:
 clean:
 	ocamlbuild -clean
 
-test_linux:
-	ocamlbuild -quiet -r -I src -I tests -pkg oUnit -use-menhir lexer_test.native
-	./lexer_test.native
