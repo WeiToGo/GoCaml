@@ -114,6 +114,7 @@ expr_list:
 pair_list:
   | pair_list id_list typ { }
   | id_list typ   { }
+  | { }
 
 basic_typ :
   | INT_TYP { }
