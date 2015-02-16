@@ -49,7 +49,7 @@ and statement =
     | IfStatement of ((statement option) * expression * (statement list) * ((statement list ) option))
     | ReturnStatement of (expression option)
     | SwitchStatement of ((statement option) * expression * (switch_case list))
-    | ForStament of (statement * expression * statement * (statement list))
+    | ForStament of (statement * expression * statement * (statement list)) (* Weed out short_var_declr in post-statement *)
     | BreakStatement
     | ContinueStatement
 and switch_case = SwitchCase of (expression * (statement list))

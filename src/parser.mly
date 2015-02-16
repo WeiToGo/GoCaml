@@ -22,7 +22,6 @@
 %left TEQ TNEQ TLS TLSEQ TGR TGREQ
 %left TPLUS TMINUS TBITOR TBITXOR
 %left TMULT TDIV TMOD TLSFT TRSFT TBITAND TANOT
-%nonassoc UMINUS
 
 %start <unit> program
 (* %start <unit> expression *)
@@ -35,7 +34,8 @@ package_decl:
   | PACKAGE ID { }
 
 top_decl_list :
-  | list(top_decl) { }
+  | (* empty *)   { }
+  | top_decl_list top_decl TSEMCOL { }
 
 top_decl :
   | declaration { }
@@ -48,13 +48,13 @@ declaration :
   | typ_decl { }
 
 func_decl: 
-  | FUNC ID signature func_body { }
+  | FUNC ID signature TLCUR func_body TRCUR { }
 
 (*-----------*)
 
 var_decl:
   | VAR var_spec { }
-  | VAR TLPAR var_spec TSEMCOL TRPAR  { }
+  | VAR TLPAR var_spec_list TRPAR  { }
 
 typ_decl :
   | TYPE typ_spec { }
@@ -65,7 +65,7 @@ signature:
   | TLPAR param TRPAR     { }
 
 func_body:
-  | stmt_list term_stmt { }
+  | stmt_list { }
 
 (*-----------*)
 
@@ -73,10 +73,10 @@ var_spec:
   | id_list typ   { }
   | id_list TASSIGN expr_list   { }
   | id_list typ TASSIGN expr_list { }
-  | TLPAR id_list typ TRPAR { }
-  | TLPAR id_list TASSIGN expr_list TRPAR { }
-  | TLPAR id_list typ TASSIGN expr_list TRPAR { }
-  (* can't do TLPAR var_spec TRPAR because var (( ...)) is illegal. *)
+
+var_spec_list:
+  | (* empty *) { }
+  | var_spec_list var_spec TSEMCOL { } 
 
 typ_spec:
   | ID typ  { }
@@ -92,8 +92,8 @@ typ :
   | ID { }
 
 stmt_list:
-    | stmt { }
-    | stmt_list TSEMCOL stmt { }
+    | stmt TSEMCOL { }
+    | stmt_list stmt TSEMCOL { }
 
 stmt:
     | empty_stmt { }
@@ -111,13 +111,10 @@ stmt:
     | break_stmt { }
     | continue_stmt { }
 
-term_stmt:
-	| return_stmt { }
-
 (*-----------*)
 
 id_list:
-    | ID { }
+  | ID { }
 	| id_list TCOM ID { }
 
 expr_list:
@@ -138,11 +135,9 @@ basic_typ :
 
 slice_typ :
   | TLBR TRBR typ { }
-  | TLBR TRBR slice_typ { }
 
 array_typ:
   | TLBR int_literal TRBR typ { }
-  | TLBR int_literal TRBR array_typ { }
 
 struct_typ:
   | STRUCT TLCUR pair_list TSEMCOL TRCUR { }
@@ -152,8 +147,8 @@ empty_stmt: { }
 expression_stmt:
     | expr { }
 
-assign_stmt: 
-	| expr assign_op expr { }
+assign_stmt:
+  | lvalue assign_op expr { }
 	| lvalue_list TASSIGN expr_list { }
 	| blank_id TASSIGN expr { }
 
@@ -180,15 +175,13 @@ return_stmt:
     | RETURN expr { }
 
 if_stmt:
-    | IF expr TLCUR stmt_list TRCUR { }
-    | IF expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
-    | IF expr TLCUR stmt_list TRCUR ELSE if_stmt { }
+    | IF simple_stmt_option expr TLCUR stmt_list TRCUR { }
+    | IF simple_stmt_option expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
+    | IF simple_stmt_option expr TLCUR stmt_list TRCUR ELSE if_stmt { }
 
 switch_stmt:
-    | SWITCH TLCUR switch_clause_list TRCUR { }
-    | SWITCH expr TLCUR switch_clause_list TRCUR { }
-    | SWITCH simple_stmt TSEMCOL TLCUR switch_clause_list TRCUR { }
-    | SWITCH simple_stmt TSEMCOL expr TLCUR switch_clause_list TRCUR { }
+    | SWITCH simple_stmt_option TLCUR switch_clause_list TRCUR { }
+    | SWITCH simple_stmt_option expr TLCUR switch_clause_list TRCUR { }
 
 for_stmt:
     | FOR TLCUR stmt_list TRCUR { }
@@ -203,7 +196,7 @@ continue_stmt:
 
 (*-----------*)
 
-assign_op:
+assign_op: 
   | TADDAS | TSUBAS | TMULAS | TDIVAS | TMODAS | TANDAS
   | TORAS | TXORAS | TLAS | TRAS  { }
 
@@ -212,7 +205,7 @@ lvalue_list:
     | lvalue_list TCOM lvalue { }
 
 lvalue:
-    | ID { } (* TODO *)
+    | ID { }
     | lvalue TLBR expr TRBR { } (* array indexing *)
     | lvalue TDOT ID { } (* struct field access *)
 
@@ -224,6 +217,10 @@ switch_clause_list:
 switch_clause:
     | DEFAULT TCOL stmt_list { }
     | CASE expr_list TCOL stmt_list { }
+
+simple_stmt_option:
+    | (* empty *)  { }
+    | simple_stmt TSEMCOL { }
 
 simple_stmt:
     | empty_stmt { }
@@ -266,13 +263,13 @@ append_exp: APPEND TLPAR ID TCOM expr TRPAR { }
 
 type_cast_exp: castable_type TLPAR expr TRPAR {}
 castable_type: INT_TYP | FL_TYP | RUNE_TYP | BOOL_TYP { } 
-
-binary_exp: expr binary_op unary_exp { }
+ 
+binary_exp: expr binary_op expr { }
 
 binary_op: TOR | TAND | rel_op | add_op | mul_op {}
 rel_op: TEQ | TNEQ | TLS | TGR | TLSEQ | TGREQ { }
 add_op: TPLUS | TMINUS | TBITOR | TCARET { }
-mul_op: TMULT | TDIV | TMOD | TLSFT | TRSFT | TBITAND | TANOT { }
+mul_op: TMULT | TDIV | TMOD | TLSFT | TRSFT | TBITAND | TANOT { } 
 
 blank_id: TBLANKID {}
 
