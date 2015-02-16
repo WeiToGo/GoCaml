@@ -86,9 +86,11 @@ typ :
   | array_typ { }
   | struct_typ { }
 
-stmt_list: TEOF { }
+stmt_list:
+    | stmt { }
+    | stmt_list TSEMCOL stmt { }
 
-term_stmt:
+stmt:
     | empty_stmt { }
     | expression_stmt { }
     | assign_stmt { }
@@ -98,8 +100,11 @@ term_stmt:
     | print_stmt { }
     | println_stmt { }
 	| return_stmt { }
-	| if_else_stmt { }
-	| TEOF { }
+    | if_stmt { }
+    | switch_stmt { }
+
+term_stmt:
+	| return_stmt { }
 
 (*-----------*)
 
@@ -166,7 +171,13 @@ return_stmt:
     | RETURN { }
     | RETURN expr { }
 
-if_else_stmt: { }
+if_stmt:
+    | IF expr TLCUR stmt_list TRCUR { }
+    | IF expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
+    | IF expr TLCUR stmt_list TRCUR ELSE if_stmt { }
+
+switch_stmt:
+    | SWITCH expr TLCUR switch_clause_list TRCUR { }
 
 (*-----------*)
 
@@ -181,7 +192,13 @@ lvalue_list:
 lvalue:
     | ID { } (* TODO *)
 
+switch_clause_list:
+    | switch_clause { }
+    | switch_clause_list switch_clause { }
 
+switch_clause:
+    | DEFAULT TCOL stmt_list { }
+    | CASE expr_list TCOL stmt_list { }
 
 
 
