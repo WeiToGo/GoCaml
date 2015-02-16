@@ -17,13 +17,14 @@ let decimal_digit = ['0'-'9']
 let nz_digit = ['1'-'9']  (* Non-zero digit *) 
 let octal_digit = ['0' - '7']
 let hex_digit = ['0'-'9' 'A'-'F' 'a'-'f']
+let character = ['A'-'Z' 'a'-'z' '_' '0'-'9' ' ' '\t']
 
 
 (* operators + delimeters *)
 rule scan last_token = parse
 
-  (* Whitespace and comments *)
-  | white         { scan last_token lexbuf }
+  (* Whitespace and comments *)  | white         { scan last_token lexbuf }
+
   | newline       { match last_token with
                     | Some(BREAK)
                     | Some(ID _)
@@ -33,6 +34,8 @@ rule scan last_token = parse
                       -> TSEMCOL
                     | _ -> scan None lexbuf 
                   } 
+  | "//" character* { scan last_token lexbuf }
+  | "/*" character* "*/" { scan last_token lexbuf }
 
   (* Keywords *)
   | "break"       { BREAK }
