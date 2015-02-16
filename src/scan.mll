@@ -28,8 +28,10 @@ rule scan last_token = parse
   | newline       { match last_token with
                     | Some(BREAK)
                     | Some(ID _)
-                    (* Add cases for int, float imaginary, rune and string here *)
                     | Some(TINC) | Some(TDECR)
+                    | Some(FALLTHROUGH) | Some(RETURN) | Some(CONT)
+                    | Some(DEC_INT(_)) | Some(HEX_INT(_)) | Some(OCTAL_INT(_))
+                    | Some(TRUNE(_)) | Some(TRWSTR(_)) | Some(TSTR(_))
                     | Some(TRBR) | Some(TRPAR) | Some(TRCUR)
                       -> TSEMCOL
                     | _ -> scan None lexbuf 

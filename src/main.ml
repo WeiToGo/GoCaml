@@ -1,15 +1,21 @@
 open Scan
+open Parser
 
-let filename = Sys.argv.(1)
+(* let filename = Sys.argv.(1) *)
 
 let main () =
-	let input = open_in filename in
-	let filebuf = Lexing.from_channel input in
+	(* let input = open_in filename in *)
+	let filebuf = Lexing.from_channel stdin in
 	try
-		ignore(Scan.wrapped_scan filebuf);
-  		Printf.eprintf "VALID \n "
+		Parser.program Scan.wrapped_scan filebuf;
+  		Printf.eprintf "VALID \n ";
 	with
-	| Scan.Error msg ->
-		Printf.eprintf " INVALID :%s%!" msg
+	| Parser.Error ->
+		Printf.eprintf " INVALID"
 
-let _ = main ()
+(* let _ = main () *)
+
+let get_ast fname =
+  let input = open_in fname in
+  let filebuf = Lexing.from_channel input in
+  Parser.program Scan.wrapped_scan filebuf

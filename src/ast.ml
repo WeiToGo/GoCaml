@@ -4,21 +4,22 @@ and top_decl = FunctionDecl of function_decl
       | TypeDeclBlock of (type_declaration list)
       | VarDeclBlock of (var_declaration list)
 and var_declaration = 
-      | MultipleVarDecl of ((identifier * (type_spec option) * (expression option)) list)
+      | MultipleVarDecl of (single_var_declaration list)
+and single_var_declaration = SingleVarDecl of (identifier * (type_spec option) * (expression option))
 and type_declaration = 
       | SingleTypeDecl of (identifier * type_spec)
 and type_spec = 
       | BasicType of basic_type
       | SliceType of type_spec
       | ArrayType of (int_literal * type_spec)
-      | StructType of struct_definition
+      | StructType of (struct_field_decl list)
       | CustomType of identifier
-and struct_definition = StructDefinition of (struct_field_list list)
-and struct_field_list = StructFieldList of (struct_field list)
+and struct_field_decl = StructFieldDecl of (struct_field list)
 and struct_field = StructField of (identifier * type_spec) 
 and basic_type = IntType | FloatType | BoolType | RuneType | StringType
 and identifier = IdName of string | BlankID
-and function_decl = Function of ((function_arg list) * (type_spec option) * (statement list))
+and function_decl = Function of (identifier * function_signature * (statement list))
+and function_signature = FunctionSig of ((function_arg list) * (type_spec option))
 and function_arg = FunctionArg of (identifier * type_spec)
 and expression =
     | IdExp of identifier 
@@ -28,7 +29,7 @@ and expression =
     | FunctionCallExp of (identifier * (expression list))
     | AppendExp of (identifier * expression)
     | TypeCastExp of (type_spec * expression)
-    | IndexExp of (expression * int)
+    | IndexExp of (expression * expression)
     | SelectExp of (expression * identifier) 
 and literal = 
     | IntLit of int_literal
@@ -46,20 +47,20 @@ and statement =
     | EmptyStatement
     | ExpressionStatement of expression
     | AssignmentStatement of ((lvalue * expression) list) 
-    | TypeDeclStatement of (type_declaration list)
-    | VarDeclStatement of var_declaration
-    | PrintStatemet of (expression list)
-    | PrintlnStamement of (expression list)
+    | TypeDeclBlockStatement of (type_declaration list)
+    | VarDeclBlockStatement of (var_declaration list) 
+    | PrintStatement of (expression list)
+    | PrintlnStatement of (expression list)
     | IfStatement of ((statement option) * expression * (statement list) * ((statement list ) option))
     | ReturnStatement of (expression option)
     | SwitchStatement of ((statement option) * expression * (switch_case list))
-    | ForStament of (statement * expression * statement * (statement list)) (* Weed out short_var_declr in post-statement *)
+    | ForStatement of ((statement option) * expression * (statement option) * (statement list)) (* Weed out short_var_declr in post-statement *)
     | BreakStatement
     | ContinueStatement
-and switch_case = SwitchCase of (expression * (statement list))
+and switch_case = SwitchCase of ((expression list)* (statement list)) | DefaultCase of (statement list)
 and lvalue = 
     | LId of identifier
-    | LIndex of (lvalue * int)
+    | LIndex of (lvalue * expression)
     | LSelector of (lvalue * identifier)
 
 let rec exp_of_lvalue lval = match lval with

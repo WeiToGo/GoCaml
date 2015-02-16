@@ -1,6 +1,22 @@
 %{
   exception NotImplemented
+  exception UnequalListLength
+  exception ParsingError
   open Ast
+  (* THIS FILE WILL NOT COMPILE. *)
+
+  (* Both of these functions return things in reverse order 
+    because of tail recursion. You will have to call List.rev on 
+    the return value at some point *)
+  let rec distribute xs y acc f = match xs with
+  | [] -> acc
+  | h :: t -> distribute t y ((f h y) :: acc) f
+
+  let rec list_zip xs ys acc f = match xs, ys with
+  | [], [] -> acc
+  | (h :: t), (h' :: t') -> list_zip t t' ((f h h') :: acc) f
+  | _ -> raise UnequalListLength
+
 %}
 
 %token TPLUS TMINUS TMULT TDIV TMOD TBITAND TBITOR TCARET TLSFT TRSFT TANOT
@@ -23,275 +39,406 @@
 %left TPLUS TMINUS TBITOR TCARET
 %left TMULT TDIV TMOD TLSFT TRSFT TBITAND TANOT
 
-%start <unit> program
-(* %start <unit> expression *)
+%start<Ast.program> program
+
 %%
 
 program :       
-  | package_decl TSEMCOL top_decl_list TEOF   { }
+  | package_decl TSEMCOL top_decl_list TEOF  { Program($1, List.rev $3)} 
 
 package_decl:
-  | PACKAGE ID { }
+  | PACKAGE ID { Package($2) }
 
 top_decl_list :
-  | (* empty *)   { }
-  | top_decl_list top_decl TSEMCOL { }
+  | (* empty *)   { [] }
+  | top_decl_list top_decl TSEMCOL { $2 :: $1 }  
 
 top_decl :
-  | declaration { }
-  | func_decl { }
+  | declaration { $1 } 
+  | func_decl { FunctionDecl $1 }
 
 (*-----------*)
 
 declaration :
-  | var_decl { }
-  | typ_decl { }
+  | var_decl { VarDeclBlock $1 }
+  | typ_decl { TypeDeclBlock $1 }
 
 func_decl: 
-  | FUNC ID signature TLCUR func_body TRCUR { }
+  | FUNC ID func_signature TLCUR func_body TRCUR { Function(IdName($2), $3, $5) } 
 
 (*-----------*)
 
 var_decl:
-  | VAR var_spec { }
-  | VAR TLPAR var_spec_list TRPAR  { }
+  | VAR var_spec { [ $2 ] }
+  | VAR TLPAR var_spec_list TRPAR  { List.rev $3 }
 
 typ_decl :
-  | TYPE typ_spec { }
-  | TYPE TLPAR typ_spec TSEMCOL TRPAR { }
+  | TYPE typ_spec TSEMCOL { [ $2 ] }
+  | TYPE TLPAR typ_spec_list TRPAR { List.rev $3 }  (* This might cause weird errors. Check back *)
 
-signature:
-  | TLPAR pair_list TRPAR typ { }
-  | TLPAR pair_list TRPAR     { }
+func_signature:
+  | TLPAR args_list TRPAR typ { FunctionSig($2, Some($4)) }
+  | TLPAR args_list TRPAR { FunctionSig($2, None) } 
+
+
+args_list: 
+  | (* empty *) { [] }
+  | args_list TCOM id_list typ 
+    {
+      let res = distribute (List.rev $3) $4 [] (fun x y -> FunctionArg(x, y))
+      in $1 @ (List.rev res)
+    }
+  | id_list typ 
+    {
+      let res = distribute (List.rev $1) $2 [] (fun x y -> FunctionArg(x, y))
+      in List.rev res 
+     } 
 
 func_body:
-  | stmt_list { }
+  | non_empty_stmt_list { List.rev $1 }
 
 (*-----------*)
 
 var_spec:
-  | id_list typ   { }
-  | id_list TASSIGN expr_list   { }
-  | id_list typ TASSIGN expr_list { }
-
+  | id_list typ
+    { 
+      let res = distribute $1 $2 [] (fun x y -> (SingleVarDecl (x, Some(y), None))) in 
+      MultipleVarDecl(List.rev res)
+    }
+  | id_list TASSIGN expr_list
+    {
+      try 
+        let res = list_zip $1 $3 [] (fun x y -> SingleVarDecl( x, None, Some(y)))
+        in MultipleVarDecl(List.rev res)
+      with UnequalListLength -> raise ParsingError
+    }
+  | id_list typ TASSIGN expr_list 
+    { 
+      let res = list_zip $1 $4 [] (fun x y -> SingleVarDecl(x, Some($2), Some(y)))
+      in MultipleVarDecl(List.rev res)
+    }
 
 var_spec_list:
-  | (* empty *) { }
-  | var_spec_list var_spec TSEMCOL { } 
+  | (* empty *) { [] }
+  | var_spec_list var_spec TSEMCOL { $2 :: $1 } 
 
 typ_spec:
-  | ID typ  { }
+  | ID typ  { SingleTypeDecl(IdName($1), $2) }
 
+typ_spec_list:
+  | (* empty *) { [] }
+  | typ_spec_list typ_spec TSEMCOL { $2 :: $1 }
 
-typ :
-  | basic_typ  { }
-  | slice_typ { }
-  | array_typ { }
-  | struct_typ { }
-  | ID { }
+typ:
+  | basic_typ  { BasicType $1 }
+  | slice_typ { $1 }
+  | array_typ { $1 }
+  | struct_typ { $1 }
+  | ID { CustomType(IdName($1)) }
+
+non_empty_stmt_list:
+    | stmt_list stmt TSEMCOL { $2 :: $1 }
 
 stmt_list:
-    | stmt TSEMCOL { }
-    | stmt_list stmt TSEMCOL { }
+    | (* empty *) { [ ] }
+    | stmt_list stmt TSEMCOL { $2 :: $1 }
 
 stmt:
-    | empty_stmt { }
-    | expression_stmt { }
-    | assign_stmt { }
-    | declaration_stmt { }
-    | shortvardecl_stmt { }
-    | incdec_stmt { }
-    | print_stmt { }
-    | println_stmt { }
-	  | return_stmt { }
-    | if_stmt { }
-    | switch_stmt { }
-    | for_stmt { }
-    | break_stmt { }
-    | continue_stmt { }
+    | empty_stmt { $1 }
+    | expression_stmt { $1 }
+    | assign_stmt { $1 }
+    | declaration_stmt { $1 }
+    | shortvardecl_stmt { $1 }
+    | incdec_stmt { $1 }
+    | print_stmt { $1 }
+    | println_stmt { $1 }
+    | return_stmt { $1 }
+    | if_stmt { $1 } 
+    | switch_stmt { $1 }
+    | for_stmt { $1 }
+    | break_stmt { $1 }
+    | continue_stmt { $1 }
 
 (*-----------*)
 
 id_list:
-  | ID { }
-	| id_list TCOM ID { }
+  | ID { [IdName($1)] }
+  | id_list TCOM ID { IdName($3) :: $1 }
 
 expr_list:
-    | expr { }
-    | expr_list TCOM expr { }
-
-pair_list:
-  | pair_list TCOM id_list typ { }
-  | id_list typ   { }
-  | (* empty *) { }
+    | expr { [$1] }
+    | expr_list TCOM expr { $3 :: $1}
 
 basic_typ :
-  | INT_TYP { }
-  | FL_TYP  { }
-  | BOOL_TYP  { }
-  | RUNE_TYP  { }
-  | STR_TYP   { }
+  | INT_TYP { IntType }
+  | FL_TYP  { FloatType }
+  | BOOL_TYP  { BoolType }
+  | RUNE_TYP  { RuneType }
+  | STR_TYP   { StringType }
 
 slice_typ :
-  | TLBR TRBR typ { }
+  | TLBR; TRBR; t = typ { SliceType t }
 
 array_typ:
-  | TLBR int_literal TRBR typ { }
+  | TLBR; d = int_literal; TRBR; t = typ { ArrayType(d, t) }
 
 struct_typ:
-  | STRUCT TLCUR pair_list TSEMCOL TRCUR { }
+  | STRUCT TLCUR field_decl_list TRCUR { StructType( List.rev $3) }
 
-empty_stmt: { }
+field_decl_list: 
+  | (* empty *) { [] }
+  | field_decl_list field_decl TSEMCOL { $2 :: $1 }
+
+field_decl: 
+  | id_list typ 
+    {
+      let res = distribute $1 $2 [] (fun x y -> StructField(x, y))
+      in StructFieldDecl(List.rev res)
+    }
+
+empty_stmt: 
+  | (* empty *) { EmptyStatement }
 
 expression_stmt:
-    | expr { }
+    | expr { ExpressionStatement $1 }
 
 assign_stmt:
-  | lvalue assign_op expr { }
-	| lvalue_list TASSIGN expr_list { }
-	| blank_id TASSIGN expr { }
+  | single_assignment { $1 }
+  | lvalue_list TASSIGN expr_list
+     {
+        let reversed_lvalue = List.rev $1 in
+        let res = list_zip reversed_lvalue $3 [] (fun x y -> (x, y)) in
+        AssignmentStatement(List.rev res)
+     }
+  | blank_id TASSIGN expr { AssignmentStatement([(LId(BlankID), $3)]) }
+
+single_assignment:
+  | lvalue TADDAS expr 
+      { AssignmentStatement([($1, BinaryExp( BinPlus, (exp_of_lvalue $1), $3 ))])} 
+  | lvalue TSUBAS expr 
+      { AssignmentStatement([($1, BinaryExp( BinMinus, (exp_of_lvalue $1), $3 ))])} 
+  | lvalue TMULAS expr 
+      { AssignmentStatement([($1, BinaryExp( BinMult, (exp_of_lvalue $1), $3 ))])} 
+  | lvalue TDIVAS expr 
+      { AssignmentStatement([($1, BinaryExp( BinDiv, (exp_of_lvalue $1), $3 ))])} 
+  | lvalue TMODAS expr 
+      { AssignmentStatement([($1, BinaryExp( BinMod, (exp_of_lvalue $1), $3 ))])} 
+  | lvalue TANDAS expr 
+      { AssignmentStatement([($1, BinaryExp( BinBitAnd, (exp_of_lvalue $1), $3 ))])} 
+  | lvalue TORAS expr 
+      { AssignmentStatement([($1, BinaryExp( BinBitOr, (exp_of_lvalue $1), $3 ))])} 
+  | lvalue TXORAS expr 
+      { AssignmentStatement([($1, BinaryExp( BinBitXor, (exp_of_lvalue $1), $3 ))])} 
+  | lvalue TLAS expr 
+      { AssignmentStatement([($1, BinaryExp( BinShiftLeft, (exp_of_lvalue $1), $3 ))])} 
+  | lvalue TRAS expr 
+      { AssignmentStatement([($1, BinaryExp( BinShiftRight, (exp_of_lvalue $1), $3 ))])}
+  | lvalue TASSIGN expr 
+      { AssignmentStatement([($1, BinaryExp( BinShiftRight, (exp_of_lvalue $1), $3 ))])}
+
+
 
 declaration_stmt:
-    | declaration { }
+    | declaration 
+        { match $1 with 
+          | VarDeclBlock(x) -> VarDeclBlockStatement(x)
+          | TypeDeclBlock(x) -> TypeDeclBlockStatement(x) 
+        }
 
 shortvardecl_stmt:
-    | lvalue_list TCOLEQ expr_list { (* make sure expr is id*)}
+    | id_list TCOLEQ expr_list   (* WARNING!!!! *)
+      {
+        let res = list_zip $1 $3 [] (fun x y -> SingleVarDecl(x, None, Some(y)))
+        in VarDeclBlockStatement([ MultipleVarDecl (List.rev res) ] )
+      }
 
 incdec_stmt:
-    | lvalue TINC { }
-    | lvalue TDECR { }
+    | lvalue TINC 
+        { 
+          let lexp = exp_of_lvalue $1 in
+          AssignmentStatement([($1, BinaryExp(BinPlus, lexp, LiteralExp(IntLit(DecInt("1")))))])
+        }
+    | lvalue TDECR
+        { 
+          let lexp = exp_of_lvalue $1 in
+          AssignmentStatement([($1, BinaryExp(BinMinus, lexp, LiteralExp(IntLit(DecInt("1")))))])
+        }
+
 
 print_stmt:
-    | PRINT TLPAR TRPAR { }
-    | PRINT TLPAR expr_list TRPAR { }
+    | PRINT TLPAR TRPAR { PrintStatement([])}
+    | PRINT TLPAR expr_list TRPAR { PrintStatement(List.rev $3 )}
 
 println_stmt:
-    | PRINTLN TLPAR TRPAR { }
-    | PRINTLN TLPAR expr_list TRPAR { }
+    | PRINTLN TLPAR TRPAR { PrintlnStatement([]) }
+    | PRINTLN TLPAR expr_list TRPAR { PrintlnStatement(List.rev $3) }
 
 return_stmt:
-    | RETURN { }
-    | RETURN expr { }
+    | RETURN { ReturnStatement(None) }
+    | RETURN expr { ReturnStatement(Some($2)) }
 
 if_stmt:
-    | IF expr TLCUR stmt_list TRCUR { }
-    | IF expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
-    | IF expr TLCUR stmt_list TRCUR ELSE if_stmt { }
-    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR { }
-    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
-    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE if_stmt { }
+    | IF expr TLCUR stmt_list TRCUR { IfStatement(None, $2, List.rev $4, None) }
+    | IF expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { IfStatement(None, $2, List.rev $4, Some(List.rev $8))}
+    | IF expr TLCUR stmt_list TRCUR ELSE if_stmt { IfStatement(None, $2, List.rev $4, Some([$7]))}
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR { IfStatement(Some($2), $4, List.rev $6, None) }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { IfStatement(Some($2), $4, List.rev $6, Some($10)) }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE if_stmt { IfStatement(Some($2), $4, List.rev $6, Some([$9])) }
 
 switch_stmt:
-    | SWITCH TLCUR switch_clause_list TRCUR { }
-    | SWITCH expr TLCUR switch_clause_list TRCUR { }
-    | SWITCH simple_stmt TSEMCOL TLCUR switch_clause_list TRCUR { }
-    | SWITCH simple_stmt TSEMCOL expr TLCUR switch_clause_list TRCUR { }
+    | SWITCH TLCUR switch_clause_list TRCUR { SwitchStatement(None,IdExp(IdName("true")), List.rev $3)}
+    | SWITCH expr TLCUR switch_clause_list TRCUR { SwitchStatement(None, $2, List.rev $4)}
+    | SWITCH simple_stmt TSEMCOL TLCUR switch_clause_list TRCUR { SwitchStatement(Some($2),IdExp(IdName("true")), List.rev $5) }
+    | SWITCH simple_stmt TSEMCOL expr TLCUR switch_clause_list TRCUR { SwitchStatement(Some($2), $4, List.rev $6) }
 
 for_stmt:
-    | FOR TLCUR stmt_list TRCUR { }
-    | FOR expr TLCUR stmt_list TRCUR { }
-    | FOR simple_stmt TSEMCOL expr TSEMCOL simple_stmt TLCUR stmt_list TRCUR { }
+    | FOR TLCUR stmt_list TRCUR { ForStatement(None, IdExp(IdName("true")), None, List.rev $3 )}
+    | FOR expr TLCUR stmt_list TRCUR { ForStatement(None, $2, None, List.rev $4 ) }
+    | FOR simple_stmt TSEMCOL expr TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
+        { ForStatement(Some($2), $4, Some($6), $8) }
 
 break_stmt:
-    | BREAK { }
+    | BREAK { BreakStatement }
 
 continue_stmt:
-    | CONT { }
+    | CONT { ContinueStatement }
 
 (*-----------*)
 
-assign_op: 
-  | TADDAS | TSUBAS | TMULAS | TDIVAS | TMODAS | TANDAS
-  | TORAS | TXORAS | TLAS | TRAS  { }
-
 lvalue_list:
-    | lvalue { }
-    | lvalue_list TCOM lvalue { }
+    | lvalue_list TCOM lvalue { $3 :: $1}
+    | lvalue { [ $1 ]}
 
-lvalue:
-    | ID { }
-    | primary_expression TLBR expr TRBR { } (* array indexing *)
-    | primary_expression TDOT ID { } (* struct field access *)
+lvalue:   (*  If conflict, fix this *)
+    | ID { LId(IdName($1)) }
+    | lvalue TLBR expr TRBR { LIndex($1, $3) } (* array indexing *)
+    | lvalue TDOT ID { LSelector($1, IdName($3)) } (* struct field access *)
 
 switch_clause_list:
-    | switch_clause { }
-    | switch_clause_list switch_clause { }
+    | switch_clause { [$1] }
+    | switch_clause_list switch_clause { $2::$1}
 
 
 switch_clause:
-    | DEFAULT TCOL stmt_list { }
-    | CASE expr_list TCOL stmt_list { }
-
-simple_stmt_option:
-    | (* empty *)  { }
-    | simple_stmt TSEMCOL { }
+    | DEFAULT TCOL stmt_list { DefaultCase (List.rev $3)}
+    | CASE expr_list TCOL stmt_list { SwitchCase ($2, List.rev $4)}
 
 simple_stmt:
-    | empty_stmt { }
-    | expression_stmt { }
-    | assign_stmt { }
-    | shortvardecl_stmt { }
-    | incdec_stmt { }
+    | empty_stmt { $1 }
+    | expression_stmt { $1 }
+    | assign_stmt { $1 }
+    | shortvardecl_stmt { $1 }
+    | incdec_stmt { $1 }
 
+expr: 
+    | unary_exp { $1 } 
+    | binary_exp { $1 }
 
+literal: 
+    | int_literal { IntLit $1 } 
+    | float_literal { $1 } 
+    | rune_literal { $1 } 
+    | string_literal  { $1 }
 
+int_literal: 
+    | DEC_INT { DecInt($1) }
+    | OCTAL_INT { OctalInt($1) }
+    | HEX_INT { HexInt($1) }
 
+float_literal: FLOAT64 { FloatLit($1) }
 
+rune_literal: TRUNE { RuneLit($1) }
 
+string_literal: 
+    | TRWSTR { StringLit($1) } 
+    | TSTR { StringLit($1) }
 
-expr:  unary_exp | binary_exp  { }
+unary_exp: 
+  | primary_expression { $1 }
+  | unary_op unary_exp { UnaryExp($1, $2) }
 
-literal: int_literal | float_literal| rune_literal | string_literal  { }
+primary_expression: 
+  | ID { IdExp ( IdName($1)) } 
+  | literal { LiteralExp $1} 
+  | function_call { $1 } 
+  | index_exp { $1 } 
+  | append_exp { $1 } 
+  | select_exp  { $1 }
+  | type_cast_exp { $1 }
 
-int_literal: decimal_lit | octal_lit | hex_lit { }
+unary_op:
+  | TPLUS { UPlus } 
+  | TMINUS { UMinus } 
+  | TNOT { UNot } 
+  | TCARET { UCaret } 
 
-decimal_lit: x = DEC_INT { DecInt(x) }
-octal_lit: x = OCTAL_INT { OctalInt(x) }
-hex_lit: x = HEX_INT { HexInt(x) }
+function_call:
+  | ID TLPAR function_arguments TRPAR 
+      { FunctionCallExp(IdName($1), $3 )}
 
-float_literal: x = FLOAT64 { FloatLit(x) }
-rune_literal: x = TRUNE { RuneLit(x) }
-string_literal: x = TRWSTR | x = TSTR { StringLit(x) }
+function_arguments: 
+  | (* empty *) { [] }
+  | non_empty_function_arguments { List.rev $1 }
 
-unary_exp: primary_expression | unary_op unary_exp {}
+non_empty_function_arguments:
+  | expr { [ $1 ]  }
+  | function_arguments TCOM expr { $3 :: $1 }
 
-primary_expression: ID | literal | function_call | index_exp | append_exp | type_cast_exp { }
-unary_op:  TPLUS | TMINUS | TNOT | TCARET { }
+index_exp: 
+  | primary_expression TLBR expr TRBR 
+      { IndexExp($1, $3) } 
 
-function_call: ID; TLPAR; function_arguments; TRPAR { }
-function_arguments: expr | function_arguments TCOM expr { }
+append_exp:
+  | APPEND TLPAR ID TCOM expr TRPAR
+      { AppendExp(IdName($3), $5) }
 
-index_exp: primary_expression TLBR expr TRBR { } 
+select_exp: 
+  | primary_expression TDOT ID 
+      { SelectExp($1, IdName($3)) }
 
-append_exp: APPEND TLPAR ID TCOM expr TRPAR { }
+type_cast_exp:
+  | castable_type TLPAR expr TRPAR 
+      { TypeCastExp($1, $3) }
 
-type_cast_exp: castable_type TLPAR expr TRPAR {}
-castable_type: INT_TYP | FL_TYP | RUNE_TYP | BOOL_TYP { } 
+castable_type: 
+  | INT_TYP { BasicType(IntType) }
+  | FL_TYP { BasicType(FloatType) } 
+  | RUNE_TYP { BasicType(RuneType) }
+  | BOOL_TYP { BasicType(BoolType) } 
  
-binary_exp: expr binary_op expr {}
+binary_exp:
+  | expr binary_op expr { BinaryExp($2, $1, $3) }
 
-%inline binary_op: 
-| TOR {} 
-| TAND {} 
-| TEQ {} 
-| TNEQ {} 
-| TLS {} 
-| TGR {} 
-| TLSEQ {} 
-| TGREQ {} 
-| TPLUS {} 
-| TMINUS {} 
-| TMULT {} 
-| TDIV {} 
-| TMOD {} 
-| TBITOR {} 
-| TCARET {} 
-| TLSFT {} 
-| TRSFT {} 
-| TBITAND {} 
-| TANOT {} 
+binary_op:
+  | TOR { BinOr}
+  | TAND {BinAnd}
+  | op = rel_op { op }
+  | op = add_op { op }
+  | op = mul_op { op }
 
-blank_id: TBLANKID {}
+rel_op: 
+  | TEQ { BinEq } 
+  | TNEQ { BinNotEq }
+  | TLS { BinLess }
+  | TGR { BinGreater }
+  | TLSEQ { BinLessEq }
+  | TGREQ { BinGreaterEq }
 
+add_op: 
+  | TPLUS { BinPlus }  
+  | TMINUS { BinMinus }
+  | TBITOR { BinBitOr } 
+  | TCARET { BinBitXor } 
+
+mul_op: 
+  | TMULT { BinMult } 
+  | TDIV { BinDiv }
+  | TMOD { BinMod } 
+  | TLSFT { BinShiftLeft } 
+  | TRSFT { BinShiftRight }
+  | TBITAND { BinBitAnd } 
+  | TANOT { BinBitAndNot } 
+
+blank_id: TBLANKID { BlankID }
 
 %%
