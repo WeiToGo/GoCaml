@@ -20,7 +20,7 @@
 %left TOR
 %left TAND
 %left TEQ TNEQ TLS TLSEQ TGR TGREQ
-%left TPLUS TMINUS TBITOR TBITXOR
+%left TPLUS TMINUS TBITOR TCARET
 %left TMULT TDIV TMOD TLSFT TRSFT TBITAND TANOT
 
 %start <unit> program
@@ -210,8 +210,8 @@ lvalue_list:
 
 lvalue:
     | ID { }
-    | lvalue TLBR expr TRBR { } (* array indexing *)
-    | lvalue TDOT ID { } (* struct field access *)
+    | primary_expression TLBR expr TRBR { } (* array indexing *)
+    | primary_expression TDOT ID { } (* struct field access *)
 
 switch_clause_list:
     | switch_clause { }
@@ -268,12 +268,28 @@ append_exp: APPEND TLPAR ID TCOM expr TRPAR { }
 type_cast_exp: castable_type TLPAR expr TRPAR {}
 castable_type: INT_TYP | FL_TYP | RUNE_TYP | BOOL_TYP { } 
  
-binary_exp: expr binary_op expr { }
+binary_exp: expr binary_op expr {}
 
-binary_op: TOR | TAND | rel_op | add_op | mul_op {}
-rel_op: TEQ | TNEQ | TLS | TGR | TLSEQ | TGREQ { }
-add_op: TPLUS | TMINUS | TBITOR | TCARET { }
-mul_op: TMULT | TDIV | TMOD | TLSFT | TRSFT | TBITAND | TANOT { } 
+%inline binary_op: 
+| TOR {} 
+| TAND {} 
+| TEQ {} 
+| TNEQ {} 
+| TLS {} 
+| TGR {} 
+| TLSEQ {} 
+| TGREQ {} 
+| TPLUS {} 
+| TMINUS {} 
+| TMULT {} 
+| TDIV {} 
+| TMOD {} 
+| TBITOR {} 
+| TCARET {} 
+| TLSFT {} 
+| TRSFT {} 
+| TBITAND {} 
+| TANOT {} 
 
 blank_id: TBLANKID {}
 
