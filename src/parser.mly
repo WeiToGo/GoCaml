@@ -61,8 +61,8 @@ typ_decl :
   | TYPE TLPAR typ_spec TSEMCOL TRPAR { }
 
 signature:
-  | TLPAR param TRPAR typ { }
-  | TLPAR param TRPAR     { }
+  | TLPAR pair_list TRPAR typ { }
+  | TLPAR pair_list TRPAR     { }
 
 func_body:
   | stmt_list { }
@@ -82,8 +82,6 @@ var_spec_list:
 typ_spec:
   | ID typ  { }
 
-param: {} 
-  | pair_list { }
 
 typ :
   | basic_typ  { }
@@ -157,7 +155,7 @@ declaration_stmt:
     | declaration { }
 
 shortvardecl_stmt:
-    | id_list TCOLEQ expr_list { }
+    | lvalue_list TCOLEQ expr_list { (* make sure expr is id*)}
 
 incdec_stmt:
     | lvalue TINC { }
@@ -176,13 +174,18 @@ return_stmt:
     | RETURN expr { }
 
 if_stmt:
-    | IF simple_stmt_option expr TLCUR stmt_list TRCUR { }
-    | IF simple_stmt_option expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
-    | IF simple_stmt_option expr TLCUR stmt_list TRCUR ELSE if_stmt { }
+    | IF expr TLCUR stmt_list TRCUR { }
+    | IF expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
+    | IF expr TLCUR stmt_list TRCUR ELSE if_stmt { }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR { }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE if_stmt { }
 
 switch_stmt:
-    | SWITCH simple_stmt_option TLCUR switch_clause_list TRCUR { }
-    | SWITCH simple_stmt_option expr TLCUR switch_clause_list TRCUR { }
+    | SWITCH TLCUR switch_clause_list TRCUR { }
+    | SWITCH expr TLCUR switch_clause_list TRCUR { }
+    | SWITCH simple_stmt TSEMCOL TLCUR switch_clause_list TRCUR { }
+    | SWITCH simple_stmt TSEMCOL expr TLCUR switch_clause_list TRCUR { }
 
 for_stmt:
     | FOR TLCUR stmt_list TRCUR { }
@@ -236,7 +239,7 @@ simple_stmt:
 
 
 
-expr: ID | literal | unary_exp | binary_exp | append_exp | type_cast_exp  { }
+expr:  unary_exp | binary_exp  { }
 
 literal: int_literal | float_literal| rune_literal | string_literal  { }
 
@@ -252,7 +255,7 @@ string_literal: x = TRWSTR | x = TSTR { StringLit(x) }
 
 unary_exp: primary_expression | unary_op unary_exp {}
 
-primary_expression: function_call | index_exp | append_exp | type_cast_exp { }
+primary_expression: ID | literal | function_call | index_exp | append_exp | type_cast_exp { }
 unary_op:  TPLUS | TMINUS | TNOT | TCARET { }
 
 function_call: ID; TLPAR; function_arguments; TRPAR { }
