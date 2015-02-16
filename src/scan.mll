@@ -22,8 +22,8 @@ let hex_digit = ['0'-'9' 'A'-'F' 'a'-'f']
 (* operators + delimeters *)
 rule scan last_token = parse
 
-  (* Whitespace and comments *)
-  | white         { scan last_token lexbuf }
+  (* Whitespace and comments *)  | white         { scan last_token lexbuf }
+
   | newline       { match last_token with
                     | Some(BREAK)
                     | Some(ID _)
