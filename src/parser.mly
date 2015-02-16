@@ -199,10 +199,13 @@ lvalue_list:
 
 lvalue:
     | ID { } (* TODO *)
+    | ID TLBR int_literal TRBR { } (* array indexing *)
+    | ID TDOT ID { } (* struct field access *)
 
 switch_clause_list:
     | switch_clause { }
     | switch_clause_list switch_clause { }
+
 
 switch_clause:
     | DEFAULT TCOL stmt_list { }
