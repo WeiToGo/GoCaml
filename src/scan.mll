@@ -142,14 +142,13 @@ and read_rune buf = parse
   | '\\' '\\' { Buffer.add_char buf '\\'; read_rune buf lexbuf}
   | '\\' '\'' { Buffer.add_char buf '\''; read_rune buf lexbuf}
   | '\\' '"' { Buffer.add_char buf '"'; read_rune buf lexbuf}
-  | [^''' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf);
-                    Buffer.output_buffer stdout buf; read_rune buf lexbuf}
+  | [^''' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_rune buf lexbuf}
   | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
 
   
 and read_raw_str buf = parse
   | '`' { TRWSTR (Buffer.contents buf)}
-  | [^'`' '\r']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); Buffer.output_buffer stdout buf; read_raw_str buf lexbuf}
+  | [^'`' '\r']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_raw_str buf lexbuf}
 
 and read_string buf = parse
   | '"' { TSTR (Buffer.contents buf)}
@@ -162,8 +161,7 @@ and read_string buf = parse
   | '\\' 'v' { Buffer.add_char buf '\013'; read_string buf lexbuf}
   | '\\' '\\' { Buffer.add_char buf '\\'; read_string buf lexbuf}
   | '\\' '"' { Buffer.add_char buf '"'; read_string buf lexbuf}
-  | [^'"' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf);
-                    Buffer.output_buffer stdout buf; read_string buf lexbuf}
+  | [^'"' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_string buf lexbuf}
   | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
 
 {

@@ -95,6 +95,7 @@ let string_of_token tk = match tk with
 | HEX_INT(s) -> "HEX_INT<" ^ s ^ ">" 
 | TDECR -> "TDECR"
 | FLOAT64(s) -> "FLOAT64<" ^ s ^ ">" 
+| TBLANKID -> "TBLANKID"
 
 let print_token tk = print_endline (string_of_token tk)
 
