@@ -104,7 +104,7 @@ stmt:
     | incdec_stmt { }
     | print_stmt { }
     | println_stmt { }
-	| return_stmt { }
+	  | return_stmt { }
     | if_stmt { }
     | switch_stmt { }
     | for_stmt { }
@@ -213,8 +213,8 @@ lvalue_list:
 
 lvalue:
     | ID { } (* TODO *)
-    | ID TLBR int_literal TRBR { } (* array indexing *)
-    | ID TDOT ID { } (* struct field access *)
+    | lvalue TLBR expr TRBR { } (* array indexing *)
+    | lvalue TDOT ID { } (* struct field access *)
 
 switch_clause_list:
     | switch_clause { }
@@ -238,10 +238,7 @@ simple_stmt:
 
 
 
-
-expr: identifier | literal | unary_exp | binary_exp | append_exp | type_cast_exp  { }
-
-identifier: id_name = ID; { } 
+expr: ID | literal | unary_exp | binary_exp | append_exp | type_cast_exp  { }
 
 literal: int_literal | float_literal| rune_literal | string_literal  { }
 
@@ -260,12 +257,12 @@ unary_exp: primary_expression | unary_op unary_exp {}
 primary_expression: function_call | index_exp | append_exp | type_cast_exp { }
 unary_op:  TPLUS | TMINUS | TNOT | TCARET { }
 
-function_call: identifier; TLPAR; function_arguments; TRPAR { }
+function_call: ID; TLPAR; function_arguments; TRPAR { }
 function_arguments: expr | function_arguments TCOM expr { }
 
 index_exp: primary_expression TLBR expr TRBR { } 
 
-append_exp: APPEND TLPAR identifier TCOM expr TRPAR { }
+append_exp: APPEND TLPAR ID TCOM expr TRPAR { }
 
 type_cast_exp: castable_type TLPAR expr TRPAR {}
 castable_type: INT_TYP | FL_TYP | RUNE_TYP | BOOL_TYP { } 
