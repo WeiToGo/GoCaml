@@ -33,11 +33,12 @@ rule scan last_token = parse
                     | Some(DEC_INT(_)) | Some(HEX_INT(_)) | Some(OCTAL_INT(_))
                     | Some(TRUNE(_)) | Some(TRWSTR(_)) | Some(TSTR(_))
                     | Some(TRBR) | Some(TRPAR) | Some(TRCUR)
+                    | Some(INT_TYP) | Some(FL_TYP) | Some(BOOL_TYP) | Some(RUNE_TYP) | Some(STR_TYP)
                       -> TSEMCOL
                     | _ -> scan None lexbuf 
                   } 
-  | "//" character* { scan last_token lexbuf }
-  | "/*" character* "*/" { scan last_token lexbuf }
+  | "//" [^ '\n']* { scan last_token lexbuf }
+  | "/*" _* "*/"   { scan last_token lexbuf }
 
   (* Keywords *)
   | "break"       { BREAK }
@@ -132,6 +133,8 @@ rule scan last_token = parse
   | nz_digit decimal_digit* as st { DEC_INT(st)}
   | "0" octal_digit* as st { OCTAL_INT(st) }
   | "0" ("x" | "X" ) hex_digit* as st { HEX_INT(st) }
+  | nz_digit decimal_digit* "." decimal_digit* as st { FLOAT64(st)}
+  | "." decimal_digit+ as st { FLOAT64(st)}
   | eof   { TEOF}
 
 
