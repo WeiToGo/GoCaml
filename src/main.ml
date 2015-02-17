@@ -1,6 +1,5 @@
 open Scan
 open Parser
-open Pretty 
 open Lexing
 ;;
 
