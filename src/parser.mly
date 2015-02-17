@@ -407,16 +407,16 @@ castable_type:
   | BOOL_TYP { BasicType(BoolType) } 
  
 binary_exp:
-  | expr binary_op expr { BinaryExp($2, $1, $3) }
+  | e1 = expr; op = binary_op; e2 = expr { BinaryExp(op, e1, e2) }
 
-binary_op:
+%inline binary_op:
   | TOR { BinOr}
   | TAND {BinAnd}
   | op = rel_op { op }
-  | op = add_op { op }
-  | op = mul_op { op }
+  | op = add_op { op}
+  | op = mul_op { op}
 
-rel_op: 
+%inline rel_op: 
   | TEQ { BinEq } 
   | TNEQ { BinNotEq }
   | TLS { BinLess }
@@ -424,13 +424,13 @@ rel_op:
   | TLSEQ { BinLessEq }
   | TGREQ { BinGreaterEq }
 
-add_op: 
+%inline add_op: 
   | TPLUS { BinPlus }  
   | TMINUS { BinMinus }
   | TBITOR { BinBitOr } 
   | TCARET { BinBitXor } 
 
-mul_op: 
+%inline mul_op: 
   | TMULT { BinMult } 
   | TDIV { BinDiv }
   | TMOD { BinMod } 
