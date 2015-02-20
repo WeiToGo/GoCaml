@@ -1,6 +1,6 @@
 open Scan
 open Parser
-open Pretty 
+open PrettyPrint
 open Lexing
 ;;
 
@@ -15,6 +15,7 @@ let build_ast input =
   let ast = 
     try
       Parser.program Scan.wrapped_scan lexbuf
+(*       PrettyPrint.print_ast ast "out.txt" *)
     with Parser.Error
       -> (
           Printf.eprintf "%s" ("Syntax Error at line " 
@@ -48,4 +49,4 @@ let filebuf = Lexing.from_channel inp
 let ast = build_ast in_file_name
 ;;
 
-pretty ast
+(* pretty ast *)

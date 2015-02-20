@@ -177,10 +177,10 @@ basic_typ :
   | STR_TYP   { StringType }
 
 slice_typ :
-  | TLBR; TRBR; t = typ { SliceType t }
+  | TLBR TRBR typ { SliceType $3 }
 
 array_typ:
-  | TLBR; d = int_literal; TRBR; t = typ { ArrayType(d, t) }
+  | TLBR int_literal TRBR typ { ArrayType($2, $4) }
 
 struct_typ:
   | STRUCT TLCUR field_decl_list TRCUR { StructType( List.rev $3) }
@@ -241,7 +241,7 @@ single_assignment:
 declaration_stmt:
     | declaration 
         { match $1 with 
-          | VarDeclBlock(x) -> VarDeclBlockStatement(x)
+            VarDeclBlock(x) -> VarDeclBlockStatement(x)
           | TypeDeclBlock(x) -> TypeDeclBlockStatement(x) 
         }
 
@@ -407,14 +407,14 @@ castable_type:
   | BOOL_TYP { BasicType(BoolType) } 
  
 binary_exp:
-  | e1 = expr; op = binary_op; e2 = expr { BinaryExp(op, e1, e2) }
+  | expr binary_op expr { BinaryExp($2, $1, $3) }
 
 %inline binary_op:
   | TOR { BinOr}
   | TAND {BinAnd}
-  | op = rel_op { op }
-  | op = add_op { op}
-  | op = mul_op { op}
+  | rel_op { $1 }
+  | add_op { $1 }
+  | mul_op { $1 }
 
 %inline rel_op: 
   | TEQ { BinEq } 
