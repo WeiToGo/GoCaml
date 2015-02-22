@@ -203,7 +203,7 @@ expression_stmt:
     | expr { ExpressionStatement $1 }
 
 assign_stmt:
-  | single_assignment { $1 }
+  | lvalue single_op expr { SingleAssign($1,$2,$3) }
   | lvalue_list TASSIGN expr_list
      {
         let reversed_lvalue = List.rev $1 in
@@ -211,31 +211,6 @@ assign_stmt:
         AssignmentStatement(List.rev res)
      }
   | blank_id TASSIGN expr { AssignmentStatement([(LId(BlankID), $3)]) }
-
-single_assignment:
-  | lvalue TADDAS expr 
-      { AssignmentStatement([($1, BinaryExp( BinPlus, (exp_of_lvalue $1), $3 ))])} 
-  | lvalue TSUBAS expr 
-      { AssignmentStatement([($1, BinaryExp( BinMinus, (exp_of_lvalue $1), $3 ))])} 
-  | lvalue TMULAS expr 
-      { AssignmentStatement([($1, BinaryExp( BinMult, (exp_of_lvalue $1), $3 ))])} 
-  | lvalue TDIVAS expr 
-      { AssignmentStatement([($1, BinaryExp( BinDiv, (exp_of_lvalue $1), $3 ))])} 
-  | lvalue TMODAS expr 
-      { AssignmentStatement([($1, BinaryExp( BinMod, (exp_of_lvalue $1), $3 ))])} 
-  | lvalue TANDAS expr 
-      { AssignmentStatement([($1, BinaryExp( BinBitAnd, (exp_of_lvalue $1), $3 ))])} 
-  | lvalue TORAS expr 
-      { AssignmentStatement([($1, BinaryExp( BinBitOr, (exp_of_lvalue $1), $3 ))])} 
-  | lvalue TXORAS expr 
-      { AssignmentStatement([($1, BinaryExp( BinBitXor, (exp_of_lvalue $1), $3 ))])} 
-  | lvalue TLAS expr 
-      { AssignmentStatement([($1, BinaryExp( BinShiftLeft, (exp_of_lvalue $1), $3 ))])} 
-  | lvalue TRAS expr 
-      { AssignmentStatement([($1, BinaryExp( BinShiftRight, (exp_of_lvalue $1), $3 ))])}
-  | lvalue TASSIGN expr 
-      { AssignmentStatement([($1, BinaryExp( BinShiftRight, (exp_of_lvalue $1), $3 ))])}
-
 
 
 declaration_stmt:
@@ -438,6 +413,19 @@ binary_exp:
   | TRSFT { BinShiftRight }
   | TBITAND { BinBitAnd } 
   | TANOT { BinBitAndNot } 
+
+%inline single_op:
+  | TADDAS { SinADD } 
+  | TSUBAS { SinSUB } 
+  | TMULAS { SinMul } 
+  | TDIVAS { SinDiv } 
+  | TMODAS { SinMod } 
+  | TANDAS { SinAnd} 
+  | TORAS  { SinOr} 
+  | TXORAS { SinXor} 
+  | TLAS   { SinLas} 
+  | TRAS   { SinRas}
+  | TANEQ  { SinAneq}
 
 blank_id: TBLANKID { BlankID }
 
