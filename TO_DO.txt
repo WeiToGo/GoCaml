@@ -1,0 +1,18 @@
+TO DO:
+
+weeder for
+- check break + continue statement are properly used. (only within a loop)
+
+for type checking:
+
+can have :
+public int m (int m)
+{
+	int m;
+}
+
+function in one scope, parameter in another scope, local var in another scope.
+
+
+assignment compatibility:
+have to be the exact types on both sides.

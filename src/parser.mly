@@ -95,7 +95,7 @@ args_list:
      } 
 
 func_body:
-  | non_empty_stmt_list { List.rev $1 }
+  | stmt_list { List.rev $1 }
 
 (*-----------*)
 
@@ -136,8 +136,6 @@ typ:
   | struct_typ { $1 }
   | ID { CustomType(IdName($1)) }
 
-non_empty_stmt_list:
-    | stmt_list stmt TSEMCOL { $2 :: $1 }
 
 stmt_list:
     | (* empty *) { [ ] }
@@ -203,7 +201,7 @@ expression_stmt:
     | expr { ExpressionStatement $1 }
 
 assign_stmt:
-  | lvalue single_op expr { SingleAssign($1,$2,$3) }
+  | lvalue single_op expr { SingleAssign($1,$2,$3) } (* TO ADD to ast *)
   | lvalue_list TASSIGN expr_list
      {
         let reversed_lvalue = List.rev $1 in
@@ -221,7 +219,8 @@ declaration_stmt:
         }
 
 shortvardecl_stmt:
-    | id_list TCOLEQ expr_list   (* WARNING!!!! *)
+    | lvalue_list TCOLEQ expr_list   (* make sure lvalue is ID only? *)
+(*    | id_list TCOLEQ expr_list    WARNING!!!! *)
       {
         let res = list_zip $1 $3 [] (fun x y -> SingleVarDecl(x, None, Some(y)))
         in VarDeclBlockStatement([ MultipleVarDecl (List.rev res) ] )
@@ -286,8 +285,9 @@ lvalue_list:
 
 lvalue:   (*  If conflict, fix this *)
     | ID { LId(IdName($1)) }
-    | lvalue TLBR expr TRBR { LIndex($1, $3) } (* array indexing *)
-    | lvalue TDOT ID { LSelector($1, IdName($3)) } (* struct field access *)
+    (*make sure primary_exp is only ID,index_exp.. *)
+    | primary_expression TLBR expr TRBR { LIndex($1, $3) } (* array indexing *)
+    | primary_expression TDOT ID { LSelector($1, IdName($3)) } (* struct field access *)
 
 switch_clause_list:
     | switch_clause { [$1] }

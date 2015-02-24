@@ -14,7 +14,8 @@ let build_ast input =
   let lexbuf = Lexing.from_channel ic in
   let ast = 
     try
-      Parser.program Scan.wrapped_scan lexbuf
+      Parser.program Scan.wrapped_scan lexbuf;
+      print_string "VALID \n"
 (*       PrettyPrint.print_ast ast "out.txt" *)
     with Parser.Error
       -> (
