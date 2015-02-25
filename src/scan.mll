@@ -25,7 +25,7 @@ rule scan last_token = parse
 
   (* Whitespace and comments *)  | white         { scan last_token lexbuf }
 
-  | newline       { Lexing.new_line lexbuf; match last_token with
+  | newline       { (* Lexing.new_line lexbuf; match last_token with
                     | Some(BREAK)
                     | Some(ID _)
                     | Some(TINC) | Some(TDECR)
@@ -35,7 +35,7 @@ rule scan last_token = parse
                     | Some(TRBR) | Some(TRPAR) | Some(TRCUR)
                     | Some(INT_TYP) | Some(FL_TYP) | Some(BOOL_TYP) | Some(RUNE_TYP) | Some(STR_TYP)
                       -> TSEMCOL
-                    | _ -> scan None lexbuf 
+                    | _ -> *) scan None lexbuf 
                   } 
   | "//" [^ '\n']* { scan last_token lexbuf }
   | "/*" _* "*/"   { scan last_token lexbuf }

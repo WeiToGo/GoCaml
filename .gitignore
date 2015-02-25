@@ -6,3 +6,4 @@ gocaml.sublime-workspace
 *.thoughts
 *.native
 *.byte
+lexer_stream.out

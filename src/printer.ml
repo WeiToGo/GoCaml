@@ -97,14 +97,14 @@ let string_of_token tk = match tk with
 | FLOAT64(s) -> "FLOAT64<" ^ s ^ ">" 
 | TBLANKID -> "TBLANKID"
 
-let print_token tk = print_endline (string_of_token tk)
+let print_token oc tk = output_string oc ((string_of_token tk) ^ "\n")
 
-let rec loop_token_printer f lexbuf = 
+let rec loop_token_printer f lexbuf out_channel =
 	let tk = (f lexbuf) in
-	print_token tk;
+	print_token out_channel tk;
   match tk with
   | TEOF -> ()
-  | _ -> loop_token_printer f lexbuf
+  | _ -> loop_token_printer f lexbuf out_channel
 
 let string_of_token_list tk_list = 
   "[" ^ 

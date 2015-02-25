@@ -4,8 +4,6 @@ open PrettyPrint
 open Lexing
 ;;
 
-let pretty x = print_string "hello_world"; ()
-
 let build_ast input = 
   let ic = match input with
   | "stdin" -> stdin
@@ -49,5 +47,15 @@ let inp = open_in in_file_name
 let filebuf = Lexing.from_channel inp 
 let ast = build_ast in_file_name
 ;;
+
+
+
+(* let out_channel = open_out "lexer_stream.out" in 
+let _ = Printer.loop_token_printer Scan.wrapped_scan (Lexing.from_channel stdin) out_channel
+in
+close_out out_channel
+;; *)
+
+
 
 (* pretty ast *)
