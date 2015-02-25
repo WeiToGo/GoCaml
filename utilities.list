@@ -1,0 +1,14 @@
+- a tool to automatically remove the ast crap from the parsesr file will be nice. 
+	- Don't remove it (obviously.) Write the output to a separate file. 
+
+- We need more tests.
+
+
+++++++++++
+
+fix line numbers
+fix parser
+fix semicolon insertion
+fix ast
+fix pretty print
+
