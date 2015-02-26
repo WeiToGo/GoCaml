@@ -18,6 +18,7 @@ let nz_digit = ['1'-'9']  (* Non-zero digit *)
 let octal_digit = ['0' - '7']
 let hex_digit = ['0'-'9' 'A'-'F' 'a'-'f']
 let character = ['A'-'Z' 'a'-'z' '_' '0'-'9' ' ' '\t']
+let a = [^ '*' '/']
 
 
 (* operators + delimeters *)
@@ -25,20 +26,21 @@ rule scan last_token = parse
 
   (* Whitespace and comments *)  | white         { scan last_token lexbuf }
 
-  | newline       { (* Lexing.new_line lexbuf; match last_token with
+  | newline       { Lexing.new_line lexbuf; match last_token with
                     | Some(BREAK)
                     | Some(ID _)
                     | Some(TINC) | Some(TDECR)
                     | Some(FALLTHROUGH) | Some(RETURN) | Some(CONT)
                     | Some(DEC_INT(_)) | Some(HEX_INT(_)) | Some(OCTAL_INT(_))
+                    | Some(FLOAT64(_))
                     | Some(TRUNE(_)) | Some(TRWSTR(_)) | Some(TSTR(_))
                     | Some(TRBR) | Some(TRPAR) | Some(TRCUR)
                     | Some(INT_TYP) | Some(FL_TYP) | Some(BOOL_TYP) | Some(RUNE_TYP) | Some(STR_TYP)
                       -> TSEMCOL
-                    | _ -> *) Lexing.new_line lexbuf; scan None lexbuf 
+                    | _ -> scan None lexbuf 
                   } 
   | "//" [^ '\n']* { scan last_token lexbuf }
-  | "/*" _* "*/"   { scan last_token lexbuf }
+  | "/*" { read_comment last_token (Buffer.create 15) lexbuf }
 
   (* Keywords *)
   | "break"       { BREAK }
@@ -133,9 +135,11 @@ rule scan last_token = parse
   | nz_digit decimal_digit* as st { DEC_INT(st)}
   | "0" octal_digit* as st { OCTAL_INT(st) }
   | "0" ("x" | "X" ) hex_digit* as st { HEX_INT(st) }
-  | nz_digit decimal_digit* "." decimal_digit* as st { FLOAT64(st)}
-  | "." decimal_digit+ as st { FLOAT64(st)}
+  | decimal_digit+ "." decimal_digit* as st { FLOAT64(st)}
+  | "." decimal_digit+ as st { FLOAT64(st) }
   | eof   { TEOF}
+  | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
+
 
 
 and read_rune buf = parse
@@ -151,7 +155,6 @@ and read_rune buf = parse
   | '\\' '\'' { Buffer.add_char buf '\''; read_rune buf lexbuf}
   | '\\' '"' { Buffer.add_char buf '"'; read_rune buf lexbuf}
   | [^''' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_rune buf lexbuf}
-  | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
 
   
 and read_raw_str buf = parse
@@ -170,7 +173,11 @@ and read_string buf = parse
   | '\\' '\\' { Buffer.add_char buf '\\'; read_string buf lexbuf}
   | '\\' '"' { Buffer.add_char buf '"'; read_string buf lexbuf}
   | [^'"' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_string buf lexbuf}
-  | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
+
+and read_comment last_token buf = parse
+  | "*/" { scan last_token lexbuf }
+  | '\n'{ Lexing.new_line lexbuf; read_comment last_token buf lexbuf}
+  | _ { read_comment last_token buf lexbuf}
 
 {
   (* wrapped_scan keeps track of the last token returned by scan. *)

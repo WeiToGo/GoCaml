@@ -54,8 +54,8 @@ let ast = build_ast in_file_name
 let _ = Printer.loop_token_printer Scan.wrapped_scan (Lexing.from_channel stdin) out_channel
 in
 close_out out_channel
-;; *)
-
+;;
+ *)
 
 
 (* pretty ast *)

@@ -28,9 +28,9 @@ Utilities:
 
 ++++++++++
 
-fix line numbers
-fix parser
-fix semicolon insertion
+fix line numbers [DONE]
+fix parser [DONE]
+fix semicolon insertion [DONE]
 fix ast
 fix pretty print
 

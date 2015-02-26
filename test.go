@@ -310,9 +310,9 @@ func short_decl() {
 
 func block() {
 	println(1)
-	// {
-	// 	println(2) // ##################### ERROR
-	// }
+	{
+		println(2) // ##################### ERROR
+	}
 	println(3)
 }
 
@@ -324,9 +324,9 @@ func exprs() {
 	n = 0377
 
 	// Floats ##################### NEED SEMCOL
-	x = 12.0;
-	x = 12.;
-	x = .12;
+	x = 12.0
+	x = 12.
+	x = .12
 
 	// Rune
 	c = 'L'

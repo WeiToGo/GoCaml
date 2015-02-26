@@ -140,6 +140,7 @@ stmt:
     | for_stmt { }
     | break_stmt {  }
     | continue_stmt {  }
+    | block_stmt { }
 (*-----------*)
 
 id_list:
@@ -243,6 +244,8 @@ break_stmt:
 continue_stmt:
     | CONT {  }
 
+block_stmt:
+    | TLCUR stmt_list TRCUR { }
 (*-----------*)
 
 
@@ -275,7 +278,7 @@ simple_stmt:
 
 (* ok *)
 
-expr: 
+expr:
     | unary_exp {  } 
     | binary_exp {  }
 
@@ -298,7 +301,8 @@ string_literal:
     | TRWSTR { } 
     | TSTR {  }
 
-unary_exp: 
+unary_exp:
+  | TLPAR expr TRPAR { }
   | primary_expression {  }
   | unary_op unary_exp {  }
 

@@ -56,7 +56,8 @@ and statement =
     | SwitchStatement of ((statement option) * expression * (switch_case list))
     | ForStatement of ((statement option) * expression * (statement option) * (statement list)) (* Weed out short_var_declr in post-statement *)
     | BreakStatement
-    | ContinueStatement
+    | ContinueStatement 
+    | BlockStatement of (statement list)
 and switch_case = SwitchCase of ((expression list)* (statement list)) | DefaultCase of (statement list)
 and lvalue = 
     | LId of identifier
