@@ -35,7 +35,7 @@ rule scan last_token = parse
                     | Some(TRBR) | Some(TRPAR) | Some(TRCUR)
                     | Some(INT_TYP) | Some(FL_TYP) | Some(BOOL_TYP) | Some(RUNE_TYP) | Some(STR_TYP)
                       -> TSEMCOL
-                    | _ -> *) scan None lexbuf 
+                    | _ -> *) Lexing.new_line lexbuf; scan None lexbuf 
                   } 
   | "//" [^ '\n']* { scan last_token lexbuf }
   | "/*" _* "*/"   { scan last_token lexbuf }
