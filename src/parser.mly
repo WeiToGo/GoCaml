@@ -234,7 +234,7 @@ switch_stmt:
 for_stmt:
     | FOR TLCUR stmt_list TRCUR { }
     | FOR expr TLCUR stmt_list TRCUR {  }
-    | FOR simple_stmt TSEMCOL expr TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
+    | FOR simple_stmt TSEMCOL option(expr) TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
         { }
 
 break_stmt:
