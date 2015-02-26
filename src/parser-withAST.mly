@@ -39,15 +39,12 @@
 %left TPLUS TMINUS TBITOR TCARET
 %left TMULT TDIV TMOD TLSFT TRSFT TBITAND TANOT
 
-(* %start<Ast.program> program *)
-%start<unit> program
+%start<Ast.program> program
 %%
 
-(*program :       
+program :       
   | package_decl TSEMCOL top_decl_list TEOF  { Program($1, List.rev $3)} 
-*)
 
-program: expression { }
 package_decl:
   | PACKAGE ID { Package($2) }
 

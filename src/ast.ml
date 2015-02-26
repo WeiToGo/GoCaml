@@ -43,7 +43,8 @@ and binary_op =
     | BinEq | BinNotEq | BinLess | BinLessEq | BinGreater | BinGreaterEq
     | BinPlus | BinMinus | BinBitOr | BinBitXor
     | BinMult | BinDiv | BinMod | BinShiftLeft | BinShiftRight | BinBitAnd | BinBitAndNot
-and statement = 
+and statement = LinedStatement of int * plain_statement    
+and plain_statement = 
     | EmptyStatement
     | ExpressionStatement of expression
     | AssignmentStatement of ((lvalue * expression) list) 

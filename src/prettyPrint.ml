@@ -1,4 +1,4 @@
-let level = ref 0
+(* let level = ref 0
 
 let print_ast (pack, dl) pretty = 
 	let outfile = open_out pretty in 
@@ -351,4 +351,4 @@ let print_ast (pack, dl) pretty =
 	in 
 	print_package pack;
 	print_top_decl_list dl;
-	close_out outfile
+	close_out outfile *)

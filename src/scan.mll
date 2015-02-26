@@ -40,7 +40,7 @@ rule scan last_token = parse
                     | _ -> scan None lexbuf 
                   } 
   | "//" [^ '\n']* { scan last_token lexbuf }
-  | "/*" { read_comment last_token (Buffer.create 15) lexbuf }
+  | "/*" { read_comment last_token lexbuf }
 
   (* Keywords *)
   | "break"       { BREAK }
@@ -174,10 +174,10 @@ and read_string buf = parse
   | '\\' '"' { Buffer.add_char buf '"'; read_string buf lexbuf}
   | [^'"' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_string buf lexbuf}
 
-and read_comment last_token buf = parse
+and read_comment last_token = parse
   | "*/" { scan last_token lexbuf }
-  | '\n'{ Lexing.new_line lexbuf; read_comment last_token buf lexbuf}
-  | _ { read_comment last_token buf lexbuf}
+  | '\n'{ Lexing.new_line lexbuf; read_comment last_token lexbuf}
+  | _ { read_comment last_token lexbuf}
 
 {
   (* wrapped_scan keeps track of the last token returned by scan. *)

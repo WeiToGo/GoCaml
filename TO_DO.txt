@@ -34,3 +34,4 @@ fix semicolon insertion [DONE]
 fix ast
 fix pretty print
 
+- All valid instead of valid for every single test file
