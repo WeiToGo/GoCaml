@@ -21,7 +21,6 @@ let outFile =
  * ignores brackets and prints all *)
 let rec printBody ch =
    fprintf outFile "%c" ch;
-   flush stdout;
    match ch with
    | '{' -> skipChars (Stream.next charStream)
    | '(' -> (match Stream.peek charStream with
@@ -33,38 +32,32 @@ and skipChars ch =
    | '}' -> fprintf outFile "%c" ch; printBody (Stream.next charStream)
    | '(' -> (match Stream.peek charStream with
             | Some('*') -> fprintf outFile "%c" '(';
-                           flush stdout;
                            skipInComment (Stream.next charStream)
             | _         -> skipChars (Stream.next charStream))
    | _ -> skipChars (Stream.next charStream)
 and skipComment ch =
    match ch with
    | '*' -> fprintf outFile "%c" ch;
-            flush stdout;
             (match Stream.peek charStream with
             | Some(')') -> printBody (Stream.next charStream)
             | _         -> skipComment (Stream.next charStream))
    | _   -> fprintf outFile "%c" ch;
-            flush stdout;
             skipComment (Stream.next charStream)
 and skipInComment ch =
    match ch with
    | '*' -> fprintf outFile "%c" ch;
-            flush stdout;
             (match Stream.peek charStream with
             | Some(')') -> fprintf outFile "%c" ')';
-                           flush stdout;
                            skipChars (Stream.next charStream)
             | _         -> skipInComment (Stream.next charStream))
    | _   -> fprintf outFile "%c" ch;
-            flush stdout;
+            ;
             skipInComment (Stream.next charStream)
 
 (* Prints all chars of the first section of a parser file (before %%).
  * It then passes control to the printBody function to strip ast parts *)
 let rec printAll ch =
    fprintf outFile "%c" ch;
-   flush stdout;
    match ch with
    | '%' -> (match Stream.peek charStream with
             | Some('%') -> printBody (Stream.next charStream)
