@@ -38,7 +38,8 @@
 %left TPLUS TMINUS TBITOR TCARET
 %left TMULT TDIV TMOD TLSFT TRSFT TBITAND TANOT
 %nonassoc uop
-%nonassoc fun_parens
+%nonassoc TLPAR
+
 
 %start<Ast.expression> program
 
@@ -306,7 +307,7 @@ string_literal:
 unary_exp:
   | TLPAR expr TRPAR { $2 }
   | primary_expression { $1 }
-  | unary_op unary_exp %prec uop { UnaryExp($1, $2) } 
+  | unary_op unary_exp %prec uop { UnaryExp($1, $2) }  (* Unary operators have highest precedence *)
 
 primary_expression: 
   | ID { IdExp(IdName($1)) } 
@@ -315,7 +316,7 @@ primary_expression:
   | index_exp { $1 } 
   | append_exp { $1 } 
   | select_exp  { $1 }
-  | type_cast_exp { UnaryExp(UNot, IdExp(IdName("testtest"))) }
+  | type_cast_exp { $1 }
 
 unary_op:
   | TPLUS { UPlus } 
@@ -325,7 +326,7 @@ unary_op:
 
 
 function_call:
-  | unary_exp TLPAR function_arguments TRPAR %prec fun_parens
+  | unary_exp TLPAR function_arguments TRPAR
       { FunctionCallExp($1, $3)}
 
 function_arguments: 

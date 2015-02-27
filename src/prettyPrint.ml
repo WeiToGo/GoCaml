@@ -1,4 +1,4 @@
-open Ast
+(* open Ast
 
 let print_ast (pack, dl) pretty level = 
 	let outfile = open_out pretty in 
@@ -376,3 +376,4 @@ in
 	print_top_decl_list dl;
 	close_out outfile
 
+ *)
