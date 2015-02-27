@@ -36,7 +36,7 @@ let _ = if (Array.length Sys.argv) < 2 then
           print_string "You must supply the filename as first argument"
         else ()
 
-let in_file_name = Sys.argv.(1)
+(* let in_file_name = Sys.argv.(1)
 
 
 let file_basename = String.sub in_file_name 0 ((String.length in_file_name) - 3) 
@@ -46,7 +46,7 @@ let pretty_file_name = file_basename ^ ".pretty.go"
 let inp = open_in in_file_name 
 let filebuf = Lexing.from_channel inp 
 let ast = build_ast in_file_name
-;;
+ *);;
 
 
 

@@ -3,7 +3,6 @@
   exception UnequalListLength
   exception ParsingError
   open Ast
-  (* THIS FILE WILL NOT COMPILE. *)
 
   (* Both of these functions return things in reverse order 
     because of tail recursion. You will have to call List.rev on 
@@ -38,13 +37,16 @@
 %left TEQ TNEQ TLS TLSEQ TGR TGREQ
 %left TPLUS TMINUS TBITOR TCARET
 %left TMULT TDIV TMOD TLSFT TRSFT TBITAND TANOT
+%nonassoc uop
+%nonassoc fun_parens
 
-%start<unit> program
+%start<Ast.expression> program
 
 %%
 
 program :       
-  | package_decl TSEMCOL top_decl_list TEOF  { } 
+  (*| package_decl TSEMCOL top_decl_list TEOF  { } *)
+  | expr TSEMCOL { $1 }
 
 package_decl:
   | PACKAGE ID { }
@@ -276,74 +278,74 @@ simple_stmt:
     | incdec_stmt {  }
 
 
-(* ok *)
+(* ----- expressions ----- *)
 
 expr:
-    | unary_exp {  } 
-    | binary_exp {  }
+    | unary_exp { $1 } 
+    | binary_exp { LiteralExp(FloatLit("testest")) }
 
 literal: 
-    | int_literal {  } 
-    | float_literal {  } 
-    | rune_literal {  } 
-    | string_literal  {  }
+    | int_literal { IntLit $1 } 
+    | float_literal { FloatLit($1) } 
+    | rune_literal { RuneLit($1) } 
+    | string_literal  { StringLit($1) }
 
 int_literal: 
-    | DEC_INT {  }
-    | OCTAL_INT {  }
-    | HEX_INT {  }
+    | DEC_INT { DecInt $1  }
+    | OCTAL_INT { OctalInt $1 }
+    | HEX_INT { HexInt $1 }
 
-float_literal: FLOAT64 {  }
+float_literal: FLOAT64 { $1 }
 
-rune_literal: TRUNE {  }
+rune_literal: TRUNE { $1 }
 
 string_literal: 
-    | TRWSTR { } 
-    | TSTR {  }
+    | TRWSTR { $1 } 
+    | TSTR { $1 }
 
 unary_exp:
-  | TLPAR expr TRPAR { }
-  | primary_expression {  }
-  | unary_op unary_exp {  }
+  | TLPAR expr TRPAR { $2 }
+  | primary_expression { $1 }
+  | unary_op unary_exp %prec uop { UnaryExp($1, $2) } 
 
 primary_expression: 
-  | ID { } 
-  | literal { } 
-  | function_call {  } 
-  | index_exp {  } 
-  | append_exp {  } 
-  | select_exp  {  }
-  | type_cast_exp {  }
+  | ID { IdExp(IdName($1)) } 
+  | literal { LiteralExp $1 } 
+  | function_call { $1 } 
+  | index_exp { $1 } 
+  | append_exp { $1 } 
+  | select_exp  { $1 }
+  | type_cast_exp { UnaryExp(UNot, IdExp(IdName("testtest"))) }
 
 unary_op:
-  | TPLUS { } 
-  | TMINUS { } 
-  | TNOT {  } 
-  | TCARET { } 
+  | TPLUS { UPlus } 
+  | TMINUS { UMinus } 
+  | TNOT { UNot } 
+  | TCARET { UCaret } 
 
 
 function_call:
-  | ID TLPAR function_arguments TRPAR 
-      { }
+  | unary_exp TLPAR function_arguments TRPAR %prec fun_parens
+      { FunctionCallExp($1, $3)}
 
 function_arguments: 
-  | (* empty *) {  }
-  | non_empty_function_arguments {  }
+  | (* empty *) { [] }
+  | non_empty_function_arguments { List.rev $1 }
 
 non_empty_function_arguments:
-  | expr {   }
-  | function_arguments TCOM expr {  }
+  | expr { [ $1 ] }
+  | non_empty_function_arguments TCOM expr { $3::$1 }
  
 index_exp: 
   | primary_expression TLBR expr TRBR 
-      { } 
+      { IndexExp($1, $3)} 
 
 append_exp:
-  | APPEND TLPAR ID TCOM expr TRPAR   {  }
+  | APPEND TLPAR ID TCOM expr TRPAR   { AppendExp(IdName($3), $5) }
 
 select_exp: 
   | primary_expression TDOT ID 
-      {  }
+      { SelectExp($1, IdName($3)) }
 
 type_cast_exp:
   | castable_type TLPAR expr TRPAR 

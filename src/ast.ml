@@ -26,7 +26,7 @@ and expression =
     | LiteralExp of literal
     | UnaryExp of (unary_op * expression) 
     | BinaryExp of (binary_op * expression * expression)
-    | FunctionCallExp of (identifier * (expression list))
+    | FunctionCallExp of (expression * (expression list))
     | AppendExp of (identifier * expression)
     | TypeCastExp of (type_spec * expression)
     | IndexExp of (expression * expression)

@@ -89,13 +89,13 @@ let suite =
     (
       "dec_int_test">::
         fun test_ctxt -> batch_check_lexer
-          [ "45"; "123"] [ [DEC_INT("45")]; [DEC_INT("123")]]
+          [ "45"; "123"; "0"] [ [DEC_INT("45")]; [DEC_INT("123")]; [DEC_INT("0")]]
           ~msg: "Decimal int lexing failed"
     );
     (
       "octal_int_test">::
         fun test_ctxt -> batch_check_lexer 
-          [ "0234"; "0"] [ [OCTAL_INT("0234")]; [OCTAL_INT("0")]]
+          [ "0234"] [ [OCTAL_INT("0234")]]
           ~msg: "Octal int lexing failed"
     );
     (

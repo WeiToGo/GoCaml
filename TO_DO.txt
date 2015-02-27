@@ -35,3 +35,4 @@ fix ast
 fix pretty print
 
 - All valid instead of valid for every single test file
+- Have a file with no ending newline and check if the semicolon rule still works

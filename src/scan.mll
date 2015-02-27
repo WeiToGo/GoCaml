@@ -132,9 +132,9 @@ rule scan last_token = parse
   | '`'   { read_raw_str (Buffer.create 15) lexbuf } (* raw string token *) 
   | '"'   { read_string (Buffer.create 15) lexbuf } (* interpreted string token *) 
   | '''   { read_rune (Buffer.create 2) lexbuf } (* raw string token *) 
-  | nz_digit decimal_digit* as st { DEC_INT(st)}
-  | "0" octal_digit* as st { OCTAL_INT(st) }
-  | "0" ("x" | "X" ) hex_digit* as st { HEX_INT(st) }
+  | (nz_digit decimal_digit* | "0") as st { DEC_INT(st)}
+  | "0" octal_digit+ as st { OCTAL_INT(st) }
+  | "0" ("x" | "X" ) hex_digit+ as st { HEX_INT(st) }
   | decimal_digit+ "." decimal_digit* as st { FLOAT64(st)}
   | "." decimal_digit+ as st { FLOAT64(st) }
   | eof   { TEOF}
@@ -176,7 +176,7 @@ and read_string buf = parse
 
 and read_comment last_token = parse
   | "*/" { scan last_token lexbuf }
-  | '\n'{ Lexing.new_line lexbuf; read_comment last_token lexbuf}
+  | '\n'{ Lexing.new_line lexbuf; read_comment last_token lexbuf }
   | _ { read_comment last_token lexbuf}
 
 {
