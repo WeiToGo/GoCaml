@@ -14,6 +14,11 @@ let outFile =
    let name = concat "." [pre; "stripped.mly"] in
    open_out name
 
+(* Set of mutually recursive char printing functions.
+ * printBody prints everything until you enter brackets or comments,
+ * sending you to the appropriate function. skipChars skips all chars
+ * inside brackets (with redirection to skipInComment) while skipComment
+ * ignores brackets and prints all *)
 let rec printBody ch =
    fprintf outFile "%c" ch;
    flush stdout;
@@ -55,6 +60,8 @@ and skipInComment ch =
             flush stdout;
             skipInComment (Stream.next charStream)
 
+(* Prints all chars of the first section of a parser file (before %%).
+ * It then passes control to the printBody function to strip ast parts *)
 let rec printAll ch =
    fprintf outFile "%c" ch;
    flush stdout;
@@ -65,6 +72,8 @@ let rec printAll ch =
             | _   -> printAll (Stream.next charStream))
    | _   -> printAll (Stream.next charStream)
 
+(* Main function. Initiates printing functions and closes
+ * the files when stream is empty (exception is raised) *)
 let () =
    try
       printAll (Stream.next charStream)
