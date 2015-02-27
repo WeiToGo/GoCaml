@@ -3,8 +3,8 @@ open Ast
 let print_ast (pack, dl) pretty level = 
 	let outfile = open_out pretty in 
 	let print_string = fun s -> output_string outfile s in
-	let insert_tab () = 
-		print_string (String.make !level '\t')
+	let insert_tab (level) = 
+		print_string (String.make level '\t')
 	in
 	let print_binop binop = match binop with
 		| BinOr -> print_string "||"
@@ -91,7 +91,11 @@ in
 		| StructType (st) -> 
 			begin
 				print_string "struct { ";
+				ignore(level = level + 1);
+				insert_tab(level);
 				List.iter print_struct_field_decl st; 
+				ignore(level = level - 1);
+				insert_tab(level);
 				print_string "}";
 			end
 		| CustomType (id) -> print_identifier id
@@ -219,7 +223,7 @@ in
 					end 
 				in print_var_decl_helper svd_list
 	in
-	let rec print_stmt stmt = 
+	let rec print_stmt level stmt = 
 		match stmt with
 		| EmptyStatement -> ()
 		| ExpressionStatement (e) -> 
@@ -259,15 +263,24 @@ in
 				print_string "if ";
 				(match s with 
 				| None -> ()
-				| Some s -> print_stmt_wrap s);
+				| Some s -> print_stmt_wrap level s);
 				print_string ";";
 				print_expr e;
 				print_string " { \n";
-				List.iter print_stmt_wrap s1_list;
+				ignore(level = level + 1);
+				insert_tab(level);
+				List.iter (fun x -> print_stmt_wrap level x) s1_list;
+				ignore(level = level - 1);
+				insert_tab(level);
 				print_string "} else { \n";
 				match s2_list with 
 				| None -> print_string "}; \n"
-				| Some s2_list -> List.iter print_stmt_wrap s2_list
+				| Some s2_list -> 
+					begin
+						ignore(level = level + 1);
+						insert_tab(level); 
+						List.iter (fun x -> print_stmt_wrap level x) s2_list;
+					end
 			end
 		| ReturnStatement (e_op)-> 
 		    (match e_op with
@@ -283,7 +296,7 @@ in
 				print_string "switch";
 				(match s_op with 
 				|None -> ()
-				|Some s_op -> print_stmt_wrap s_op);
+				|Some s_op -> print_stmt_wrap level s_op);
 				print_expr e;
 				print_string "{ \n";
 				let print_case_list sl = 
@@ -291,12 +304,12 @@ in
 					| SwitchCase (e_list,case_list) -> 
 						begin
 							print_string "case: ";
-							List.iter print_stmt_wrap case_list;
+							List.iter (fun x -> print_stmt_wrap level x) case_list;
 						end
 					| DefaultCase (case_list) -> 
 						begin
 							print_string "default: \n";
-							List.iter print_stmt_wrap case_list;
+							List.iter (fun x -> print_stmt_wrap level x) case_list;
 						end
 					)
 				in
@@ -308,12 +321,12 @@ in
 				print_string "for";
 				match s1_op with
 				| None ->()
-				| Some s1_op -> print_stmt_wrap s1_op;
+				| Some s1_op -> print_stmt_wrap level s1_op;
 				match s2_op with
 				| None ->()
-				| Some s2_op -> print_stmt_wrap s2_op;
+				| Some s2_op -> print_stmt_wrap level s2_op;
 				print_string "{\n ";
-				List.iter print_stmt_wrap stmt_list;
+				List.iter (fun x -> print_stmt_wrap level x) stmt_list;
 				print_string "}\n";
 			end
 		| BreakStatement -> print_string "break;\n"
@@ -321,11 +334,15 @@ in
 		| BlockStatement (sl) -> 
 			begin
 				print_string "{ \n";
-				List.iter print_stmt_wrap sl;
+				ignore(level = level + 1);
+				insert_tab(level);
+				List.iter (fun x -> print_stmt_wrap level x) sl;
+				ignore(level = level - 1);
+				insert_tab(level);
 				print_string "}\n";
 			end
-	and print_stmt_wrap stmt = match stmt with
-		| LinedStatement (l,s) -> print_stmt s
+	and print_stmt_wrap level stmt = match stmt with
+		| LinedStatement (ln,s) -> print_stmt level s
 	in
 	let print_func_decl fd = match fd with 
 		| Function (id,fs, stmt_list) ->
@@ -334,7 +351,7 @@ in
 				print_identifier id;
 				print_func_sign fs;
 				print_string "{ \n";
-				List.iter print_stmt_wrap stmt_list;
+				List.iter (fun x -> print_stmt_wrap level x) stmt_list;
 				print_string "} \n";
 			end
 	in
