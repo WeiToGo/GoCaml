@@ -1,6 +1,7 @@
-(* open Ast
+open Ast
 
-let print_ast (pack, dl) pretty level = 
+let print_ast prog pretty level = 
+	let Program(pack,dl) = prog in
 	let outfile = open_out pretty in 
 	let print_string = fun s -> output_string outfile s in
 	let insert_tab (level) = 
@@ -34,8 +35,8 @@ let print_ast (pack, dl) pretty level =
 		| UCaret -> print_string "^"
 	in
 	let print_identifier id = match id with
-		| IdName (s) -> print_string s
-		| BlankID -> print_string "_"
+		| IdName (s) -> print_string (s ^ " ")
+		| BlankID -> print_string "_ "
 	in
 	let print_int_literal lit = match lit with
 		| Ast.DecInt (s) -> print_string s
@@ -118,16 +119,16 @@ in
 				print_expr e2;
 				print_string ")";
 			end
-		| FunctionCallExp (id,e_list) ->
+		| FunctionCallExp (exp,e_list) ->
 			begin
-				print_identifier id;
+				print_expr exp;
 				print_string "(";
 				List.iter print_expr e_list;
 				print_string ")";
 			end
 		| AppendExp (id,e) ->
 			begin
-				print_string "append";
+				print_string "append ";
 				print_string "(";
 				print_identifier id;
 				print_string ",";
@@ -191,12 +192,13 @@ in
 			begin
 				print_identifier id;
 				print_type_spec ts;
+				print_string ";";
 			end
 	in
 	let print_single_var_decl vd = match vd with 
 		| SingleVarDecl (id, t_op, e_op) ->
 			begin
-				print_string "var";
+				print_string "var ";
 				print_identifier id;
 				(match t_op with 
 				| None -> ()
@@ -212,15 +214,16 @@ in
 	in
 	let print_var_decl vd = match vd with 
 		| MultipleVarDecl (svd_list) -> 
-				let rec print_var_decl_helper sl = match sl with
+				let rec print_var_decl_helper sl = (match sl with
 					| [] -> ()
 					| h::[] -> print_single_var_decl h
 					| h::t ->
-					begin
-						print_single_var_decl h;
-						print_string ",";
-						print_var_decl_helper t;
-					end 
+						begin
+							print_single_var_decl h;
+							print_string ",";
+							print_var_decl_helper t;
+						end);
+					print_string ";";
 				in print_var_decl_helper svd_list
 	in
 	let rec print_stmt level stmt = 
@@ -352,7 +355,7 @@ in
 				print_func_sign fs;
 				print_string "{ \n";
 				List.iter (fun x -> print_stmt_wrap level x) stmt_list;
-				print_string "} \n";
+				print_string "}; \n";
 			end
 	in
 	let print_top_decl td = match td with
@@ -367,7 +370,7 @@ in
 	let print_package s = match s with
 		| Package (str) -> 
 			begin
-				print_string "package";
+				print_string "package ";
 				print_string str;
 				print_string ";\n"
 			end
@@ -376,4 +379,3 @@ in
 	print_top_decl_list dl;
 	close_out outfile
 
- *)
