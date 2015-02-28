@@ -31,7 +31,7 @@ let build_ast input =
   | "stdin" -> ast
   | filename -> close_in ic; ast
 
-
+(* 
 let _ = if (Array.length Sys.argv) < 2 then
           print_string "You must supply the filename as first argument"
         else ()
@@ -47,7 +47,7 @@ let inp = open_in in_file_name
 let filebuf = Lexing.from_channel inp 
 let ast = build_ast in_file_name
 ;;
-
+ *)
 
 
 (* let out_channel = open_out "lexer_stream.out" in 

@@ -41,13 +41,13 @@
 %nonassoc TLPAR
 
 
-%start<Ast.expression> program
+%start<Ast.plain_statement> program
 
 %%
 
 program :       
   (*| package_decl TSEMCOL top_decl_list TEOF  { } *)
-  | expr TSEMCOL { $1 }
+  | stmt TSEMCOL { $1 }
 
 package_decl:
   | PACKAGE ID { }
@@ -129,21 +129,21 @@ stmt_list:
     | stmt_list stmt TSEMCOL { }
 
 stmt:
-    | empty_stmt {  }
-    | expression_stmt {  }
-    | assign_stmt { }
-    | declaration_stmt {  }
-    | shortvardecl_stmt {  }
-    | incdec_stmt { }
-    | print_stmt {  }
-    | println_stmt {  }
-    | return_stmt {  }
-    | if_stmt {  } 
-    | switch_stmt {  }
-    | for_stmt { }
-    | break_stmt {  }
-    | continue_stmt {  }
-    | block_stmt { }
+    | empty_stmt { ExpressionStatement(IdExp(IdName("NotImplemented"))) }
+    | expression_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
+    | assign_stmt { $1 }
+    | declaration_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
+    | shortvardecl_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
+    | incdec_stmt { ExpressionStatement(IdExp(IdName("NotImplemented"))) }
+    | print_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
+    | println_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
+    | return_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
+    | if_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  } 
+    | switch_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
+    | for_stmt { ExpressionStatement(IdExp(IdName("NotImplemented"))) }
+    | break_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
+    | continue_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
+    | block_stmt { ExpressionStatement(IdExp(IdName("NotImplemented"))) }
 (*-----------*)
 
 id_list:
@@ -283,7 +283,7 @@ simple_stmt:
 
 expr:
     | unary_exp { $1 } 
-    | binary_exp { LiteralExp(FloatLit("testest")) }
+    | binary_exp { $1 }
 
 literal: 
     | int_literal { IntLit $1 } 
@@ -350,46 +350,46 @@ select_exp:
 
 type_cast_exp:
   | castable_type TLPAR expr TRPAR 
-      {  }
+      { TypeCastExp($1, $3) }
 
 castable_type: 
-  | INT_TYP {  }
-  | FL_TYP {  } 
-  | RUNE_TYP {  }
-  | BOOL_TYP {  } 
+  | INT_TYP { BasicType(IntType) }
+  | FL_TYP { BasicType(FloatType) } 
+  | RUNE_TYP { BasicType(RuneType) }
+  | BOOL_TYP { BasicType(StringType) } 
  
 binary_exp:
-  | expr binary_op expr {  }
+  | e1 = expr; op = binary_op; e2 = expr { BinaryExp(op, e1, e2) }
 
 %inline binary_op:
-  | TOR { }
-  | TAND { }
-  | rel_op { }
-  | add_op { }
-  | mul_op { }
+  | TOR { BinOr }
+  | TAND {BinAnd }
+  | op = rel_op { op }
+  | op = add_op { op }
+  | op = mul_op { op }
 
 %inline rel_op: 
-  | TEQ {  } 
-  | TNEQ {  }
-  | TLS {  }
-  | TGR {  }
-  | TLSEQ {  }
-  | TGREQ {  }
+  | TEQ { BinEq } 
+  | TNEQ { BinNotEq }
+  | TLS { BinLess }
+  | TGR { BinGreater }
+  | TLSEQ { BinLessEq }
+  | TGREQ { BinGreaterEq }
 
 %inline add_op: 
-  | TPLUS {  }  
-  | TMINUS {  }
-  | TBITOR {  } 
-  | TCARET {  } 
+  | TPLUS { BinPlus }  
+  | TMINUS { BinMinus }
+  | TBITOR { BinBitOr } 
+  | TCARET { BinBitXor } 
 
 %inline mul_op: 
-  | TMULT {  } 
-  | TDIV {  }
-  | TMOD {  } 
-  | TLSFT {  } 
-  | TRSFT {  }
-  | TBITAND {  } 
-  | TANOT {  } 
+  | TMULT { BinMult } 
+  | TDIV { BinDiv }
+  | TMOD { BinMod } 
+  | TLSFT { BinShiftLeft } 
+  | TRSFT { BinShiftRight }
+  | TBITAND { BinBitAnd } 
+  | TANOT { BinBitAndNot } 
 
 %inline single_op:
   | TADDAS { } 
@@ -404,6 +404,6 @@ binary_exp:
   | TRAS   { }
   | TANEQ  { }
 
-blank_id: TBLANKID { }
+blank_id: TBLANKID { BlankID }
 
 %%
