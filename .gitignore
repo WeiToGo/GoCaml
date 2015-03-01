@@ -7,3 +7,4 @@ gocaml.sublime-workspace
 *.native
 *.byte
 lexer_stream.out
+*.stripped.mly

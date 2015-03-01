@@ -2,7 +2,9 @@
   exception NotImplemented
   exception UnequalListLength
   exception ParsingError
+  exception NonIDExpr
   open Ast
+  open Lexing
 
   (* Both of these functions return things in reverse order 
     because of tail recursion. You will have to call List.rev on 
@@ -38,10 +40,10 @@
 %left TPLUS TMINUS TBITOR TCARET
 %left TMULT TDIV TMOD TLSFT TRSFT TBITAND TANOT
 %nonassoc uop
-%nonassoc TLPAR
+%nonassoc TLPAR TLBR TDOT
 
 
-%start<Ast.plain_statement> program
+%start<Ast.statement> program
 
 %%
 
@@ -59,14 +61,14 @@ top_decl_list :
 
 
 top_decl :
-  | declaration { } 
-  | func_decl { } 
+  | declaration { $1 } 
+  | func_decl { raise NotImplemented } 
 
 (*-----------*)
 
 declaration :
-  | var_decl { }
-  | typ_decl {  }
+  | var_decl { VarDeclBlock $1 }
+  | typ_decl { TypeDeclBlock $1 }
 
 func_decl: 
   | FUNC ID func_signature TLCUR func_body TRCUR { } 
@@ -74,12 +76,12 @@ func_decl:
 (*-----------*)
 
 var_decl:
-  | VAR var_spec { }
-  | VAR TLPAR var_spec_list TRPAR  { }
+  | VAR var_spec { [$2] }
+  | VAR TLPAR var_spec_list TRPAR  { raise NotImplemented }
 
 typ_decl :
-  | TYPE typ_spec { }
-  | TYPE TLPAR typ_spec_list TRPAR {  }  (* This might cause weird errors. Check back *)
+  | TYPE typ_spec { [$2] }
+  | TYPE TLPAR typ_spec_list TRPAR { List.rev $3 }
 
 func_signature:
   | TLPAR args_list TRPAR typ {  }
@@ -98,185 +100,245 @@ func_body:
 
 (*-----------*)
 
-var_spec:
+var_spec:   (* Returns multivardecl *)
   | id_list typ
-    {   }
+    { MultipleVarDecl(distribute $1 $2 [] (fun x y -> SingleVarDecl(x, Some y, None))) }
   | id_list TASSIGN expr_list
-    {    }
+    {  MultipleVarDecl(list_zip $1 $3 [] (fun x y -> SingleVarDecl(x, None, Some y)))  }
   | id_list typ TASSIGN expr_list 
-    {   }
+    { MultipleVarDecl(list_zip $1 $4 [] (fun x y -> SingleVarDecl(x, Some $2, Some y))) }
 
 var_spec_list:
   | (* empty *) { }
   | var_spec_list var_spec TSEMCOL { } 
 
 typ_spec:
-  | ID typ  {  }
+  | ID typ  { SingleTypeDecl(IdName($1), $2) }
 
 typ_spec_list:
-  | (* empty *) { }
-  | typ_spec_list typ_spec TSEMCOL { }
+  | (* empty *) { [] }
+  | typ_spec_list typ_spec TSEMCOL { $2 :: $1 }
 
 typ:
-  | basic_typ  { }
-  | slice_typ {  }
-  | array_typ {  }
-  | struct_typ {  }
-  | ID { }
+  | basic_typ  { BasicType $1 }
+  | slice_typ { $1 }
+  | array_typ { $1 }
+  | struct_typ { $1 }
+  | func_typ { $1 } 
+  | ID { CustomType(IdName($1)) }
+
+func_typ:
+  | FUNC TLPAR typ_list TRPAR option(typ)
+    { FucntionType(List.rev $3, $5)}
+
+typ_list:
+  | (* empty *) { [] }
+  | non_empty_typ_list { $1 }
+
+non_empty_typ_list:
+  | typ { [$1] }
+  | non_empty_typ_list TCOM typ { $3 :: $1 }
 
 stmt_list:
-    | (* empty *) { }
-    | stmt_list stmt TSEMCOL { }
+    | (* empty *) { [] }
+    | stmt_list stmt TSEMCOL { $2 :: $1 }
 
 stmt:
-    | empty_stmt { ExpressionStatement(IdExp(IdName("NotImplemented"))) }
-    | expression_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
-    | assign_stmt { $1 }
-    | declaration_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
-    | shortvardecl_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
-    | incdec_stmt { ExpressionStatement(IdExp(IdName("NotImplemented"))) }
-    | print_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
-    | println_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
-    | return_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
-    | if_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  } 
-    | switch_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
-    | for_stmt { ExpressionStatement(IdExp(IdName("NotImplemented"))) }
-    | break_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
-    | continue_stmt { ExpressionStatement(IdExp(IdName("NotImplemented")))  }
-    | block_stmt { ExpressionStatement(IdExp(IdName("NotImplemented"))) }
+    | empty_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | expression_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | assign_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | declaration_stmt { LinedStatement($startpos.pos_lnum, $1)  }
+    | shortvardecl_stmt { LinedStatement($startpos.pos_lnum, $1)  }
+    | incdec_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | print_stmt { LinedStatement($startpos.pos_lnum, $1)  }
+    | println_stmt { LinedStatement($startpos.pos_lnum, $1)  }
+    | return_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | if_stmt { LinedStatement($startpos.pos_lnum, $1) } 
+    | switch_stmt { LinedStatement($startpos.pos_lnum, $1)  }
+    | for_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | break_stmt { LinedStatement($startpos.pos_lnum, $1)  }
+    | continue_stmt { LinedStatement($startpos.pos_lnum, $1)  }
+    | block_stmt { LinedStatement($startpos.pos_lnum, $1) }
 (*-----------*)
 
 id_list:
-  | ID {  }
-  | id_list TCOM ID {  }
+  | ID { [IdName $1] }
+  | id_list TCOM ID { (IdName $3) :: $1 }
 
-expr_list:
-    | expr { }
-    | expr_list TCOM expr { }
+
 
 basic_typ :
-  | INT_TYP {  }
-  | FL_TYP  {  }
-  | BOOL_TYP  {  }
-  | RUNE_TYP  {  }
-  | STR_TYP   {  }
+  | INT_TYP { IntType }
+  | FL_TYP  { FloatType }
+  | BOOL_TYP  { BoolType }
+  | RUNE_TYP  { RuneType }
+  | STR_TYP   { StringType }
 
 slice_typ :
-  | TLBR TRBR typ {  }
+  | TLBR TRBR typ { SliceType $3 }
 
 array_typ:
-  | TLBR int_literal TRBR typ { }
+  | TLBR int_literal TRBR typ { ArrayType($2, $4)}
 
 struct_typ:
-  | STRUCT TLCUR field_decl_list TRCUR {  }
+  | STRUCT TLCUR field_decl_list TRCUR { StructType(List.rev $3) }
 
 field_decl_list: 
-  | (* empty *) {  }
-  | field_decl_list field_decl TSEMCOL { }
+  | (* empty *) { [] }
+  | field_decl_list field_decl TSEMCOL { $2 :: $1 }
 
-field_decl: 
+field_decl: (* Returns multi_struct_field_decl *)
   | id_list typ 
-    {   }
+    { MultipleStructFieldDecl(distribute $1 $2 [] (fun x y -> SingleStructFieldDecl(x, y))) }
 
 
 empty_stmt: 
-  | (* empty *) {  }
+  | (* empty *) { EmptyStatement }
 
 expression_stmt:
-    | expr {  }
+    | expr { ExpressionStatement($1) }
 
 assign_stmt:
-  | lvalue single_op expr {  }
-  | lvalue_list TASSIGN expr_list
-     {  }
-  | blank_id TASSIGN expr { }
+  | lv = primary_expression; op = single_op; exp = expr 
+    { let binop_of_assignment_op op = match op with
+      |SinADD -> BinPlus
+      |SinSUB -> BinMinus
+      |SinMul -> BinMult
+      |SinDiv -> BinDiv
+      |SinMod -> BinMod
+      |SinAnd -> BinBitAnd
+      |SinOr -> BinBitOr
+      |SinXor -> BinBitXor
+      |SinLas -> BinShiftLeft
+      |SinRas -> BinShiftRight
+      |SinAneq -> BinBitAndNot
+      in
+      AssignmentStatement([(lv, BinaryExp(binop_of_assignment_op op, lv, exp))])
+     }
+  | expr_list TASSIGN expr_list
+     { AssignmentStatement(list_zip $1 $3 []  (fun x y -> (x,y)) ) }
+  | blank_id TASSIGN expr { AssignmentStatement([(IdExp(BlankID), $3)]) }
+
+pexp_list:
+    | pexp_list TCOM primary_expression { $3 :: $1 }
+    | primary_expression { [ $1 ] }
+
+expr_list:
+    | expr_list TCOM expr { $3 :: $1 }
+    | expr { [ $1 ] }
 
 declaration_stmt:
-    | declaration 
-        {    }
+    | var_decl 
+        {  VarDeclBlockStatement $1  }
+    | typ_decl
+        { TypeDeclBlockStatement $1 }
 
-shortvardecl_stmt:
-    | lvalue_list TCOLEQ expr_list   (* make sure lvalue is ID only? *)
-      {    }
-
+shortvardecl_stmt:  
+    | expr_list TCOLEQ expr_list   (* make sure lvalue is ID only? *)
+      { let id_of_expr xp = match xp with
+        | IdExp(id) -> id
+        | _ -> raise NonIDExpr 
+        in
+        let id_list = List.map id_of_expr $1 in
+        VarDeclBlockStatement(
+          [MultipleVarDecl(
+            list_zip id_list $3 [] (fun x y -> SingleVarDecl(x, None, Some(y)))
+          )]
+        )   }
+ 
 incdec_stmt:
-    | lvalue TINC 
-        {     }
-    | lvalue TDECR
-        {   }
+    | primary_expression TINC 
+        { AssignmentStatement([($1, BinaryExp(BinPlus, $1, 
+            LiteralExp(IntLit(DecInt("1")))
+          ))])
+        }
+    | primary_expression TDECR
+        { AssignmentStatement([($1, BinaryExp(BinMinus, $1,
+            LiteralExp(IntLit(DecInt("1")))
+          ))])    
+        }
 
 
 print_stmt:
-    | PRINT TLPAR TRPAR { }
-    | PRINT TLPAR expr_list TRPAR { }
+    | PRINT TLPAR TRPAR { PrintStatement([]) }
+    | PRINT TLPAR expr_list TRPAR { PrintStatement(List.rev $3) }
 
 println_stmt:
-    | PRINTLN TLPAR TRPAR {  }
-    | PRINTLN TLPAR expr_list TRPAR {  }
+    | PRINTLN TLPAR TRPAR { PrintlnStatement([]) }
+    | PRINTLN TLPAR expr_list TRPAR { PrintlnStatement(List.rev $3) }
 
 return_stmt:
-    | RETURN {  }
-    | RETURN expr {  }
+    | RETURN { ReturnStatement(None) }
+    | RETURN expr { ReturnStatement(Some $2) }
 
 
 
 
 if_stmt:
-    | IF expr TLCUR stmt_list TRCUR {  }
-    | IF expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
-    | IF expr TLCUR stmt_list TRCUR ELSE if_stmt { }
-    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR {  }
-    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR {  }
-    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE if_stmt {  }
+    | IF expr TLCUR stmt_list TRCUR 
+        { IfStatement(None, $2, $4, None) }
+    | IF expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR 
+        { IfStatement(None, $2, List.rev $4, Some (List.rev $8)) }
+    | IF expr TLCUR stmt_list TRCUR ELSE if_stmt 
+        { IfStatement(None, $2, List.rev $4,
+           Some [LinedStatement($startpos.pos_lnum, $7)]) }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR 
+        { IfStatement(Some $2, $4, List.rev $6, None) }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR 
+        { IfStatement(Some $2, $4, List.rev $6, Some (List.rev $10)) }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE if_stmt 
+        { IfStatement(Some $2, $4, List.rev $6,
+           Some [LinedStatement($startpos.pos_lnum, $9)]) }
 
 switch_stmt:
-    | SWITCH TLCUR switch_clause_list TRCUR {  }
-    | SWITCH expr TLCUR switch_clause_list TRCUR { }
-    | SWITCH simple_stmt TSEMCOL TLCUR switch_clause_list TRCUR { }
-    | SWITCH simple_stmt TSEMCOL expr TLCUR switch_clause_list TRCUR { }
+    | SWITCH TLCUR switch_clause_list TRCUR 
+        { SwitchStatement(None, IdExp(IdName("true")), List.rev $3) }
+    | SWITCH expr TLCUR switch_clause_list TRCUR 
+        { SwitchStatement(None, $2, List.rev $4) }
+    | SWITCH simple_stmt TSEMCOL TLCUR switch_clause_list TRCUR 
+        { SwitchStatement(Some $2, IdExp(IdName("true")), List.rev $5)}
+    | SWITCH simple_stmt TSEMCOL expr TLCUR switch_clause_list TRCUR 
+        { SwitchStatement(Some $2, $4, List.rev $6) } 
 
 for_stmt:
-    | FOR TLCUR stmt_list TRCUR { }
-    | FOR expr TLCUR stmt_list TRCUR {  }
-    | FOR simple_stmt TSEMCOL option(expr) TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
-        { }
+    | FOR TLCUR stmt_list TRCUR { ForStatement(None, IdExp(IdName("true")), None, List.rev $3) }
+    | FOR expr TLCUR stmt_list TRCUR { ForStatement(None, $2, None, List.rev $4) }
+    | FOR simple_stmt TSEMCOL expr TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
+        { ForStatement(Some $2, $4, Some $6, List.rev $8) } 
+    | FOR simple_stmt TSEMCOL TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
+        { ForStatement(Some $2, IdExp(IdName("true")), Some $5, List.rev $7) }
 
 break_stmt:
-    | BREAK {  }
+    | BREAK { BreakStatement }
 
 continue_stmt:
-    | CONT {  }
+    | CONT { ContinueStatement }
 
 block_stmt:
-    | TLCUR stmt_list TRCUR { }
+    | TLCUR stmt_list TRCUR { BlockStatement(List.rev $2) }
 (*-----------*)
 
 
-lvalue_list:
-    | lvalue_list TCOM lvalue { }
-    | lvalue { }
 
-lvalue:   
-    | ID {  }
-    | primary_expression TLBR expr TRBR { (*make sure only ID,index_exp.. *) } (* array indexing *)
-    | primary_expression TDOT ID { } (* struct field access *)
 
 
 switch_clause_list:
-    | switch_clause {  }
-    | switch_clause_list switch_clause { }
+    | (* empty *) { [] }
+    | switch_clause_list switch_clause { $2 :: $1 }
 
 
 switch_clause:
-    | DEFAULT TCOL stmt_list { }
-    | CASE expr_list TCOL stmt_list { }
+    | DEFAULT TCOL stmt_list 
+        { DefaultCase (List.rev $3) }
+    | CASE expr_list TCOL stmt_list 
+        { SwitchCase (List.rev $2, List.rev $4) }
 
 simple_stmt:
-    | empty_stmt {  }
-    | expression_stmt {  }
-    | assign_stmt {  }
-    | shortvardecl_stmt {  }
-    | incdec_stmt {  }
+    | empty_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | expression_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | assign_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | shortvardecl_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | incdec_stmt { LinedStatement($startpos.pos_lnum, $1) }
 
 
 (* ----- expressions ----- *)
@@ -338,14 +400,14 @@ non_empty_function_arguments:
   | non_empty_function_arguments TCOM expr { $3::$1 }
  
 index_exp: 
-  | primary_expression TLBR expr TRBR 
+  | unary_exp TLBR expr TRBR 
       { IndexExp($1, $3)} 
 
 append_exp:
   | APPEND TLPAR ID TCOM expr TRPAR   { AppendExp(IdName($3), $5) }
 
 select_exp: 
-  | primary_expression TDOT ID 
+  | unary_exp TDOT ID 
       { SelectExp($1, IdName($3)) }
 
 type_cast_exp:
@@ -392,17 +454,17 @@ binary_exp:
   | TANOT { BinBitAndNot } 
 
 %inline single_op:
-  | TADDAS { } 
-  | TSUBAS { } 
-  | TMULAS { } 
-  | TDIVAS { } 
-  | TMODAS { } 
-  | TANDAS { } 
-  | TORAS  { } 
-  | TXORAS { } 
-  | TLAS   { } 
-  | TRAS   { }
-  | TANEQ  { }
+  | TADDAS { SinADD } 
+  | TSUBAS { SinSUB } 
+  | TMULAS { SinMul } 
+  | TDIVAS { SinDiv } 
+  | TMODAS { SinMod } 
+  | TANDAS { SinAnd } 
+  | TORAS  { SinOr } 
+  | TXORAS { SinXor } 
+  | TLAS   { SinLas } 
+  | TRAS   { SinRas }
+  | TANEQ  { SinAneq }
 
 blank_id: TBLANKID { BlankID }
 

@@ -10,7 +10,7 @@ test:
 	./lexer_test.native
 
 dev:
-	ocamlbuild  -r -I src -use-menhir dev_tools.byte
+	ocamlbuild  -r -I src -use-menhir -menhir "menhir --explain" dev_tools.byte
 
 clean:
 	ocamlbuild -clean
