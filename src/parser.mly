@@ -68,7 +68,7 @@ top_decl :
 
 declaration :
   | var_decl { VarDeclBlock $1 }
-  | typ_decl { raise NotImplemented }
+  | typ_decl { TypeDeclBlock $1 }
 
 func_decl: 
   | FUNC ID func_signature TLCUR func_body TRCUR { } 
@@ -80,8 +80,8 @@ var_decl:
   | VAR TLPAR var_spec_list TRPAR  { raise NotImplemented }
 
 typ_decl :
-  | TYPE typ_spec { }
-  | TYPE TLPAR typ_spec_list TRPAR {  }  (* This might cause weird errors. Check back *)
+  | TYPE typ_spec { [$2] }
+  | TYPE TLPAR typ_spec_list TRPAR { List.rev $3 }
 
 func_signature:
   | TLPAR args_list TRPAR typ {  }
@@ -113,11 +113,11 @@ var_spec_list:
   | var_spec_list var_spec TSEMCOL { } 
 
 typ_spec:
-  | ID typ  {  }
+  | ID typ  { SingleTypeDecl(IdName($1), $2) }
 
 typ_spec_list:
-  | (* empty *) { }
-  | typ_spec_list typ_spec TSEMCOL { }
+  | (* empty *) { [] }
+  | typ_spec_list typ_spec TSEMCOL { $2 :: $1 }
 
 typ:
   | basic_typ  { BasicType $1 }
@@ -153,9 +153,9 @@ stmt:
     | print_stmt { LinedStatement($startpos.pos_lnum, $1)  }
     | println_stmt { LinedStatement($startpos.pos_lnum, $1)  }
     | return_stmt { LinedStatement($startpos.pos_lnum, $1) }
-    | if_stmt { raise NotImplemented  } 
-    | switch_stmt { raise NotImplemented  }
-    | for_stmt { raise NotImplemented }
+    | if_stmt { LinedStatement($startpos.pos_lnum, $1) } 
+    | switch_stmt { LinedStatement($startpos.pos_lnum, $1)  }
+    | for_stmt { LinedStatement($startpos.pos_lnum, $1) }
     | break_stmt { LinedStatement($startpos.pos_lnum, $1)  }
     | continue_stmt { LinedStatement($startpos.pos_lnum, $1)  }
     | block_stmt { LinedStatement($startpos.pos_lnum, $1) }
@@ -231,7 +231,7 @@ declaration_stmt:
     | var_decl 
         {  VarDeclBlockStatement $1  }
     | typ_decl
-        { raise NotImplemented }
+        { TypeDeclBlockStatement $1 }
 
 shortvardecl_stmt:  
     | expr_list TCOLEQ expr_list   (* make sure lvalue is ID only? *)
@@ -275,24 +275,38 @@ return_stmt:
 
 
 if_stmt:
-    | IF expr TLCUR stmt_list TRCUR {  }
-    | IF expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR { }
-    | IF expr TLCUR stmt_list TRCUR ELSE if_stmt { }
-    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR {  }
-    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR {  }
-    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE if_stmt {  }
+    | IF expr TLCUR stmt_list TRCUR 
+        { IfStatement(None, $2, $4, None) }
+    | IF expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR 
+        { IfStatement(None, $2, List.rev $4, Some (List.rev $8)) }
+    | IF expr TLCUR stmt_list TRCUR ELSE if_stmt 
+        { IfStatement(None, $2, List.rev $4,
+           Some [LinedStatement($startpos.pos_lnum, $7)]) }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR 
+        { IfStatement(Some $2, $4, List.rev $6, None) }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR 
+        { IfStatement(Some $2, $4, List.rev $6, Some (List.rev $10)) }
+    | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE if_stmt 
+        { IfStatement(Some $2, $4, List.rev $6,
+           Some [LinedStatement($startpos.pos_lnum, $9)]) }
 
 switch_stmt:
-    | SWITCH TLCUR switch_clause_list TRCUR {  }
-    | SWITCH expr TLCUR switch_clause_list TRCUR { }
-    | SWITCH simple_stmt TSEMCOL TLCUR switch_clause_list TRCUR { }
-    | SWITCH simple_stmt TSEMCOL expr TLCUR switch_clause_list TRCUR { }
+    | SWITCH TLCUR switch_clause_list TRCUR 
+        { SwitchStatement(None, IdExp(IdName("true")), List.rev $3) }
+    | SWITCH expr TLCUR switch_clause_list TRCUR 
+        { SwitchStatement(None, $2, List.rev $4) }
+    | SWITCH simple_stmt TSEMCOL TLCUR switch_clause_list TRCUR 
+        { SwitchStatement(Some $2, IdExp(IdName("true")), List.rev $5)}
+    | SWITCH simple_stmt TSEMCOL expr TLCUR switch_clause_list TRCUR 
+        { SwitchStatement(Some $2, $4, List.rev $6) } 
 
 for_stmt:
-    | FOR TLCUR stmt_list TRCUR { }
-    | FOR expr TLCUR stmt_list TRCUR {  }
-    | FOR simple_stmt TSEMCOL option(expr) TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
-        { }
+    | FOR TLCUR stmt_list TRCUR { ForStatement(None, IdExp(IdName("true")), None, List.rev $3) }
+    | FOR expr TLCUR stmt_list TRCUR { ForStatement(None, $2, None, List.rev $4) }
+    | FOR simple_stmt TSEMCOL expr TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
+        { ForStatement(Some $2, $4, Some $6, List.rev $8) } 
+    | FOR simple_stmt TSEMCOL TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
+        { ForStatement(Some $2, IdExp(IdName("true")), Some $5, List.rev $7) }
 
 break_stmt:
     | BREAK { BreakStatement }
@@ -309,20 +323,22 @@ block_stmt:
 
 
 switch_clause_list:
-    | switch_clause {  }
-    | switch_clause_list switch_clause { }
+    | (* empty *) { [] }
+    | switch_clause_list switch_clause { $2 :: $1 }
 
 
 switch_clause:
-    | DEFAULT TCOL stmt_list { }
-    | CASE expr_list TCOL stmt_list { }
+    | DEFAULT TCOL stmt_list 
+        { DefaultCase (List.rev $3) }
+    | CASE expr_list TCOL stmt_list 
+        { SwitchCase (List.rev $2, List.rev $4) }
 
 simple_stmt:
-    | empty_stmt {  }
-    | expression_stmt {  }
-    | assign_stmt {  }
-    | shortvardecl_stmt {  }
-    | incdec_stmt {  }
+    | empty_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | expression_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | assign_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | shortvardecl_stmt { LinedStatement($startpos.pos_lnum, $1) }
+    | incdec_stmt { LinedStatement($startpos.pos_lnum, $1) }
 
 
 (* ----- expressions ----- *)

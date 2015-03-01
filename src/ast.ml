@@ -79,7 +79,8 @@ and plain_statement =
     | IfStatement of ((statement option) * expression * (statement list) * ((statement list ) option))
     | ReturnStatement of (expression option)
     | SwitchStatement of ((statement option) * expression * (switch_case list))
-    | ForStatement of ((statement option) * expression * (statement option) * (statement list)) (* Weed out short_var_declr in post-statement *)
+    | ForStatement of ((statement option) * expression * (statement option) * (statement list)) 
+          (* ForStamenet(init statement, condition (*true by default*), post statement, loop body *)
     | BreakStatement
     | ContinueStatement 
     | BlockStatement of (statement list)
