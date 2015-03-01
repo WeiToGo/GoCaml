@@ -419,12 +419,12 @@ binary_exp:
   | TMULAS { SinMul } 
   | TDIVAS { SinDiv } 
   | TMODAS { SinMod } 
-  | TANDAS { SinAnd} 
-  | TORAS  { SinOr} 
-  | TXORAS { SinXor} 
-  | TLAS   { SinLas} 
-  | TRAS   { SinRas}
-  | TANEQ  { SinAneq}
+  | TANDAS { SinAnd } 
+  | TORAS  { SinOr } 
+  | TXORAS { SinXor } 
+  | TLAS   { SinLas } 
+  | TRAS   { SinRas }
+  | TANEQ  { SinAneq }
 
 blank_id: TBLANKID { BlankID }
 *)

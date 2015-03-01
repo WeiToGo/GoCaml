@@ -11,7 +11,8 @@
 
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
-let letter = ['A'-'Z' 'a'-'z' '_']
+let letter = ['A'-'Z' 'a'-'z']
+let uscore = '_'
 let digit = ['0'-'9']
 let decimal_digit = ['0'-'9'] 
 let nz_digit = ['1'-'9']  (* Non-zero digit *) 
@@ -76,7 +77,7 @@ rule scan last_token = parse
   | "print"       { PRINT }
   | "println"     { PRINTLN }
   | "append"      { APPEND }
-  | letter (letter|digit)* as id_string  { ID(id_string) }
+  | letter (letter|digit)* | uscore (letter|digit|uscore)+ as id_string  { ID(id_string) }
 
   (* Symbols and operators *)
   | '+'   { TPLUS }

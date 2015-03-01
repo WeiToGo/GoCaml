@@ -1,10 +1,33 @@
+type assignment_ops = | SinADD
+                      | SinSUB
+                      | SinMul
+                      | SinDiv
+                      | SinMod
+                      | SinAnd
+                      | SinOr
+                      | SinXor
+                      | SinLas
+                      | SinRas
+                      | SinAneq
+
 type program = Program of package_decl * (top_decl list)
 and package_decl = Package of string
 and top_decl = FunctionDecl of function_decl 
       | TypeDeclBlock of (type_declaration list)
-      | VarDeclBlock of (var_declaration list)
-and var_declaration = 
-      | MultipleVarDecl of (single_var_declaration list)
+      | VarDeclBlock of (multiple_var_declaration list)
+(* This is a var decl block: 
+  var(
+      a,b int = 1,2      <----- MultipleVarDecl           
+      c string = "foo"   <----- MultipleVarDecl
+    ) 
+
+  In total, [MultipleVarDecl(~~first one~~), MultipleVarDecl(~~second one~~)] 
+
+  Looking at the first MultipleVarDecl:
+    a,b int = 1,2
+==  [SingleVarDecl a int 1, SingleVarDecl b int 2]
+*)
+and multiple_var_declaration = MultipleVarDecl of (single_var_declaration list)
 and single_var_declaration = SingleVarDecl of (identifier * (type_spec option) * (expression option))
 and type_declaration = 
       | SingleTypeDecl of (identifier * type_spec)
@@ -12,10 +35,11 @@ and type_spec =
       | BasicType of basic_type
       | SliceType of type_spec
       | ArrayType of (int_literal * type_spec)
-      | StructType of (struct_field_decl list)
+      | StructType of (multi_struct_field_decl list)
+      | FucntionType of (type_spec list * type_spec option)  (* function argument type list x function return type *)
       | CustomType of identifier
-and struct_field_decl = StructFieldDecl of (struct_field list)
-and struct_field = StructField of (identifier * type_spec) 
+and multi_struct_field_decl = MultipleStructFieldDecl of (single_struct_field_decl list)
+and single_struct_field_decl = SingleStructFieldDecl of (identifier * type_spec) 
 and basic_type = IntType | FloatType | BoolType | RuneType | StringType
 and identifier = IdName of string | BlankID
 and function_decl = Function of (identifier * function_signature * (statement list))
@@ -47,9 +71,9 @@ and statement = LinedStatement of int * plain_statement
 and plain_statement = 
     | EmptyStatement
     | ExpressionStatement of expression
-    | AssignmentStatement of ((lvalue * expression) list) 
+    | AssignmentStatement of ((expression * expression) list) 
     | TypeDeclBlockStatement of (type_declaration list)
-    | VarDeclBlockStatement of (var_declaration list) 
+    | VarDeclBlockStatement of (multiple_var_declaration list) 
     | PrintStatement of (expression list)
     | PrintlnStatement of (expression list)
     | IfStatement of ((statement option) * expression * (statement list) * ((statement list ) option))
@@ -60,12 +84,3 @@ and plain_statement =
     | ContinueStatement 
     | BlockStatement of (statement list)
 and switch_case = SwitchCase of ((expression list)* (statement list)) | DefaultCase of (statement list)
-and lvalue = 
-    | LId of identifier
-    | LIndex of (lvalue * expression)
-    | LSelector of (lvalue * identifier)
-
-let rec exp_of_lvalue lval = match lval with
-  | LId(idn) -> IdExp(idn)
-  | LIndex(l', x) -> IndexExp(exp_of_lvalue l', x)
-  | LSelector(l', idn) -> SelectExp(exp_of_lvalue l', idn) 
