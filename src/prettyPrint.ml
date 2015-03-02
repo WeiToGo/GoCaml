@@ -8,34 +8,34 @@ let print_ast prog pretty level =
 		print_string (String.make level '\t')
 	in
 	let print_binop binop = match binop with
-		| BinOr -> print_string "||"
-		| BinAnd -> print_string "&&"
-		| BinEq -> print_string "=="
-		| BinNotEq -> print_string "!="
-		| BinLess -> print_string "<"
-		| BinLessEq -> print_string "<="
-		| BinGreater -> print_string ">"
-		| BinGreaterEq -> print_string ">="
-		| BinPlus -> print_string "+"
-		| BinMinus -> print_string "-"
-		| BinBitOr -> print_string  "|"
-		| BinBitXor -> print_string "^"
-		| BinMult -> print_string "*"
-		| BinDiv -> print_string "/"
-		| BinMod -> print_string "%"
-		| BinShiftLeft -> print_string "<<"
-		| BinShiftRight -> print_string ">>"
-		| BinBitAnd -> print_string "&"
-		| BinBitAndNot -> print_string "&^"
+		| BinOr -> print_string " || "
+		| BinAnd -> print_string " && "
+		| BinEq -> print_string " == "
+		| BinNotEq -> print_string " != "
+		| BinLess -> print_string " < "
+		| BinLessEq -> print_string " <= "
+		| BinGreater -> print_string " > "
+		| BinGreaterEq -> print_string " >= "
+		| BinPlus -> print_string " + "
+		| BinMinus -> print_string " - "
+		| BinBitOr -> print_string  " | "
+		| BinBitXor -> print_string " ^ "
+		| BinMult -> print_string " * "
+		| BinDiv -> print_string " / "
+		| BinMod -> print_string " % "
+		| BinShiftLeft -> print_string " << "
+		| BinShiftRight -> print_string " >> "
+		| BinBitAnd -> print_string " & "
+		| BinBitAndNot -> print_string " &^ "
 	in
 	let print_unary_op unop = match unop with
-		| UPlus -> print_string "+"
-		| UMinus -> print_string "-"
-		| UNot -> print_string "!"
-		| UCaret -> print_string "^"
+		| UPlus -> print_string " + "
+		| UMinus -> print_string " - "
+		| UNot -> print_string " ! "
+		| UCaret -> print_string " ^ "
 	in
 	let print_identifier id = match id with
-		| IdName (s) -> print_string (s ^ " ")
+		| IdName (s) -> print_string s 
 		| BlankID -> print_string "_ "
 	in
 	let print_int_literal lit = match lit with
@@ -50,11 +50,11 @@ in
 		| StringLit (s) -> print_string s
 	in
 	let print_basic_type t = match t with
-		| IntType -> print_string "int"
-		| FloatType -> print_string "float64"
-		| BoolType -> print_string "bool"
-		| RuneType -> print_string "rune"
-		| StringType -> print_string "string"
+		| IntType -> print_string " int "
+		| FloatType -> print_string " float64 "
+		| BoolType -> print_string " bool "
+		| RuneType -> print_string " rune "
+		| StringType -> print_string " string "
 	in 
 	let rec print_multi_struct_field sfd = match sfd with
 		| MultipleStructFieldDecl (sf_list) -> 
@@ -91,13 +91,22 @@ in
 			end
 		| StructType (st) -> 
 			begin
-				print_string "struct { ";
+				print_string " struct { ";
 				ignore(level = level + 1);
 				insert_tab(level);
 				List.iter print_multi_struct_field st; 
 				ignore(level = level - 1);
 				insert_tab(level);
 				print_string "}";
+			end
+		| FunctionType (tl, ts_op) ->
+			begin
+				print_string " func ( ";
+				List.iter print_type_spec tl;
+				print_string ") ";
+				match ts_op with
+				| None -> ()
+				| Some ts_op ->  print_type_spec ts_op
 			end
 		| CustomType (id) -> print_identifier id
 	in
@@ -128,7 +137,7 @@ in
 			end
 		| AppendExp (id,e) ->
 			begin
-				print_string "append ";
+				print_string " append ";
 				print_string "(";
 				print_identifier id;
 				print_string ",";
@@ -187,9 +196,10 @@ in
 	let print_type_decl td = match td with
 		| SingleTypeDecl (id,ts) ->
 			begin
+				print_string "type ";
 				print_identifier id;
 				print_type_spec ts;
-				print_string ";";
+				print_string ";\n";
 			end
 	in
 	let print_single_var_decl vd = match vd with 
@@ -228,11 +238,13 @@ in
 		| EmptyStatement -> ()
 		| ExpressionStatement (e) -> 
 			begin 
+				insert_tab(level);
 				print_expr e;
-				print_string ";";
+				print_string ";\n";
 			end
 		| AssignmentStatement (l)->
 			begin
+				insert_tab(level);
 			 	List.iter (fun (e1,e2) -> 
 			 		begin
 				 		print_expr e1;
@@ -242,10 +254,19 @@ in
 			 		end
 			 	) l
 			 end 
-		| TypeDeclBlockStatement (decl_list)-> List.iter print_type_decl decl_list
-		| VarDeclBlockStatement (decl_list)-> List.iter print_var_decl decl_list
+		| TypeDeclBlockStatement (decl_list)-> 
+			begin
+				insert_tab(level);
+				List.iter print_type_decl decl_list;
+			end
+		| VarDeclBlockStatement (decl_list)-> 
+			begin
+				insert_tab(level);				
+				List.iter print_var_decl decl_list
+			end
 		| PrintStatement (e_list)-> 
 			begin
+				insert_tab(level);
 				print_string "print ";
 				print_string "(";
 				List.iter print_expr e_list;
@@ -253,6 +274,7 @@ in
 			end
 		| PrintlnStatement (e_list)->
 			begin
+				insert_tab(level);
 				print_string "println ";
 				print_string "(";
 				List.iter print_expr e_list;
@@ -260,6 +282,7 @@ in
 			end
 		| IfStatement (s, e, s1_list, s2_list) ->
 			begin
+				insert_tab(level);
 				print_string "if ";
 				(match s with 
 				| None -> ()
@@ -282,7 +305,8 @@ in
 						List.iter (fun x -> print_stmt_wrap level x) s2_list;
 					end
 			end
-		| ReturnStatement (e_op)-> 
+		| ReturnStatement (e_op)-> 	
+			insert_tab(level);
 		    (match e_op with
 			| None -> print_string "return;\n"
 			| Some e_op -> 
@@ -293,6 +317,7 @@ in
 				end)
 		| SwitchStatement (s_op,e,case_list)->
 			begin
+				insert_tab(level);
 				print_string "switch";
 				(match s_op with 
 				|None -> ()
@@ -318,21 +343,37 @@ in
 			end
 		| ForStatement (s1_op,e,s2_op,stmt_list)->
 			begin
-				print_string "for";
-				match s1_op with
+				insert_tab(level);
+				print_string "for ";
+				(match s1_op with
+				| None -> print_string ";";
+				| Some s1_op -> print_stmt_wrap level s1_op);
+				print_expr e;
+				print_string "; ";
+				(match s2_op with
 				| None ->()
-				| Some s1_op -> print_stmt_wrap level s1_op;
-				match s2_op with
-				| None ->()
-				| Some s2_op -> print_stmt_wrap level s2_op;
+				| Some s2_op -> print_stmt_wrap level s2_op);
 				print_string "{\n ";
+				ignore(level = level + 1);
+				insert_tab(level);
 				List.iter (fun x -> print_stmt_wrap level x) stmt_list;
+				ignore(level = level - 1);
+				insert_tab(level);
 				print_string "}\n";
 			end
-		| BreakStatement -> print_string "break;\n"
-		| ContinueStatement  -> print_string "continue;\n"
+		| BreakStatement -> 
+			begin
+				insert_tab(level);
+				print_string "break;\n"
+			end
+		| ContinueStatement  -> 
+			begin
+				insert_tab(level);
+				print_string "continue;\n"
+			end
 		| BlockStatement (sl) -> 
 			begin
+				insert_tab(level);
 				print_string "{ \n";
 				ignore(level = level + 1);
 				insert_tab(level);
@@ -344,36 +385,37 @@ in
 	and print_stmt_wrap level stmt = match stmt with
 		| LinedStatement (ln,s) -> print_stmt level s
 	in
-	let print_func_decl fd = match fd with 
-		| Function (id,fs, stmt_list) ->
+	let print_top_decl level td = match td with 
+		| FunctionDecl (id,fs, stmt_list) ->
 			begin
-				print_string "func";
+				print_string "func ";
 				print_identifier id;
 				print_func_sign fs;
 				print_string "{ \n";
+				ignore(level = level + 1);
+				insert_tab(level);
 				List.iter (fun x -> print_stmt_wrap level x) stmt_list;
+				ignore(level = level - 1);
+				insert_tab(level);
 				print_string "}; \n";
 			end
-	in
-	let print_top_decl td = match td with
-		| FunctionDecl (f) -> print_func_decl f
 		| TypeDeclBlock (tl) -> List.iter print_type_decl tl
 		| VarDeclBlock (vl) -> List.iter print_var_decl vl
 	in
 
-	let print_top_decl_list dl =
-		List.iter print_top_decl dl 
+	let print_top_decl_list level dl =
+		List.iter (fun x -> print_top_decl level x) dl 
 	in
 	let print_package s = match s with
 		| Package (str) -> 
 			begin
 				print_string "package ";
 				print_string str;
-				print_string ";\n"
+				print_string ";\n\n"
 			end
 	in 
 	print_package pack;
-	print_top_decl_list dl;
+	print_top_decl_list level dl;
 	close_out outfile
 
 

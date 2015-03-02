@@ -10,11 +10,11 @@ let build_ast input =
   | filename -> open_in filename
   in
   let lexbuf = Lexing.from_channel ic in
-  let ast = 
+  let () = 
     try
-      Parser.program Scan.wrapped_scan lexbuf;
-      print_string "VALID \n"
-(*       PrettyPrint.print_ast ast "out.txt" *)
+      let ast = Parser.program Scan.wrapped_scan lexbuf in
+      (* print_string "VALID \n"; *)
+      PrettyPrint.print_ast ast "out.go" 0
     with Parser.Error
       -> (
           Printf.eprintf "%s" ("Syntax Error at line " 
@@ -28,8 +28,8 @@ let build_ast input =
     
   in
   match input with
-  | "stdin" -> ast
-  | filename -> close_in ic; ast
+  | "stdin" -> ()
+  | filename -> close_in ic
 
 
 let _ = if (Array.length Sys.argv) < 2 then
