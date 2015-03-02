@@ -23,7 +23,7 @@ Utilities:
 - a tool to automatically remove the ast crap from the parsesr file will be nice.
         - Don't remove it (obviously.) Write the output to a separate file. [DONE]
 
-- We need more tests.
+- We need more tests. [See dev/deep_dev_notes for a list of tests used for development. Also working on a automated test suite right now.]
 
 
 ++++++++++
@@ -31,8 +31,32 @@ Utilities:
 fix line numbers [DONE]
 fix parser [DONE]
 fix semicolon insertion [DONE]
-fix ast
-fix pretty print
+fix ast [DONE]
+fix pretty print 
 
 - All valid instead of valid for every single test file
-- Have a file with no ending newline and check if the semicolon rule still works
+- Have a file with no ending newline and check if the semicolon rule still works [This DOES NOT WORK. Fixing this is non straightforward. Need to check with the TA is this is an issue.]
+
+weeder todo:
+- Break and continue outside loops are not allowed.  
+- Weeding for assignment, variable decl , and inc/decr
+We no longer have lvalues since that was a massive parsing PITA
+(In particular, I could not get `(x)[0] = 1` to parse).
+So weeder needs to take care of lvalue checking.
+
+- Weed out short variable decl in for loop post statement
+- Weed out blank statement rule.  For example, these are not allowed:
+    x = _
+    x := _
+    var x int = _
+There might be more such rules. 
+
+- Note that in the real go compiler, this passes fine: 
+```go
+func foo(_, _ int) { } 
+```
+while this has an duplicate argument error:
+```go
+func foo(a, a int) { } 
+```
+The second one will need to be done by weeding. 
