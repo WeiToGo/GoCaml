@@ -230,12 +230,6 @@ in
 					end)
 			end
 	in
-	let print_single_short_var_decl svd = match svd with
-		| SingleShortVarDecl (e1_list, e2_list) -> 
-			begin
-				
-			end
-	in
 	let print_var_decl vd = match vd with 
 		| MultipleVarDecl (mvd_list) -> 
 				let rec print_var_decl_helper sl = (match sl with
@@ -250,19 +244,16 @@ in
 				in print_var_decl_helper mvd_list;
 				print_string ";\n";
 	in
-	let print_short_var_decl svd = match svd with 
-		| MultipleShortVarDecl (msvd_list) ->
-				let rec print_short_var_decl_helper sl = (match sl with
-					| [] -> ()
-					| h::[] -> print_single_short_var_decl h
-					| h::t ->
-						begin
-							print_single_short_var_decl h;
-							print_string "; ";
-							print_short_var_decl_helper t;
-						end);
-				in print_short_var_decl_helper msvd_list;
-				print_string ";\n";	
+	let print_short_var_decl level svd = match svd with 
+		| ShortVarDecl (e1_list, e2_list) -> 
+			let print_short_var_decl_helper (e1, e2) = 
+				begin
+					print_expr level e1;
+					print_string ":=";
+					print_expr level e2;
+					print_string ";";
+				end
+			in List.map2 print_short_var_decl_helper e1_list e2_list
 	in
 	let rec print_stmt level stmt = 
 		match stmt with
@@ -295,10 +286,10 @@ in
 				insert_tab(level);				
 				List.iter print_var_decl decl_list
 			end
-		| ShortVarDeclBlockStatement (decl_list) ->
+		| ShortVarDeclStatement (decl_list) ->
 			begin
 				insert_tab(level);
-				List.iter print_short_var_decl decl_list;
+				List.iter (fun x -> print_short_var_decl level x) decl_list;
 			end
 		| PrintStatement (e_list)-> 
 			begin

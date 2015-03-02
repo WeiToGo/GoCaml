@@ -29,8 +29,7 @@ and top_decl = FunctionDecl of (identifier * function_signature * (statement lis
 *)
 and multiple_var_declaration = MultipleVarDecl of (single_var_declaration list)
 and single_var_declaration = SingleVarDecl of (identifier * (type_spec option) * (expression option))
-and multiple_short_var_decl = MultipleShortVarDecl of (single_short_var_decl list)
-and single_short_var_decl = SingleShortVarDecl of (expression list) * (expression list)
+and short_var_decl = ShortVarDecl of (expression list) * (expression list)
 and type_declaration = 
       | SingleTypeDecl of (identifier * type_spec)
 and type_spec = 
@@ -74,7 +73,7 @@ and plain_statement =
     | ExpressionStatement of expression
     | AssignmentStatement of ((expression * expression) list) 
     | TypeDeclBlockStatement of (type_declaration list)
-    | ShortVarDeclBlockStatement of (multiple_short_var_decl list)
+    | ShortVarDeclStatement of (short_var_decl list)
     | VarDeclBlockStatement of (multiple_var_declaration list) 
     | PrintStatement of (expression list)
     | PrintlnStatement of (expression list)
