@@ -1,1 +1,16 @@
-var x int;
+package main
+
+var (
+	x,y  int = 1,2;
+	a int = 0;
+	a,b string
+)
+
+type a point
+type (x1 int; x2 int;)
+type ()
+
+func foo(_, _ int)  { 
+	_, a = 34, 35;
+	_ := 3
+}

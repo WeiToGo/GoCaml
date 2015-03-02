@@ -6,11 +6,11 @@ compile:
 	ocamlbuild -quiet -r -I src -use-menhir main.byte
 
 test:
-	ocamlbuild -quiet -r -I src -I tests -pkg oUnit -use-menhir -menhir "menhir --explain" lexer_test.native
+	ocamlbuild -quiet -r -I src -I tests -pkg oUnit -use-menhir -menhir "menhir --strict --explain" lexer_test.native
 	./lexer_test.native
 
 dev:
-	ocamlbuild  -r -I src -use-menhir -menhir "menhir --explain" dev_tools.byte
+	ocamlbuild  -r -I src -use-menhir -menhir "menhir --strict --explain" dev_tools.byte
 
 clean:
 	ocamlbuild -clean

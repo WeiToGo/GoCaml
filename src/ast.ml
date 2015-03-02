@@ -12,7 +12,7 @@ type assignment_ops = | SinADD
 
 type program = Program of package_decl * (top_decl list)
 and package_decl = Package of string
-and top_decl = FunctionDecl of function_decl 
+and top_decl = FunctionDecl of (identifier * function_signature * (statement list) )
       | TypeDeclBlock of (type_declaration list)
       | VarDeclBlock of (multiple_var_declaration list)
 (* This is a var decl block: 
@@ -42,7 +42,6 @@ and multi_struct_field_decl = MultipleStructFieldDecl of (single_struct_field_de
 and single_struct_field_decl = SingleStructFieldDecl of (identifier * type_spec) 
 and basic_type = IntType | FloatType | BoolType | RuneType | StringType
 and identifier = IdName of string | BlankID
-and function_decl = Function of (identifier * function_signature * (statement list))
 and function_signature = FunctionSig of ((function_arg list) * (type_spec option))
 and function_arg = FunctionArg of (identifier * type_spec)
 and expression =
