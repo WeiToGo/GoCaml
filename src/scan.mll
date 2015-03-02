@@ -83,7 +83,7 @@ rule scan last_token = parse
   | "print"       { PRINT }
   | "println"     { PRINTLN }
   | "append"      { APPEND }
-  | letter (letter|digit)* | uscore (letter|digit|uscore)+ as id_string  { ID(id_string) }
+  | letter (letter|digit|uscore)* | uscore (letter|digit|uscore)+ as id_string  { ID(id_string) }
 
   (* Symbols and operators *)
   | '+'   { TPLUS }

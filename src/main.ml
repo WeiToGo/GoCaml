@@ -32,7 +32,7 @@ let build_ast input =
   | filename -> close_in ic; ast
 
 
-(* let _ = if (Array.length Sys.argv) < 2 then
+let _ = if (Array.length Sys.argv) < 2 then
           print_string "You must supply the filename as first argument"
         else ()
 
@@ -46,7 +46,7 @@ let pretty_file_name = file_basename ^ ".pretty.go"
 let inp = open_in in_file_name 
 let filebuf = Lexing.from_channel inp 
 let ast = build_ast in_file_name
-;; *)
+;;
 
 
 
