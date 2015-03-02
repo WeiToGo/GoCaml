@@ -36,7 +36,7 @@ and type_spec =
       | SliceType of type_spec
       | ArrayType of (int_literal * type_spec)
       | StructType of (multi_struct_field_decl list)
-      | FucntionType of (type_spec list * type_spec option)  (* function argument type list x function return type *)
+      | FunctionType of (type_spec list * type_spec option)  (* function argument type list x function return type *)
       | CustomType of identifier
 and multi_struct_field_decl = MultipleStructFieldDecl of (single_struct_field_decl list)
 and single_struct_field_decl = SingleStructFieldDecl of (identifier * type_spec) 

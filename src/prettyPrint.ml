@@ -56,20 +56,20 @@ in
 		| RuneType -> print_string "rune"
 		| StringType -> print_string "string"
 	in 
-	let rec print_struct_field_decl sfd = match sfd with
-		| StructFieldDecl (sf_list) -> 
+	let rec print_multi_struct_field sfd = match sfd with
+		| MultipleStructFieldDecl (sf_list) -> 
 				let rec print_struct_field_helper sl = match sl with
 					| [] -> ()
-					| h::[] -> print_struct_field h
+					| h::[] -> print_single_struct_field h
 					| h::t ->
 					begin
-						print_struct_field h;
+						print_single_struct_field h;
 						print_string ",";
 						print_struct_field_helper t;
 					end 
 				in print_struct_field_helper sf_list
-	and print_struct_field sf = match sf with
-		| StructField (id, ty) ->
+	and print_single_struct_field sf = match sf with
+		| SingleStructFieldDecl (id, ty) ->
 			begin
 				print_identifier id;
 				print_type_spec ty;
@@ -94,7 +94,7 @@ in
 				print_string "struct { ";
 				ignore(level = level + 1);
 				insert_tab(level);
-				List.iter print_struct_field_decl st; 
+				List.iter print_multi_struct_field st; 
 				ignore(level = level - 1);
 				insert_tab(level);
 				print_string "}";
@@ -155,9 +155,6 @@ in
 				print_string ".";
 				print_identifier id;
 			end
-	in
-	let print_lvalue lvalue =
-		print_expr (exp_of_lvalue lvalue)
 	in 
 	let print_func_arg fa = match fa with
 		| FunctionArg (id,t) ->
@@ -236,11 +233,11 @@ in
 			end
 		| AssignmentStatement (l)->
 			begin
-			 	List.iter (fun (lv,e) -> 
+			 	List.iter (fun (e1,e2) -> 
 			 		begin
-				 		print_lvalue lv;
+				 		print_expr e1;
 			 			print_string " = ";
-			 			print_expr e;	
+			 			print_expr e2;	
 			 			print_string ";";		
 			 		end
 			 	) l

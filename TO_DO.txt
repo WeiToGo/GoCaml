@@ -5,14 +5,7 @@ weeder for
 
 for type checking:
 
-can have :
-public int m (int m)
-{
-	int m;
-}
-
-function in one scope, parameter in another scope, local var in another scope.
-
+function: parameters and local vars are in the same scope
 
 assignment compatibility:
 have to be the exact types on both sides.
