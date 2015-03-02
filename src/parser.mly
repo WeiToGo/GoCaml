@@ -130,7 +130,7 @@ typ:
 
 func_typ:
   | FUNC TLPAR typ_list TRPAR option(typ)
-    { FucntionType(List.rev $3, $5)}
+    { FunctionType(List.rev $3, $5)}
 
 typ_list:
   | (* empty *) { [] }
