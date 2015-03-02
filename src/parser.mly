@@ -18,17 +18,17 @@
   | (h :: t), (h' :: t') -> list_zip t t' ((f h h') :: acc) f
   | _ -> raise UnequalListLength
 
-%}
-
+%} 
+ 
 %token TPLUS TMINUS TMULT TDIV TMOD TBITAND TBITOR TCARET TLSFT TRSFT TANOT
 %token  TADDAS TSUBAS TMULAS TDIVAS TMODAS TANDAS TORAS TXORAS TLAS TRAS TANEQ
-%token TAND TOR TREC TINC TDECR TEQ TLS TGR TASSIGN TNOT TNEQ TLSEQ TGREQ TCOLEQ
-%token TTD TLPAR TRPAR TLBR TRBR TLCUR TRCUR TCOM TDOT TSEMCOL TCOL
+%token TAND TOR TINC TDECR TEQ TLS TGR TASSIGN TNOT TNEQ TLSEQ TGREQ TCOLEQ
+%token TLPAR TRPAR TLBR TRBR TLCUR TRCUR TCOM TDOT TSEMCOL TCOL
 %token TBLANKID
 %token<string> TSTR TRWSTR TRUNE
 %token TEOF
-%token BREAK CASE CHAN CONST CONT DEFAULT DEFER ELSE FALLTHROUGH FOR FUNC GO
-%token GOTO IF IMPORT INTERFACE MAP PACKAGE RANGE RETURN SELECT STRUCT SWITCH
+%token BREAK CASE CONT DEFAULT ELSE FOR FUNC
+%token IF PACKAGE RETURN STRUCT SWITCH
 %token TYPE VAR INT_TYP FL_TYP BOOL_TYP RUNE_TYP STR_TYP PRINT PRINTLN APPEND 
 %token<string> ID
 %token <string> DEC_INT OCTAL_INT HEX_INT 
@@ -43,26 +43,25 @@
 %nonassoc TLPAR TLBR TDOT
 
 
-%start<Ast.statement> program
+%start<Ast.program> program
 
 %%
 
 program :       
-  (*| package_decl TSEMCOL top_decl_list TEOF  { } *)
-  | stmt TSEMCOL { $1 }
+  | package_decl TSEMCOL top_decl_list TEOF  { Program($1, List.rev $3) }
 
 package_decl:
-  | PACKAGE ID { }
+  | PACKAGE ID { Package $2 }
 
 
 top_decl_list :
-  | (* empty *)   { }
-  | top_decl_list top_decl TSEMCOL { } 
+  | (* empty *)   { [] }
+  | top_decl_list top_decl TSEMCOL { $2 :: $1 } 
 
 
 top_decl :
   | declaration { $1 } 
-  | func_decl { raise NotImplemented } 
+  | func_decl { $1 } 
 
 (*-----------*)
 
@@ -71,32 +70,34 @@ declaration :
   | typ_decl { TypeDeclBlock $1 }
 
 func_decl: 
-  | FUNC ID func_signature TLCUR func_body TRCUR { } 
+  | FUNC ID func_signature TLCUR stmt_list TRCUR 
+      { FunctionDecl(IdName($2), $3, List.rev $5) } 
 
 (*-----------*)
 
 var_decl:
   | VAR var_spec { [$2] }
-  | VAR TLPAR var_spec_list TRPAR  { raise NotImplemented }
+  | VAR TLPAR var_spec_list TRPAR  { List.rev $3 }
 
 typ_decl :
   | TYPE typ_spec { [$2] }
   | TYPE TLPAR typ_spec_list TRPAR { List.rev $3 }
 
 func_signature:
-  | TLPAR args_list TRPAR typ {  }
-  | TLPAR args_list TRPAR {  } 
+  | TLPAR args_list TRPAR typ 
+      { FunctionSig($2, Some $4) }
+  | TLPAR args_list TRPAR 
+      { FunctionSig($2, None) } 
 
 
-args_list: 
-  | (* empty *) { }
+args_list: (* This is ugly. The list append is not ideal *)
+  | (* empty *) 
+      { [] }
   | args_list TCOM id_list typ 
-    { }
+    { $1 @ (distribute $3 $4 [] (fun x y -> FunctionArg(x, y)))}
   | id_list typ 
-    {  } 
+    { distribute $1 $2 [] (fun x y -> FunctionArg(x, y)) } 
 
-func_body:
-    | stmt_list stmt {  }
 
 (*-----------*)
 
@@ -109,8 +110,8 @@ var_spec:   (* Returns multivardecl *)
     { MultipleVarDecl(list_zip $1 $4 [] (fun x y -> SingleVarDecl(x, Some $2, Some y))) }
 
 var_spec_list:
-  | (* empty *) { }
-  | var_spec_list var_spec TSEMCOL { } 
+  | (* empty *) { [] }
+  | var_spec_list var_spec TSEMCOL { $2 :: $1 } 
 
 typ_spec:
   | ID typ  { SingleTypeDecl(IdName($1), $2) }
@@ -161,11 +162,9 @@ stmt:
     | block_stmt { LinedStatement($startpos.pos_lnum, $1) }
 (*-----------*)
 
-id_list:
-  | ID { [IdName $1] }
-  | id_list TCOM ID { (IdName $3) :: $1 }
-
-
+id_list: (* Non-empty *)
+  | identifier { [$1] }
+  | id_list TCOM identifier { $3 :: $1 }
 
 basic_typ :
   | INT_TYP { IntType }
@@ -217,11 +216,6 @@ assign_stmt:
      }
   | expr_list TASSIGN expr_list
      { AssignmentStatement(list_zip $1 $3 []  (fun x y -> (x,y)) ) }
-  | blank_id TASSIGN expr { AssignmentStatement([(IdExp(BlankID), $3)]) }
-
-pexp_list:
-    | pexp_list TCOM primary_expression { $3 :: $1 }
-    | primary_expression { [ $1 ] }
 
 expr_list:
     | expr_list TCOM expr { $3 :: $1 }
@@ -229,7 +223,7 @@ expr_list:
 
 declaration_stmt:
     | var_decl 
-        {  VarDeclBlockStatement $1  }
+        { VarDeclBlockStatement $1 }
     | typ_decl
         { TypeDeclBlockStatement $1 }
 
@@ -372,7 +366,7 @@ unary_exp:
   | unary_op unary_exp %prec uop { UnaryExp($1, $2) }  (* Unary operators have highest precedence *)
 
 primary_expression: 
-  | ID { IdExp(IdName($1)) } 
+  | identifier { IdExp $1 } 
   | literal { LiteralExp $1 } 
   | function_call { $1 } 
   | index_exp { $1 } 
@@ -380,6 +374,9 @@ primary_expression:
   | select_exp  { $1 }
   | type_cast_exp { $1 }
 
+identifier: 
+  | ID { IdName($1) }
+  | TBLANKID { BlankID }
 unary_op:
   | TPLUS { UPlus } 
   | TMINUS { UMinus } 
@@ -465,7 +462,5 @@ binary_exp:
   | TLAS   { SinLas } 
   | TRAS   { SinRas }
   | TANEQ  { SinAneq }
-
-blank_id: TBLANKID { BlankID }
 
 %%

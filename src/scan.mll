@@ -3,9 +3,23 @@
   open Parser
 
   exception Error of string
+  exception NotSupportedInGoLite
 
   (* Hah sneaking in a reference variable here. Not so pure are we. *)
   let last_token: (token option ref) = ref None
+
+  let needs_semicolon last_token = match last_token with
+  | Some(BREAK)
+  | Some(ID _)
+  | Some(TINC) | Some(TDECR)
+  | Some(RETURN) | Some(CONT)
+  | Some(DEC_INT(_)) | Some(HEX_INT(_)) | Some(OCTAL_INT(_))
+  | Some(FLOAT64(_))
+  | Some(TRUNE(_)) | Some(TRWSTR(_)) | Some(TSTR(_))
+  | Some(TRBR) | Some(TRPAR) | Some(TRCUR)
+  | Some(INT_TYP) | Some(FL_TYP) | Some(BOOL_TYP) | Some(RUNE_TYP) | Some(STR_TYP)
+    -> true
+  | _ -> false 
 
 }
 
@@ -25,20 +39,12 @@ let a = [^ '*' '/']
 (* operators + delimeters *)
 rule scan last_token = parse
 
-  (* Whitespace and comments *)  | white         { scan last_token lexbuf }
+  (* Whitespace and comments *)  
+  | white         { scan last_token lexbuf }
 
-  | newline       { Lexing.new_line lexbuf; match last_token with
-                    | Some(BREAK)
-                    | Some(ID _)
-                    | Some(TINC) | Some(TDECR)
-                    | Some(FALLTHROUGH) | Some(RETURN) | Some(CONT)
-                    | Some(DEC_INT(_)) | Some(HEX_INT(_)) | Some(OCTAL_INT(_))
-                    | Some(FLOAT64(_))
-                    | Some(TRUNE(_)) | Some(TRWSTR(_)) | Some(TSTR(_))
-                    | Some(TRBR) | Some(TRPAR) | Some(TRCUR)
-                    | Some(INT_TYP) | Some(FL_TYP) | Some(BOOL_TYP) | Some(RUNE_TYP) | Some(STR_TYP)
-                      -> TSEMCOL
-                    | _ -> scan None lexbuf 
+  | newline       { Lexing.new_line lexbuf;
+                    if (needs_semicolon last_token) then TSEMCOL
+                    else scan None lexbuf
                   } 
   | "//" [^ '\n']* { scan last_token lexbuf }
   | "/*" { read_comment last_token lexbuf }
@@ -46,25 +52,25 @@ rule scan last_token = parse
   (* Keywords *)
   | "break"       { BREAK }
   | "case"        { CASE }
-  | "chan"        { CHAN }
-  | "const"       { CONST }
+  | "chan"        { raise NotSupportedInGoLite }
+  | "const"       { raise NotSupportedInGoLite }
   | "continue"    { CONT }
   | "default"     { DEFAULT }
-  | "defer"       { DEFER }
+  | "defer"       { raise NotSupportedInGoLite }
   | "else"        { ELSE }
-  | "fallthrough" { FALLTHROUGH }
+  | "fallthrough" { raise NotSupportedInGoLite }
   | "for"         { FOR }
   | "func"        { FUNC }
-  | "go"          { GO }
-  | "goto"        { GOTO }
+  | "go"          { raise NotSupportedInGoLite }
+  | "goto"        { raise NotSupportedInGoLite }
   | "if"          { IF }
-  | "import"      { IMPORT }
-  | "interface"   { INTERFACE }
-  | "map"         { MAP }
+  | "import"      { raise NotSupportedInGoLite }
+  | "interface"   { raise NotSupportedInGoLite }
+  | "map"         { raise NotSupportedInGoLite }
   | "package"     { PACKAGE }
-  | "range"       { RANGE }
+  | "range"       { raise NotSupportedInGoLite }
   | "return"      { RETURN }
-  | "select"      { SELECT }
+  | "select"      { raise NotSupportedInGoLite }
   | "struct"      { STRUCT }
   | "switch"      { SWITCH }
   | "type"        { TYPE }
@@ -104,7 +110,7 @@ rule scan last_token = parse
   | "&^=" { TANEQ}
   | "&&"  { TAND }
   | "||"  { TOR }
-  | "<-"  { TREC }
+  | "<-"  { raise NotSupportedInGoLite }
   | "++"  { TINC }
   | "--"  { TDECR }
   | "=="  { TEQ }
@@ -116,7 +122,7 @@ rule scan last_token = parse
   | "<="  { TLSEQ }
   | ">="  { TGREQ}  
   | ":="  { TCOLEQ }
-  | "..." { TTD }
+  | "..." { raise NotSupportedInGoLite }
   | '('   { TLPAR }
   | ')'   { TRPAR }
   | '['   { TLBR }
@@ -138,10 +144,8 @@ rule scan last_token = parse
   | "0" ("x" | "X" ) hex_digit+ as st { HEX_INT(st) }
   | decimal_digit+ "." decimal_digit* as st { FLOAT64(st)}
   | "." decimal_digit+ as st { FLOAT64(st) }
-  | eof   { TEOF}
+  | eof   { TEOF }
   | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
-
-
 
 and read_rune buf = parse
   | ''' { TRUNE (Buffer.contents buf)}
