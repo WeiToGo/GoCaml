@@ -52,11 +52,11 @@ So weeder needs to take care of lvalue checking.
 There might be more such rules. 
 
 - Note that in the real go compiler, this passes fine: 
-```go
+```
 func foo(_, _ int) { } 
 ```
 while this has an duplicate argument error:
-```go
+```
 func foo(a, a int) { } 
 ```
-The second one will need to be done by weeding. 
+Rejection for the second one should be done by typechecker.
