@@ -83,4 +83,6 @@ and plain_statement =
     | BreakStatement
     | ContinueStatement 
     | BlockStatement of (statement list)
-and switch_case = SwitchCase of ((expression list)* (statement list)) | DefaultCase of (statement list)
+and switch_case = 
+    | SwitchCase of ((expression list)* (statement list)) 
+    | DefaultCase of (statement list)

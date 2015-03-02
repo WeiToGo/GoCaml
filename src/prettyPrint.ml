@@ -318,7 +318,7 @@ in
 		| SwitchStatement (s_op,e,case_list)->
 			begin
 				insert_tab(level);
-				print_string "switch";
+				print_string "switch ";
 				(match s_op with 
 				|None -> ()
 				|Some s_op -> print_stmt_wrap level s_op);
@@ -347,7 +347,9 @@ in
 				print_string "for ";
 				(match s1_op with
 				| None -> print_string ";";
-				| Some s1_op -> print_stmt_wrap level s1_op);
+				| Some s1_op -> 
+					(* | VarDeclBlockStatement (vdl) -> *)
+					print_stmt_wrap level s1_op);
 				print_expr e;
 				print_string "; ";
 				(match s2_op with
