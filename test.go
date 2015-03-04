@@ -313,7 +313,8 @@ func short_decl() {
 func block() {
 	println(1)
 	{
-		println(2) // ##################### ERROR
+		println(2) 
+		println(4)
 	}
 	println(3)
 }
@@ -325,7 +326,7 @@ func exprs() {
 	n = 0xff
 	n = 0377
 
-	// Floats ##################### NEED SEMCOL
+	// Floats 
 	x = 12.0
 	x = 12.
 	x = .12

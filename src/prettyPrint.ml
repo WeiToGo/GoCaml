@@ -417,7 +417,6 @@ in
 			begin
 				insert_tab(level);
 				print_string "{ \n";
-				insert_tab(level);
 				print_statement_list (level + 1) sl;
 				insert_tab(level);
 				print_string "}";
