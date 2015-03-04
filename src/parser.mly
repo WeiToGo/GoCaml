@@ -228,17 +228,17 @@ declaration_stmt:
         { TypeDeclBlockStatement $1 }
 
 shortvardecl_stmt:  
-    | expr_list TCOLEQ expr_list   (* make sure lvalue is ID only? *)
-      { let id_of_expr xp = match xp with
+    | expr_list TCOLEQ expr_list
+      {
+       let id_of_expr xp = match xp with
         | IdExp(id) -> id
         | _ -> raise NonIDExpr 
         in
         let id_list = List.map id_of_expr $1 in
-        VarDeclBlockStatement(
-          [MultipleVarDecl(
-            list_zip id_list $3 [] (fun x y -> SingleVarDecl(x, None, Some(y)))
-          )]
-        )   }
+        ShortVarDeclStatement(
+            list_zip id_list $3 [] (fun x y -> ShortVarDecl(x, y) )
+        )
+      }
  
 incdec_stmt:
     | primary_expression TINC 

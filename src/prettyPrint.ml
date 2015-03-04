@@ -244,16 +244,23 @@ in
 				in print_var_decl_helper mvd_list;
 				print_string ";\n";
 	in
-	let print_short_var_decl level svd = match svd with 
-		| ShortVarDecl (e1_list, e2_list) -> 
-			let print_short_var_decl_helper (e1, e2) = 
-				begin
-					print_expr level e1;
-					print_string ":=";
-					print_expr level e2;
-					print_string ";";
-				end
-			in List.map2 print_short_var_decl_helper e1_list e2_list
+	let print_short_var_decl level svd_list = 
+		let svd_proj1 = function ShortVarDecl(id, exp) -> id in
+		let svd_proj2 = function ShortVarDecl(id, exp) -> exp in
+		let ids = List.map svd_proj1 svd_list in
+		let exps = List.map svd_proj2 svd_list in
+		let rec list_printer lyst printer_fun = match lyst with
+		| a :: (b :: _ as t)  ->(
+														 printer_fun a;
+														 print_string ", ";
+													 	 list_printer t printer_fun
+													 	)
+		| a :: [] -> print_string "a ";
+		| [] -> ()
+	  in
+	  list_printer ids print_identifier;
+	  print_string ":= ";
+	  list_printer exps (print_expr level); 
 	in
 	let rec print_stmt level stmt = 
 		match stmt with
@@ -262,7 +269,6 @@ in
 			begin 
 				insert_tab(level);
 				print_expr level e;
-				print_string ";\n";
 			end
 		| AssignmentStatement (l)->
 			begin
@@ -272,7 +278,6 @@ in
 				 		print_expr level e1;
 			 			print_string " = ";
 			 			print_expr level e2;	
-			 			print_string ";\n";		
 			 		end
 			 	) l
 			 end 
@@ -286,10 +291,10 @@ in
 				insert_tab(level);				
 				List.iter print_var_decl decl_list
 			end
-		| ShortVarDeclStatement (decl_list) ->
+		| ShortVarDeclStatement(decl_list)->
 			begin
 				insert_tab(level);
-				List.iter (fun x -> print_short_var_decl level x) decl_list;
+				print_short_var_decl level decl_list
 			end
 		| PrintStatement (e_list)-> 
 			begin
@@ -297,7 +302,7 @@ in
 				print_string "print ";
 				print_string "(";
 				List.iter (fun x -> print_expr level x) e_list;
-				print_string ");\n";
+				print_string ")";
 			end
 		| PrintlnStatement (e_list)->
 			begin
@@ -305,7 +310,7 @@ in
 				print_string "println ";
 				print_string "(";
 				List.iter (fun x -> print_expr level x) e_list;
-				print_string ");\n";
+				print_string ")";
 			end
 		| IfStatement (s, e, s1_list, s2_list) ->
 			begin
@@ -317,30 +322,21 @@ in
 				print_string ";";
 				print_expr level e;
 				print_string " { \n";
-				ignore(level = level + 1);
-				insert_tab(level);
-				List.iter (fun x -> print_stmt_wrap level x) s1_list;
-				ignore(level = level - 1);
+				print_statement_list (level + 1) s1_list;
 				insert_tab(level);
 				print_string "} else { \n";
 				match s2_list with 
-				| None -> print_string "}; \n"
-				| Some s2_list -> 
-					begin
-						ignore(level = level + 1);
-						insert_tab(level); 
-						List.iter (fun x -> print_stmt_wrap level x) s2_list;
-					end
+				| None -> print_string "}"
+				| Some s2_list -> print_statement_list (level + 1) s2_list
 			end
 		| ReturnStatement (e_op)-> 	
 			insert_tab(level);
 		    (match e_op with
-			| None -> print_string "return;\n"
+			| None -> print_string "return"
 			| Some e_op -> 
 				begin
 					print_string "return ";
 					print_expr level e_op;
-					print_string ";\n"
 				end)
 		| SwitchStatement (s_op,e,case_list)->
 			begin
@@ -353,22 +349,22 @@ in
 				print_string "{ \n";
 				let print_case_list sl = 
 					(match sl with
-					| SwitchCase (e_list,case_list) -> 
+					| SwitchCase (e_list,stmt_list) -> 
 						begin
 							print_string "case ";
 							List.iter (fun x -> print_expr level x) e_list;
 							print_string ":";
-							List.iter (fun x -> print_stmt_wrap level x) case_list;
+							print_statement_list level stmt_list
 						end
-					| DefaultCase (case_list) -> 
+					| DefaultCase (stmt_list) -> 
 						begin
 							print_string "default: ";
-							List.iter (fun x -> print_stmt_wrap level x) case_list;
+							print_statement_list level stmt_list;
 						end
 					)
 				in
 				List.iter print_case_list case_list;
-				print_string "} \n";
+				print_string "}";
 			end
 		| ForStatement (s1_op,e,s2_op,stmt_list)->
 			begin
@@ -385,36 +381,41 @@ in
 				| None ->()
 				| Some s2_op -> print_stmt_wrap level s2_op);
 				print_string "{\n ";
-				ignore(level = level + 1);
 				insert_tab(level);
-				List.iter (fun x -> print_stmt_wrap level x) stmt_list;
-				ignore(level = level - 1);
+				print_statement_list (level + 1) stmt_list;
 				insert_tab(level);
-				print_string "}\n";
+				print_string "}";
 			end
 		| BreakStatement -> 
 			begin
 				insert_tab(level);
-				print_string "break;\n"
+				print_string "break"
 			end
 		| ContinueStatement  -> 
 			begin
 				insert_tab(level);
-				print_string "continue;\n"
+				print_string "continue"
 			end
 		| BlockStatement (sl) -> 
 			begin
 				insert_tab(level);
 				print_string "{ \n";
-				ignore(level = level + 1);
 				insert_tab(level);
-				List.iter (fun x -> print_stmt_wrap level x) sl;
-				ignore(level = level - 1);
+				print_statement_list (level + 1) sl;
 				insert_tab(level);
-				print_string "}\n";
+				print_string "}";
 			end
 	and print_stmt_wrap level stmt = match stmt with
 		| LinedStatement (ln,s) -> print_stmt level s
+	and print_statement_list level st_list = match st_list with
+				| h :: t -> 
+					begin
+						print_stmt_wrap (level + 1) h;
+						insert_tab(level);
+ 						print_string ";\n";
+ 						print_statement_list level t;
+ 					end
+				| [] -> ()
 	in
 	let print_top_decl level td = match td with 
 		| FunctionDecl (id,fs, stmt_list) ->
@@ -423,10 +424,8 @@ in
 				print_identifier id;
 				print_func_sign level fs;
 				print_string "{ \n";
-				ignore(level = level + 1);
 				insert_tab(level);
-				List.iter (fun x -> print_stmt_wrap level x) stmt_list;
-				ignore(level = level - 1);
+				print_statement_list level stmt_list;
 				insert_tab(level);
 				print_string "}; \n";
 			end
