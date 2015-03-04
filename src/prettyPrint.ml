@@ -70,9 +70,14 @@ in
 		| MultipleStructFieldDecl (sf_list) -> 
 				let rec print_struct_field_helper sl = match sl with
 					| [] -> ()
-					| h::[] -> print_single_struct_field level h
+					| h::[] -> 
+						begin
+							insert_tab(level);
+							print_single_struct_field level h;
+						end
 					| h::t ->
 					begin
+						insert_tab(level);
 						print_single_struct_field level h;
 						print_string "; ";
 						print_struct_field_helper t;
@@ -103,11 +108,7 @@ in
 		| StructType (st) -> 
 			begin
 				print_string " struct {\n";
-				ignore(level = level + 1);
-				insert_tab(level);
-				List.iter (fun x -> print_multi_struct_field level x) st; 
-				ignore(level = level - 1);
-				insert_tab(level);
+				List.iter (fun x -> print_multi_struct_field (level+1) x) st; 
 				print_string "}";
 			end
 		| FunctionType (tl, ts_op) ->
@@ -351,6 +352,7 @@ in
 					(match sl with
 					| SwitchCase (e_list,stmt_list) -> 
 						begin
+							insert_tab(level);
 							print_string "case ";
 							List.iter (fun x -> print_expr level x) e_list;
 							print_string ":";
@@ -358,6 +360,7 @@ in
 						end
 					| DefaultCase (stmt_list) -> 
 						begin
+							insert_tab(level);
 							print_string "default: ";
 							print_statement_list level stmt_list;
 						end
@@ -381,7 +384,6 @@ in
 				| None ->()
 				| Some s2_op -> print_stmt_wrap level s2_op);
 				print_string "{\n ";
-				insert_tab(level);
 				print_statement_list (level + 1) stmt_list;
 				insert_tab(level);
 				print_string "}";
