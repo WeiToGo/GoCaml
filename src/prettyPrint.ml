@@ -109,6 +109,7 @@ in
 			begin
 				print_string " struct {\n";
 				List.iter (fun x -> print_multi_struct_field (level+1) x) st; 
+				insert_tab(level);
 				print_string "}";
 			end
 		| FunctionType (tl, ts_op) ->
@@ -208,13 +209,14 @@ in
 	let print_type_decl level td = match td with
 		| SingleTypeDecl (id,ts) ->
 			begin
+				insert_tab(level);
 				print_string "type ";
 				print_identifier id;
 				print_type_spec level ts;
 				print_string ";\n";
 			end
 	in
-	let print_single_var_decl vd = match vd with 
+	let print_single_var_decl level vd = match vd with 
 		| SingleVarDecl (id, t_op, e_op) ->
 			begin
 				print_string "var ";
@@ -231,14 +233,19 @@ in
 					end)
 			end
 	in
-	let print_var_decl vd = match vd with 
+	let print_var_decl level vd = match vd with 
 		| MultipleVarDecl (mvd_list) -> 
 				let rec print_var_decl_helper sl = (match sl with
 					| [] -> ()
-					| h::[] -> print_single_var_decl h
+					| h::[] -> 
+						begin 
+							insert_tab(level);
+							print_single_var_decl level h;
+						end
 					| h::t ->
 						begin
-							print_single_var_decl h;
+							insert_tab(level);
+							print_single_var_decl level h;
 							print_string "; ";
 							print_var_decl_helper t;
 						end);
@@ -284,13 +291,11 @@ in
 			 end 
 		| TypeDeclBlockStatement (decl_list)-> 
 			begin
-				insert_tab(level);
 				List.iter (fun x -> print_type_decl level x) decl_list;
 			end
 		| VarDeclBlockStatement (decl_list)-> 
-			begin
-				insert_tab(level);				
-				List.iter print_var_decl decl_list
+			begin			
+				List.iter (fun x -> print_var_decl level x) decl_list
 			end
 		| ShortVarDeclStatement(decl_list)->
 			begin
@@ -327,8 +332,17 @@ in
 				insert_tab(level);
 				print_string "} else { \n";
 				match s2_list with 
-				| None -> print_string "}"
-				| Some s2_list -> print_statement_list (level + 1) s2_list
+				| None -> 
+					begin
+						insert_tab(level);
+						print_string "}";
+					end
+				| Some s2_list -> 
+					begin
+						print_statement_list (level + 1) s2_list;
+						insert_tab(level);
+						print_string "}";
+					end
 			end
 		| ReturnStatement (e_op)-> 	
 			insert_tab(level);
@@ -347,7 +361,7 @@ in
 				|None -> ()
 				|Some s_op -> print_stmt_wrap level s_op);
 				print_expr level e;
-				print_string "{ \n";
+				print_string " { \n";
 				let print_case_list sl = 
 					(match sl with
 					| SwitchCase (e_list,stmt_list) -> 
@@ -367,6 +381,7 @@ in
 					)
 				in
 				List.iter print_case_list case_list;
+				insert_tab(level);
 				print_string "}";
 			end
 		| ForStatement (s1_op,e,s2_op,stmt_list)->
@@ -383,7 +398,7 @@ in
 				(match s2_op with
 				| None ->()
 				| Some s2_op -> print_stmt_wrap level s2_op);
-				print_string "{\n ";
+				print_string " {\n ";
 				print_statement_list (level + 1) stmt_list;
 				insert_tab(level);
 				print_string "}";
@@ -413,7 +428,6 @@ in
 				| h :: t -> 
 					begin
 						print_stmt_wrap (level + 1) h;
-						insert_tab(level);
  						print_string ";\n";
  						print_statement_list level t;
  					end
@@ -425,14 +439,14 @@ in
 				print_string "func ";
 				print_identifier id;
 				print_func_sign level fs;
-				print_string "{ \n";
+				print_string " { \n";
 				insert_tab(level);
 				print_statement_list level stmt_list;
 				insert_tab(level);
 				print_string "}; \n";
 			end
 		| TypeDeclBlock (tl) -> List.iter (fun x -> print_type_decl level x) tl
-		| VarDeclBlock (vl) -> List.iter print_var_decl vl
+		| VarDeclBlock (vl) -> List.iter (fun x -> print_var_decl level x) vl
 	in
 
 	let print_top_decl_list level dl =

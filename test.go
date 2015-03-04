@@ -67,6 +67,8 @@ func f1() {
 
 // no params, one return value
 func f2() int {
+	var x int = 0
+	return x
 }
 
 // one param, no return value
