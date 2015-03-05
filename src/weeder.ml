@@ -7,6 +7,7 @@ let weed_ast prog outchann =
 	let println s =
 		fprintf outchann "%s\n" s
 	in
+	let loops = ref 0 in
 	let rec visit_program prog =
 		let Program(pack, decls) = prog in
 		visit_package_decl pack;
@@ -121,9 +122,9 @@ let weed_ast prog outchann =
 		| HexInt(str) -> ()
 		| OctalInt(str) -> ()
 	and visit_statement stmt =
-		let LinedStatement(_, pstmt) = stmt in (* ignoring line number *)
-		visit_plain_stmt pstmt
-	and visit_plain_stmt stmt =
+		let LinedStatement(linenum, pstmt) = stmt in
+		visit_plain_stmt pstmt linenum
+	and visit_plain_stmt stmt linenum =
 		match stmt with
 		| EmptyStatement -> ()
 		| ExpressionStatement(e) -> visit_expression e
@@ -156,6 +157,7 @@ let weed_ast prog outchann =
 			visit_expression e;
 			List.iter visit_switch_case scs
 		| ForStatement(stmtop1, e, stmtop2, stmts) -> (* init, cond, post, body *)
+			loops := !loops + 1;
 			(match stmtop1 with
 			| None -> ()
 			| Some(stmt1) -> visit_statement stmt1);
@@ -163,9 +165,20 @@ let weed_ast prog outchann =
 			(match stmtop2 with
 			| None -> ()
 			| Some(stmt2) -> visit_statement stmt2);
-			List.iter visit_statement stmts
-		| BreakStatement -> () (* Weed here *)
-		| ContinueStatement -> () (* Weed here *)
+			List.iter visit_statement stmts;
+			loops := !loops - 1
+		| BreakStatement ->
+			(match !loops with
+			| 0 ->
+				println ("Break statement is not in a loop. Line: " ^ (string_of_int linenum));
+				exit 0
+			| _ -> ())
+		| ContinueStatement ->
+			(match !loops with
+			| 0 ->
+				println ("Continue statement is not in a loop. Line: " ^ (string_of_int linenum));
+				exit 0
+			| _ -> ())
 		| BlockStatement(stmts) -> List.iter visit_statement stmts
 	and visit_switch_case sc =
 		match sc with
