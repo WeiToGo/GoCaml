@@ -26,7 +26,18 @@ var e num = num(4)
 
 // function decl
 
+func f1(a int, b int) {
+}
 
+func f2(a int, f1 int) {	
+}
+
+func f3(a int, b int) {
+	var f3 string
+}
+
+func f4(a, b int, c, d bool) {
+}
 
 // STATEMENTS
 
@@ -47,11 +58,23 @@ func f()[]rune {
 }
 
 // short declaration
-
+func short_decl() {
+	a := 5
+	x := "hello"
+	a, b := 0, 1
+}
 
 // declaration
 
 // assignment
+func assign_stmts() {
+	var a,b int;
+	var c [2]string
+	var point struct { x float64 }
+	a, b = 0, 1
+	c[0], point.x = "hi", 3.1415; 
+}
+
 
 // op-assignment
 
