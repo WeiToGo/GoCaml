@@ -77,6 +77,12 @@ let print_ast prog pretty level =
 				List.iter print_escape_chars_help (str_to_char_list s);
 				print_string "\"";
 			end
+		| RawStringLit (s) -> 
+			begin
+				print_string "`";
+				print_string s;
+				print_string "`";
+			end
 	in
 	let print_basic_type t = match t with
 		| IntType -> print_string " int"

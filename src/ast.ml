@@ -60,6 +60,7 @@ and literal =
     | FloatLit of string
     | RuneLit of string
     | StringLit of string
+    | RawStringLit of string
 and int_literal = DecInt of string | HexInt of string | OctalInt of string
 and unary_op = UPlus | UMinus | UNot | UCaret
 and binary_op = 
