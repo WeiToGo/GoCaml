@@ -346,6 +346,7 @@ literal:
     | float_literal { FloatLit($1) } 
     | rune_literal { RuneLit($1) } 
     | string_literal  { StringLit($1) }
+    | raw_string_literal { RawStringLit($1)}
 
 int_literal: 
     | DEC_INT { DecInt $1  }
@@ -356,9 +357,9 @@ float_literal: FLOAT64 { $1 }
 
 rune_literal: TRUNE { $1 }
 
-string_literal: 
-    | TRWSTR { $1 } 
-    | TSTR { $1 }
+string_literal: TSTR { $1 }
+
+raw_string_literal: TRWSTR { $1 } 
 
 unary_exp:
   | TLPAR expr TRPAR { $2 }

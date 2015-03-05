@@ -5,18 +5,21 @@ open Lexing
 ;;
 
 let build_ast input = 
-  let ic = match input with
-  | "stdin" -> stdin
-  | filename -> open_in filename
-  in
-  let lexbuf = Lexing.from_channel ic in
-  let () = 
-    try
-      let ast = Parser.program Scan.wrapped_scan lexbuf in
-      (* print_string "VALID \n"; *)
-      PrettyPrint.print_ast ast "out.go" 0
-    with Parser.Error
-      -> (
+	let ic = match input with
+	| "stdin" -> stdin
+	| filename -> open_in filename
+	in
+	let lexbuf = Lexing.from_channel ic in
+	let () = 
+		try
+			let ast = Parser.program Scan.wrapped_scan lexbuf in
+			(* print_string "VALID \n"; *)
+			PrettyPrint.print_ast ast "out.go" 0;
+			let outFile = open_out "WeedErrors.txt" in
+			Weeder.weed_ast ast outFile;
+			close_out outFile
+		with Parser.Error
+		-> (
           Printf.eprintf "%s" ("Syntax Error at line " 
             ^ (string_of_int lexbuf.lex_curr_p.pos_lnum)
             ^ ", column " 
