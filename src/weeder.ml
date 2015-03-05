@@ -11,10 +11,13 @@ let weed_ast prog outchann =
 	let rec visit_program prog =
 		let Program(pack, decls) = prog in
 		visit_package_decl pack;
-		List.iter (fun x -> visit_top_dcl x) decls
+		List.iter (fun x -> visit_lined_top_dcl x) decls
 	and visit_package_decl pack =
-		let Package(_) = pack in
+		let Package(_, _) = pack in
 		()
+	and visit_lined_top_dcl ldl = 
+		let LinedTD(dcl, _) = ldl in
+		visit_top_dcl dcl
 	and visit_top_dcl dcl =
 		match dcl with
 		| FunctionDecl (id,fs, stmts) ->
@@ -74,7 +77,7 @@ let weed_ast prog outchann =
 		| StringType -> ()
 	and visit_id id =
 		match id with
-		| IdName(str) -> ()
+		| ID(str, _) -> ()
 		| BlankID -> ()
 	and visit_function_signature fs =
 		let FunctionSig(args, top) = fs in

@@ -32,8 +32,9 @@ type gotype =
 
 type scope = Scope of (scope option * (string, sym_table_entry) Hashtbl.t)
              (* Scope of parent * symbol hashtable *)
-and sym_table_entry = Entry of (string * gotype * scope)
-                       (* Entry of true_name, its gotype, and the scope it was declared in *)
+and sym_table_entry = Entry of (string * gotype * scope * int)
+                       (* Entry of true_name, its gotype,
+                           the scope it was declared in, and the declaration line *)
 
 
 (* --- Printing functions --- *)
@@ -87,7 +88,7 @@ and string_of_args_list args = match args with
 
 
 let print_entry key entry = 
-  let Entry(id_name, typ, _) = entry in
+  let Entry(id_name, typ, _, _) = entry in
   fprintf out_channel "%s" id_name;
   fprintf out_channel " -> ";
   fprintf out_channel "%s" (string_of_type typ);
@@ -103,9 +104,9 @@ let rec print_sym_table scope =
 (* --- Symbol Table utils --- *)
 
 (* Adds a symbol with type typ to scope *)
-let add_sym scope symbol typ = 
+let add_sym scope symbol typ ln = 
   let Scope(_, hashmap) = scope in
-  let entry = Entry(symbol, typ, scope) in
+  let entry = Entry(symbol, typ, scope, ln) in
   let () = Hashtbl.replace hashmap symbol entry in
   scope
 
@@ -119,6 +120,13 @@ let open_scope parent_scope =
 let close_scope scope = 
   if dumpsymtab then print_sym_table scope
   else ()
+
+(* Returns the initial global scope with true and false pre-declared *)
+let initial_scope () = 
+  let scp = Scope(None, Hashtbl.create 1024) in
+  let scp = add_sym scp "true" GoBool 0 in
+  let scp = add_sym scp "false" GoBool 0 in
+  scp
 
 (* ------------- *)
 
@@ -146,5 +154,5 @@ let build_symbol_table ast =
   and tc_plain_statement node ctx = raise NotImplemented
   and tc_switch_case node ctx = raise NotImplemented
   in
-  let global_scope = Scope(None, Hashtbl.create 1024)  (* 1024 is the initial hash table size *)
+  let global_scope = initial_scope ()  (* 1024 is the initial hash table size *)
   in tc_program ast global_scope

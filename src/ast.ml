@@ -10,8 +10,9 @@ type assignment_ops = | SinADD
                       | SinRas
                       | SinAneq
 
-type program = Program of package_decl * (top_decl list)
-and package_decl = Package of string
+type program = Program of package_decl * (lined_top_decl list)
+and package_decl = Package of (string * int)  (* Package of package_name * line_number *)
+and lined_top_decl = LinedTD of (top_decl * int) 
 and top_decl = FunctionDecl of (identifier * function_signature * (statement list) )
       | TypeDeclBlock of (type_declaration list)
       | VarDeclBlock of (multiple_var_declaration list)

@@ -48,16 +48,18 @@
 %%
 
 program :       
-  | package_decl TSEMCOL top_decl_list TEOF  { Program($1, List.rev $3) }
+  | package_decl TSEMCOL lined_top_decl_list TEOF  { Program($1, List.rev $3) }
 
 package_decl:
-  | PACKAGE TID { Package $2 }
+  | PACKAGE TID { Package($2, $startpos.pos_lnum) }
 
 
-top_decl_list :
+lined_top_decl_list :
   | (* empty *)   { [] }
-  | top_decl_list top_decl TSEMCOL { $2 :: $1 } 
+  | lined_top_decl_list lined_top_decl TSEMCOL { $2 :: $1 } 
 
+lined_top_decl:
+  | top_decl { LinedTD($1, $startpos.pos_lnum)}
 
 top_decl :
   | declaration { $1 } 
