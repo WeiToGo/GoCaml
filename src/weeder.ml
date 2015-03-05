@@ -1,8 +1,6 @@
 open Ast
 open Printf
 
-exception NotImplemented
-
 (* Weed the ast *)
 let weed_ast prog outchann =
 	(* Helper print function*)
@@ -59,13 +57,25 @@ let weed_ast prog outchann =
 		| CustomType(id) -> visit_id id
 
 	and visit_mul_str_dcl dcl =
-		println "struct dcl"
+		let MultipleStructFieldDecl(ssdcls) = dcl in
+		List.iter visit_sin_str_dcl ssdcls
+	and visit_sin_str_dcl dcl =
+		let SingleStructFieldDecl(id, ts) = dcl in
+		visit_id id;
+		visit_type_spec ts
 	and visit_basic_type bt =
-		println "basic type"
+		match bt with
+		| IntType -> ()
+		| FloatType -> ()
+		| BoolType -> ()
+		| RuneType -> ()
+		| StringType -> ()
+	and visit_id id =
+		match id with
+		| IdName(str) -> ()
+		| BlankID -> ()
 	and visit_statement stmt =
 		println "stmt"
-	and visit_id id =
-		println "id"
 	and visit_function_signature fs =
 		println "fs"
 	and visit_expression e =
