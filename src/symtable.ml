@@ -95,7 +95,7 @@ let print_entry key entry =
   fprintf out_channel "\n";
   ()
 
-
+(* Prints all the entries in scope. Does not print parent scopes *)
 let rec print_sym_table scope = 
   let Scope(_, hashmap) = scope in 
   Hashtbl.iter print_entry hashmap
@@ -103,12 +103,14 @@ let rec print_sym_table scope =
 
 (* --- Symbol Table utils --- *)
 
-(* Adds a symbol with type typ to scope *)
+(* Adds a symbol with type typ to scope. Returns the symbol table entry *)
 let add_sym scope symbol typ ln = 
   let Scope(_, hashmap) = scope in
   let entry = Entry(symbol, typ, scope, ln) in
   let () = Hashtbl.replace hashmap symbol entry in
-  scope
+  entry
+
+
 
 (* Opens a new scope with given parent. *)
 let open_scope parent_scope = 
@@ -124,14 +126,20 @@ let close_scope scope =
 (* Returns the initial global scope with true and false pre-declared *)
 let initial_scope () = 
   let scp = Scope(None, Hashtbl.create 1024) in
-  let scp = add_sym scp "true" GoBool 0 in
-  let scp = add_sym scp "false" GoBool 0 in
+  let _ = add_sym scp "true" GoBool 0 in
+  let _ = add_sym scp "false" GoBool 0 in
   scp
 
+(* Is sym in the current scope? *)
 let in_current_scope scope sym = 
   let Scope(_, hashmap) = scope in
   Hashtbl.mem hashmap sym
 
+let lookup_current scope sym = 
+  let Scope(_, hashmap) = scope in
+  Hashtbl.find hashmap sym
+
+(* Recursive lookup for sym. Returns the whole entry *)
 let rec lookup scope sym = 
   let Scope(par, hashmap) = scope in
   try
@@ -140,3 +148,8 @@ let rec lookup scope sym =
     match par with
     | None -> raise Not_found
     | Some(par_scp) -> lookup par_scp sym
+
+(* Recursive lookup for sym. Returns only the type *)
+let lookup_type scope sym = 
+  let Entry(_, typ, _, _) = lookup scope sym in 
+  typ
