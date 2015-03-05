@@ -170,7 +170,17 @@ let print_ast prog pretty level =
 			begin
 				print_expr level exp;
 				print_string "(";
-				List.iter (fun x -> print_expr level x) e_list;
+				let rec print_func_call_helper l = (match l with
+					| [] -> ()
+					| h::[] -> print_expr level h
+					| h::t ->
+						begin
+							print_expr level h;
+							print_string ", ";
+							print_func_call_helper t;
+						end)
+				in
+				print_func_call_helper e_list;
 				print_string ")";
 			end
 		| AppendExp (id,e) ->
@@ -221,7 +231,7 @@ let print_ast prog pretty level =
 					begin
 						print_func_arg level h;
 						print_string ", ";
-						print_func_sign_helper (t);
+						print_func_sign_helper t;
 					end 
 				in
 				print_func_sign_helper f_list;
@@ -310,7 +320,7 @@ let print_ast prog pretty level =
 			 		begin
 				 		print_expr level e1;
 			 			print_string " = ";
-			 			print_expr level e2;	
+			 			print_expr level e2;
 			 		end
 			 	) l
 			 end 
