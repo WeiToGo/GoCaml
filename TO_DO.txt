@@ -1,14 +1,5 @@
 TO DO:
 
-weeder for
-- check break + continue statement are properly used. (only within a loop)
-
-for type checking:
-
-function: parameters and local vars are in the same scope
-
-assignment compatibility:
-have to be the exact types on both sides.
 
 
 Utilities:
@@ -26,12 +17,15 @@ fix parser [DONE]
 fix semicolon insertion [DONE]
 fix ast [DONE]
 fix pretty print 
+Create typed ast for type checker to create
+
 
 - All valid instead of valid for every single test file
 - Have a file with no ending newline and check if the semicolon rule still works [This DOES NOT WORK. Fixing this is non straightforward. Need to check with the TA is this is an issue.]
 
 weeder todo:
 - Break and continue outside loops are not allowed.  
+- Default statement count check
 - Weeding for assignment, variable decl , and inc/decr
 We no longer have lvalues since that was a massive parsing PITA
 (In particular, I could not get `(x)[0] = 1` to parse).
@@ -53,3 +47,10 @@ while this has an duplicate argument error:
 func foo(a, a int) { } 
 ```
 Rejection for the second one should be done by typechecker.
+
+for type checking:
+
+function: parameters and local vars are in the same scope
+
+assignment compatibility:
+have to be the exact types on both sides.
