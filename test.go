@@ -286,7 +286,7 @@ func assign_stmts() {
 	// Assignment
 	a = 0
 	a, b = 0, 1
-	a[0], point.x = "hi", 3.1415;  // ##################### NEED SEMCOL
+	a[0], point.x = "hi", 3.1415; 
 
 	// Op assign
 	a += 1
@@ -313,7 +313,8 @@ func short_decl() {
 func block() {
 	println(1)
 	{
-		println(2) // ##################### ERROR
+		println(2) 
+		print(4)
 	}
 	println(3)
 }
@@ -325,7 +326,7 @@ func exprs() {
 	n = 0xff
 	n = 0377
 
-	// Floats ##################### NEED SEMCOL
+	// Floats 
 	x = 12.0
 	x = 12.
 	x = .12
@@ -340,7 +341,8 @@ func exprs() {
 	c = '\n'
 	c = '\r'
 	c = '\t'
-	c = '\r'
+	c = '\"'
+	c = '\v'
 
 	// Interpreted strings
 	s = ""

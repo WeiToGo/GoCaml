@@ -4,6 +4,7 @@ let print_ast prog pretty level =
 	let Program(pack,dl) = prog in
 	let outfile = open_out pretty in 
 	let print_string = fun s -> output_string outfile s in
+	let print_char = fun c -> output_char outfile c in
 	let insert_tab (level) = 
 		print_string (String.make level '\t')
 	in
@@ -42,21 +43,45 @@ let print_ast prog pretty level =
 		| Ast.DecInt (s) -> print_string s
 		| Ast.HexInt (s) -> print_string s
 		| Ast.OctalInt (s) -> print_string s
-in
+	in
+	let print_escape_chars_help c = match c with
+			| '\007' -> print_string "\\a"
+			| '\010' -> print_string "\\b"
+			| '\014' -> print_string "\\f"
+			| '\012' -> print_string "\\n"
+			| '\015' -> print_string "\\r"
+			| '\011' -> print_string "\\t"
+			| '\013' -> print_string "\\v"
+			| '\\' -> print_string "\\\\"
+			| '\'' -> print_string "\\\'"
+			| '\"' -> print_string "\\\""
+			| _ -> print_char c
+	in
+	let str_to_char_list str = 
+		let rec explode i char_list = 
+			if i < 0 then char_list else explode (i-1) (str.[i] :: char_list) in
+		explode (String.length str - 1) []
+	in
 	let print_literal lit = match lit with
 		| IntLit (i) -> print_int_literal i
 		| FloatLit (f) -> print_string f
 		| RuneLit (r) -> 
 			begin
-				print_string "'";
-				print_string r;
-				print_string "'";
+				print_string "\'";
+				print_escape_chars_help (List.hd (str_to_char_list r));
+				print_string "\'";
 			end
 		| StringLit (s) -> 
-			begin 
+			begin
 				print_string "\"";
+				List.iter print_escape_chars_help (str_to_char_list s);
+				print_string "\"";
+			end
+		| RawStringLit (s) -> 
+			begin
+				print_string "`";
 				print_string s;
-				print_string "\"";
+				print_string "`";
 			end
 	in
 	let print_basic_type t = match t with
@@ -145,7 +170,17 @@ in
 			begin
 				print_expr level exp;
 				print_string "(";
-				List.iter (fun x -> print_expr level x) e_list;
+				let rec print_func_call_helper l = (match l with
+					| [] -> ()
+					| h::[] -> print_expr level h
+					| h::t ->
+						begin
+							print_expr level h;
+							print_string ", ";
+							print_func_call_helper t;
+						end)
+				in
+				print_func_call_helper e_list;
 				print_string ")";
 			end
 		| AppendExp (id,e) ->
@@ -196,7 +231,7 @@ in
 					begin
 						print_func_arg level h;
 						print_string ", ";
-						print_func_sign_helper (t);
+						print_func_sign_helper t;
 					end 
 				in
 				print_func_sign_helper f_list;
@@ -259,11 +294,11 @@ in
 		let exps = List.map svd_proj2 svd_list in
 		let rec list_printer lyst printer_fun = match lyst with
 		| a :: (b :: _ as t)  ->(
-														 printer_fun a;
-														 print_string ", ";
-													 	 list_printer t printer_fun
-													 	)
-		| a :: [] -> print_string "a ";
+								 printer_fun a;
+								 print_string ", ";
+							 	 list_printer t printer_fun
+							 	)
+		| a :: [] -> printer_fun a;
 		| [] -> ()
 	  in
 	  list_printer ids print_identifier;
@@ -285,7 +320,7 @@ in
 			 		begin
 				 		print_expr level e1;
 			 			print_string " = ";
-			 			print_expr level e2;	
+			 			print_expr level e2;
 			 		end
 			 	) l
 			 end 
@@ -359,7 +394,11 @@ in
 				print_string "switch ";
 				(match s_op with 
 				|None -> ()
-				|Some s_op -> print_stmt_wrap level s_op);
+				|Some s_op -> 
+					begin
+						print_stmt_wrap level s_op;
+						print_string "; ";
+					end);
 				print_expr level e;
 				print_string " { \n";
 				let print_case_list sl = 
@@ -417,7 +456,6 @@ in
 			begin
 				insert_tab(level);
 				print_string "{ \n";
-				insert_tab(level);
 				print_statement_list (level + 1) sl;
 				insert_tab(level);
 				print_string "}";
