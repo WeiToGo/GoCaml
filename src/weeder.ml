@@ -8,6 +8,7 @@ let weed_ast prog outchann =
 		fprintf outchann "%s\n" s
 	in
 	let loops = ref 0 in
+	let shortvardcl = ref 1 in
 	let rec visit_program prog =
 		let Program(pack, decls) = prog in
 		visit_package_decl pack;
@@ -136,7 +137,10 @@ let weed_ast prog outchann =
 				visit_expression e1;
 				visit_expression e2) epairs
 		| TypeDeclBlockStatement(tdcls) -> List.iter visit_type_dcl tdcls
-		| ShortVarDeclStatement(svdcls) -> List.iter visit_short_var_dcl svdcls
+		| ShortVarDeclStatement(svdcls) ->
+			(match !shortvardcl with
+			| 0 -> println ("Cannot declare in the for increment. Line: " ^ (string_of_int linenum))
+			| _ -> List.iter visit_short_var_dcl svdcls)
 		| VarDeclBlockStatement(mvdcls) -> List.iter visit_mul_var_dcl mvdcls
 		| PrintStatement(es) -> List.iter visit_expression es
 		| PrintlnStatement(es) -> List.iter visit_expression es
@@ -169,9 +173,11 @@ let weed_ast prog outchann =
 			| None -> ()
 			| Some(stmt1) -> visit_statement stmt1);
 			visit_expression e;
+			shortvardcl := 0; (* disallow shortvardcl *)
 			(match stmtop2 with
 			| None -> ()
 			| Some(stmt2) -> visit_statement stmt2);
+			shortvardcl := 1; (* allow again *)
 			List.iter visit_statement stmts;
 			loops := !loops - 1
 		| BreakStatement ->
@@ -198,3 +204,4 @@ let weed_ast prog outchann =
 	in
 	visit_program prog
    
+
