@@ -29,7 +29,7 @@ and top_decl = FunctionDecl of (identifier * function_signature * (statement lis
 *)
 and multiple_var_declaration = MultipleVarDecl of (single_var_declaration list)
 and single_var_declaration = SingleVarDecl of (identifier * (type_spec option) * (expression option))
-and short_var_decl = ShortVarDecl of (expression list) * (expression list)
+and short_var_decl = ShortVarDecl of (identifier * expression)
 and type_declaration = 
       | SingleTypeDecl of (identifier * type_spec)
 and type_spec = 

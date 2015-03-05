@@ -1,5 +1,18 @@
 TO DO:
 
+CHECKLIST FOR TYPE CHECKING:
+
+FUNC: parameters and local vars are in the same scope
+
+IF, SWITCH: conditions can be aliases of bool.
+
+INC/DEC should also work with Float and rune.
+
+PRINT/PRINTLN:  will accept only basic types (int, float64, bool, rune, string and type aliases of those types); slices, arrays and structs cannot be passed to print and println 
+
+
+assignment compatibility:
+have to be the exact types on both sides.
 
 
 Utilities:
