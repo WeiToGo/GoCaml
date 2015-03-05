@@ -30,7 +30,7 @@
 %token BREAK CASE CONT DEFAULT ELSE FOR FUNC
 %token IF PACKAGE RETURN STRUCT SWITCH
 %token TYPE VAR INT_TYP FL_TYP BOOL_TYP RUNE_TYP STR_TYP PRINT PRINTLN APPEND 
-%token<string> ID
+%token<string> TID
 %token <string> DEC_INT OCTAL_INT HEX_INT 
 %token <string> FLOAT64 
 
@@ -51,7 +51,7 @@ program :
   | package_decl TSEMCOL top_decl_list TEOF  { Program($1, List.rev $3) }
 
 package_decl:
-  | PACKAGE ID { Package $2 }
+  | PACKAGE TID { Package $2 }
 
 
 top_decl_list :
@@ -70,8 +70,8 @@ declaration :
   | typ_decl { TypeDeclBlock $1 }
 
 func_decl: 
-  | FUNC ID func_signature TLCUR stmt_list TRCUR 
-      { FunctionDecl(IdName($2), $3, List.rev $5) } 
+  | FUNC TID func_signature TLCUR stmt_list TRCUR 
+      { FunctionDecl(ID($2, ref None), $3, List.rev $5) } 
 
 (*-----------*)
 
@@ -114,7 +114,7 @@ var_spec_list:
   | var_spec_list var_spec TSEMCOL { $2 :: $1 } 
 
 typ_spec:
-  | ID typ  { SingleTypeDecl(IdName($1), $2) }
+  | TID typ  { SingleTypeDecl(ID($1, ref None), $2) }
 
 typ_spec_list:
   | (* empty *) { [] }
@@ -126,7 +126,7 @@ typ:
   | array_typ { $1 }
   | struct_typ { $1 }
   | func_typ { $1 } 
-  | ID { CustomType(IdName($1)) }
+  | TID { CustomType(ID($1, ref None)) }
 
 func_typ:
   | FUNC TLPAR typ_list TRPAR option(typ)
@@ -286,21 +286,21 @@ if_stmt:
 
 switch_stmt:
     | SWITCH TLCUR switch_clause_list TRCUR 
-        { SwitchStatement(None, IdExp(IdName("true")), List.rev $3) }
+        { SwitchStatement(None, IdExp(ID("true", ref None)), List.rev $3) }
     | SWITCH expr TLCUR switch_clause_list TRCUR 
         { SwitchStatement(None, $2, List.rev $4) }
     | SWITCH simple_stmt TSEMCOL TLCUR switch_clause_list TRCUR 
-        { SwitchStatement(Some $2, IdExp(IdName("true")), List.rev $5)}
+        { SwitchStatement(Some $2, IdExp(ID("true", ref None)), List.rev $5)}
     | SWITCH simple_stmt TSEMCOL expr TLCUR switch_clause_list TRCUR 
         { SwitchStatement(Some $2, $4, List.rev $6) } 
 
 for_stmt:
-    | FOR TLCUR stmt_list TRCUR { ForStatement(None, IdExp(IdName("true")), None, List.rev $3) }
+    | FOR TLCUR stmt_list TRCUR { ForStatement(None, IdExp(ID("true", ref None)), None, List.rev $3) }
     | FOR expr TLCUR stmt_list TRCUR { ForStatement(None, $2, None, List.rev $4) }
     | FOR simple_stmt TSEMCOL expr TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
         { ForStatement(Some $2, $4, Some $6, List.rev $8) } 
     | FOR simple_stmt TSEMCOL TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
-        { ForStatement(Some $2, IdExp(IdName("true")), Some $5, List.rev $7) }
+        { ForStatement(Some $2, IdExp(ID("true", ref None)), Some $5, List.rev $7) }
 
 break_stmt:
     | BREAK { BreakStatement }
@@ -375,7 +375,7 @@ primary_expression:
   | type_cast_exp { $1 }
 
 identifier: 
-  | ID { IdName($1) }
+  | TID { ID($1, ref None) }
   | TBLANKID { BlankID }
 unary_op:
   | TPLUS { UPlus } 
@@ -401,11 +401,11 @@ index_exp:
       { IndexExp($1, $3)} 
 
 append_exp:
-  | APPEND TLPAR ID TCOM expr TRPAR   { AppendExp(IdName($3), $5) }
+  | APPEND TLPAR TID TCOM expr TRPAR   { AppendExp(ID($3, ref None), $5) }
 
 select_exp: 
-  | unary_exp TDOT ID 
-      { SelectExp($1, IdName($3)) }
+  | unary_exp TDOT TID 
+      { SelectExp($1, ID($3, ref None)) }
 
 type_cast_exp:
   | castable_type TLPAR expr TRPAR 

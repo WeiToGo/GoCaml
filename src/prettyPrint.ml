@@ -35,7 +35,7 @@ let print_ast prog pretty level =
 		| UCaret -> print_string " ^ "
 	in
 	let print_identifier id = match id with
-		| IdName (s) -> print_string s 
+		| ID (s, _) -> print_string s 
 		| BlankID -> print_string "_ "
 	in
 	let print_int_literal lit = match lit with
