@@ -286,7 +286,7 @@ func assign_stmts() {
 	// Assignment
 	a = 0
 	a, b = 0, 1
-	a[0], point.x = "hi", 3.1415;  // ##################### NEED SEMCOL
+	a[0], point.x = "hi", 3.1415; 
 
 	// Op assign
 	a += 1
@@ -314,7 +314,7 @@ func block() {
 	println(1)
 	{
 		println(2) 
-		println(4)
+		print(4)
 	}
 	println(3)
 }
@@ -341,7 +341,8 @@ func exprs() {
 	c = '\n'
 	c = '\r'
 	c = '\t'
-	c = '\r'
+	c = '\"'
+	c = '\v'
 
 	// Interpreted strings
 	s = ""
