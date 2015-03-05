@@ -151,11 +151,15 @@ let weed_ast prog outchann =
 			| None -> ()
 			| Some(e) -> visit_expression e)
 		| SwitchStatement(stmtop, e, scs) ->
+			let defcount = ref 0 in
 			(match stmtop with
 			| None -> ()
 			| Some(stmt) -> visit_statement stmt);
 			visit_expression e;
-			List.iter visit_switch_case scs
+			List.iter (fun x -> visit_switch_case x defcount) scs;
+			(match !defcount with
+			| x when x > 1 -> println ("Multiple defaults in switch. Line: " ^ (string_of_int linenum))
+			| _ -> ())
 		| ForStatement(stmtop1, e, stmtop2, stmts) -> (* init, cond, post, body *)
 			loops := !loops + 1;
 			(match stmtop1 with
@@ -180,12 +184,14 @@ let weed_ast prog outchann =
 				exit 0
 			| _ -> ())
 		| BlockStatement(stmts) -> List.iter visit_statement stmts
-	and visit_switch_case sc =
+	and visit_switch_case sc defcount =
 		match sc with
 		| SwitchCase(es, stmts) ->
 			List.iter visit_expression es;
 			List.iter visit_statement stmts
-		| DefaultCase(stmts) -> List.iter visit_statement stmts (* weed here *)
+		| DefaultCase(stmts) ->
+			defcount := !defcount + 1;
+			List.iter visit_statement stmts
 	in
 	visit_program prog
    
