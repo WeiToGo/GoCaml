@@ -150,17 +150,16 @@ rule scan last_token = parse
 
 and read_rune buf = parse
   | ''' { TRUNE (Buffer.contents buf)}
-  | '\\' 'a' { Buffer.add_char buf '\007'; read_rune buf lexbuf}
-  | '\\' 'b' { Buffer.add_char buf '\010'; read_rune buf lexbuf}
-  | '\\' 'f' { Buffer.add_char buf '\014'; read_rune buf lexbuf}
-  | '\\' 'n' { Buffer.add_char buf '\012'; read_rune buf lexbuf}
-  | '\\' 'r' { Buffer.add_char buf '\015'; read_rune buf lexbuf}
-  | '\\' 't' { Buffer.add_char buf '\011'; read_rune buf lexbuf}
-  | '\\' 'v' { Buffer.add_char buf '\013'; read_rune buf lexbuf}
-  | '\\' '\\' { Buffer.add_char buf '\\'; read_rune buf lexbuf}
-  | '\\' '\'' { Buffer.add_char buf '\''; read_rune buf lexbuf}
-  | '\\' '"' { Buffer.add_char buf '"'; read_rune buf lexbuf}
-  | [^''' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_rune buf lexbuf}
+  | '\\' 'a' { Buffer.add_char buf '\007'}
+  | '\\' 'b' { Buffer.add_char buf '\010'}
+  | '\\' 'f' { Buffer.add_char buf '\014'}
+  | '\\' 'n' { Buffer.add_char buf '\012'}
+  | '\\' 'r' { Buffer.add_char buf '\015'}
+  | '\\' 't' { Buffer.add_char buf '\011'}
+  | '\\' 'v' { Buffer.add_char buf '\013'}
+  | '\\' '\\' { Buffer.add_char buf '\\'}
+  | '\\' '"' { Buffer.add_char buf '"'}
+  | [^''' '\\'] { Buffer.add_string buf (Lexing.lexeme lexbuf)}
 
   
 and read_raw_str buf = parse

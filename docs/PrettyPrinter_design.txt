@@ -1,0 +1,6 @@
+PrettyPrinter design decisions:
+
+-Indentation is done by having a "level" argument to all functions and increment the level each time we get into a new scope.
+
+-Block structure (variable declaration block, type declaration block, struct block) is seeing as a list of multiple declaration, where each contains a list of single declaration. 
+This way, we can print the blocks exactly as it is in the source code.
