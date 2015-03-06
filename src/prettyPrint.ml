@@ -1,5 +1,7 @@
 open Ast
 
+exception NotImplemented 
+
 let print_ast prog pretty level = 
 	let Program(pack,ldl) = prog in
 	let outfile = open_out pretty in 
@@ -90,7 +92,7 @@ let print_ast prog pretty level =
 		| BoolType -> print_string " bool"
 		| RuneType -> print_string " rune"
 		| StringType -> print_string " string"
-	in 
+	in
 	let rec print_multi_struct_field level sfd = match sfd with
 		| MultipleStructFieldDecl (sf_list) -> 
 				let rec print_struct_field_helper sl = match sl with
@@ -248,44 +250,75 @@ let print_ast prog pretty level =
 				print_string "type ";
 				print_identifier id;
 				print_type_spec level ts;
-				print_string ";\n";
+				(* print_string ";\n"; *)
 			end
 	in
-	let print_single_var_decl level vd = match vd with 
-		| SingleVarDecl (id, t_op, e_op) ->
-			begin
-				print_string "var ";
-				print_identifier id;
-				(match t_op with 
-				| None -> ()
-				| Some t_op -> print_type_spec level t_op);
-				(match e_op with 
-				| None -> ()
-				| Some e_op -> 
-					begin
-					print_string " = ";
-					print_expr level e_op;
-					end)
-			end
+		let print_multi_var_decl level mvd = match mvd with
+		| MultipleVarDecl (svd_list) -> 
+			insert_tab(level);
+			let proj1 = function SingleVarDecl(id, ty_op, exp_op) -> id in
+			let proj2 = function SingleVarDecl(id, ty_op, exp_op) -> ty_op in
+			let proj3 = function SingleVarDecl(id, ty_op, exp_op) -> exp_op in
+			let ids = List.map proj1 svd_list in
+			let types = List.map proj2 svd_list in
+			let exps = List.map proj3 svd_list in
+			let rec list_printer lyst printer_fun = match lyst with
+				| a :: (b :: _ as t)  ->(
+										 printer_fun a;
+										 print_string ", ";
+									 	 list_printer t printer_fun
+									 	)
+				| a :: [] -> printer_fun a;
+				| [] -> ()
+			in
+			let rec all_exists sth_list = match sth_list with
+			| Some(_) :: t -> all_exists t
+			| None :: t -> false
+			| [] -> true
+			in
+			let () = list_printer ids print_identifier in
+			match all_exists types, all_exists exps with
+			| false, false -> failwith "Internal error: Invalid variable declaration"
+			| true, false -> (
+				let var_type = (match List.hd types with
+					| Some(t) -> t
+					| None -> failwith "This should never happen" )
+				in 
+				print_type_spec level var_type;
+			)
+			| false, true -> (
+				print_string " = ";
+				let extract_from_some exp = (match exp with
+					| Some(e) -> e
+					| None -> failwith "This should never happen")
+				in
+				list_printer (List.map extract_from_some exps) (print_expr level);
+			)
+			| true, true -> (
+				let var_type = (match List.hd types with
+									| Some(t) -> t
+									| None -> failwith "This should never happen" )
+				in 
+				print_type_spec level var_type;
+				print_string " = ";
+				let extract_from_some exp = (match exp with
+					| Some(e) -> e
+					| None -> failwith "This should never happen")
+				in
+				list_printer (List.map extract_from_some exps) (print_expr level);
+			)
 	in
-	let print_var_decl level vd = match vd with 
-		| MultipleVarDecl (mvd_list) -> 
-				let rec print_var_decl_helper sl = (match sl with
-					| [] -> ()
-					| h::[] -> 
-						begin 
-							insert_tab(level);
-							print_single_var_decl level h;
-						end
-					| h::t ->
-						begin
-							insert_tab(level);
-							print_single_var_decl level h;
-							print_string "; ";
-							print_var_decl_helper t;
-						end);
-				in print_var_decl_helper mvd_list;
+	let print_var_decl level mvd_list = 
+		insert_tab(level);
+		print_string "var (\n";
+		List.iter 
+			(fun x -> 
+				print_multi_var_decl (level+1) x;
 				print_string ";\n";
+			) 
+			mvd_list;
+		insert_tab(level);
+		print_string ")";
 	in
 	let print_short_var_decl level svd_list = 
 		let svd_proj1 = function ShortVarDecl(id, exp) -> id in
@@ -334,10 +367,7 @@ let print_ast prog pretty level =
 			begin
 				List.iter (fun x -> print_type_decl level x) decl_list;
 			end
-		| VarDeclBlockStatement (decl_list)-> 
-			begin			
-				List.iter (fun x -> print_var_decl level x) decl_list
-			end
+		| VarDeclBlockStatement (decl_list)->  print_var_decl (level) decl_list
 		| ShortVarDeclStatement(decl_list)->
 			begin
 				insert_tab(level);
@@ -490,10 +520,14 @@ let print_ast prog pretty level =
 				print_string "}; \n";
 			end
 		| TypeDeclBlock (tl) -> List.iter (fun x -> print_type_decl level x) tl
-		| VarDeclBlock (vl) -> List.iter (fun x -> print_var_decl level x) vl
+		| VarDeclBlock (vl) -> print_var_decl level vl
 	in
 	let print_lined_top_decl_list level ldl = 
-		List.iter (fun x -> let LinedTD(td, _) = x in print_top_decl level td) ldl
+		List.iter 
+			(fun x -> 
+				let LinedTD(td, _) = x in 
+				let () = print_top_decl level td in
+				print_string ";\n") ldl
 	in
 	let print_package s = match s with
 		| Package (str, _) -> 
