@@ -101,10 +101,9 @@ let rec print_sym_table scope =
   Hashtbl.iter print_entry hashmap
 
 
-
 (* --- Symbol Table utils --- *)
 
-(* Adds a symbol with type typ to scope. Returns the symbol table entry *)
+(* Adds a symbol with type typ to scope. Returns the sym table *)
 let add_sym scope symbol typ ln = 
   let Scope(_, hashmap) = scope in
   let entry = Entry(symbol, typ, scope, ln) in
@@ -119,7 +118,9 @@ let open_scope parent_scope =
 (* Closes scope. It only involves printing out the symbol table if proper flags are set.
    Returns unit *)
 let close_scope scope = 
-  if dumpsymtab then print_sym_table scope
+  if dumpsymtab then
+    ( fprintf out_channel "##### Exiting scope #####\n";
+      print_sym_table scope )
   else ()
 
 (* Returns the initial global scope with true and false pre-declared *)

@@ -15,6 +15,9 @@ exception TypeCheckError of string
 exception VariableRedeclaration of string
 exception InternalError of string
 
+(* Statement type checking errors come bundled with line number *)
+exception StmtTypeCheckError of (string * int)
+
 let prev_decl_msg scope id = match id with
 | BlankID -> raise (InternalError "BlankID is never defined before")
 | ID(name, _) -> 
@@ -145,7 +148,10 @@ let rec resolve_to_base typ = match typ with
 | NewType(t) -> NewType (resolve_to_base t)
 
 let rec get_expression_type ctx e = match e with
-| IdExp(id) ->  lookup_id ctx id
+| IdExp(id) -> 
+  ( try lookup_id ctx id
+    with Not_found -> 
+      raise (TypeCheckError ("Undeclared identifier " ^ (string_of_id id)) ) )
 | LiteralExp(lit_exp) ->
   ( match lit_exp with
   | IntLit _ -> GoInt
@@ -181,6 +187,20 @@ let rec get_expression_type ctx e = match e with
 | IndexExp of (expression * expression)
 | SelectExp of (expression * identifier) *)
 
+
+
+let gotype_of_function_sig ctx fsig = 
+  let FunctionSig(args_list, ret) = fsig in
+  let arg_types = List.map (fun (FunctionArg (id, ts)) -> gotype_of_typspec ctx ts) args_list in
+  let ret_type = (match ret with
+      | None -> None
+      | Some(t) -> Some (gotype_of_typspec ctx t) )
+  in
+  GoFunction (arg_types, ret_type)
+
+
+
+
 (* --~~~~~~--*** The Type Checker ***--~~~~~~-- *)
 
 
@@ -197,14 +217,67 @@ and tc_package_decl ctx = function
 and tc_lined_top_decl ctx = function
   | LinedTD(tdcl, ln) -> 
       try tc_top_decl ln ctx tdcl
-      with (TypeCheckError s) -> (
-        fprintf err_channel "%s" ("Typing Error at line " ^ (string_of_int ln) ^ ":\n");
+      with 
+      | TypeCheckError s ->
+        fprintf err_channel "Typing Error at line %d:\n" ln;
         fprintf err_channel "%s\n" s;
-      )
+      | StmtTypeCheckError (s, ln) ->
+        fprintf err_channel "Typing Error at line %d:\n" ln;
+        fprintf err_channel "%s\n" s;
 
 and tc_top_decl ln ctx = function
-  | FunctionDecl(_, _, _) -> raise NotImplemented
-  | TypeDeclBlock(std_list) -> List.iter (tc_type_declaration ln ctx) std_list
+  | FunctionDecl(id, fsig, body) -> 
+      if (id_in_current_scope ctx id) then 
+        raise (VariableRedeclaration (prev_decl_msg ctx id))
+      else
+        let typ = gotype_of_function_sig ctx fsig in
+
+        let () = add_id ctx id typ ln in
+        let fun_ret_typ = function
+            | GoFunction(_, ret_type) -> ret_type
+            | _ -> raise (InternalError "Type GoFunction expected")
+        in
+        let ret_type = fun_ret_typ typ in
+        let body_scope = open_scope ctx in  
+        let FunctionSig(fargs, _) = fsig in
+        let _ = 
+          List.map 
+            (fun (FunctionArg(id, ts)) -> 
+              add_id body_scope id (gotype_of_typspec ctx ts) ln )
+            fargs
+        in    
+        let () = List.iter (tc_statement body_scope) body in
+        let ret_stmts = 
+          List.filter 
+            (function 
+             | LinedStatement(line, ReturnStatement _) -> true 
+             | _ -> false)
+            body 
+        in
+        let ret_exps = 
+          List.map 
+            (function 
+             | LinedStatement(line, ReturnStatement e) -> (line, e) 
+             | _ -> raise (InternalError "Non return statement. Filter properly.")  )
+            ret_stmts
+        in
+        let () = List.iter
+          (fun (ln, e) -> match e, ret_type with
+           | None, None -> ()
+           | Some(e), None -> raise (StmtTypeCheckError ("Too many arguments to return", ln))
+           | None, Some(t) -> raise (StmtTypeCheckError ("Not enough arguments to return", ln))
+           | Some(e1), Some(t) when get_expression_type body_scope e1 == t -> ()
+           | Some(e1), Some(t) -> 
+              raise 
+                (StmtTypeCheckError
+                  ( "The return type of the function is " ^ (string_of_type t) ^
+                    " but this statement is returning an expression of type " ^
+                    (string_of_type (get_expression_type body_scope e1)), ln ) ) ) 
+          ret_exps
+        in close_scope body_scope
+
+  | TypeDeclBlock(std_list) -> 
+      List.iter (tc_type_declaration ln ctx) std_list
   | VarDeclBlock(mvd_list) -> 
       List.iter (tc_multiple_var_declaration ln ctx) mvd_list
 
@@ -237,6 +310,7 @@ and tc_single_var_declaration ln ctx = function
             )
           )
 and tc_short_var_decl ctx node = raise NotImplemented
+
 and tc_type_declaration ln ctx = function
   | SingleTypeDecl(id, ts) -> 
     if (id_in_current_scope ctx id) then 
@@ -244,20 +318,15 @@ and tc_type_declaration ln ctx = function
     else
       let new_type = NewType (gotype_of_typspec ctx ts) in
       add_id ctx id new_type ln
-and tc_type_spec ctx node = raise NotImplemented
-and tc_multi_struct_field_decl ctx node = raise NotImplemented
-and tc_single_struct_field_decl ctx node = raise NotImplemented
-and tc_basic_type ctx node = raise NotImplemented
-and tc_identifier ctx node = raise NotImplemented
-and tc_function_signature ctx node = raise NotImplemented
-and tc_function_arg ctx node = raise NotImplemented
-and tc_expression ctx node = raise NotImplemented
-and tc_literal ctx node = raise NotImplemented
-and tc_int_literal ctx node = raise NotImplemented
-and tc_unary_op ctx node = raise NotImplemented
-and tc_binary_op ctx node = raise NotImplemented
-and tc_statement ctx node = raise NotImplemented
-and tc_plain_statement ctx node = raise NotImplemented
+
+and tc_expression ctx node = ignore (get_expression_type ctx node)
+
+and tc_statement ctx = function
+  | LinedStatement(ln, s) -> tc_plain_statement ln ctx s
+and tc_plain_statement ln ctx = function
+  | ReturnStatement(Some(e)) -> tc_expression ctx e
+  | ReturnStatement(None) -> ()
+  | _ -> raise NotImplemented
 and tc_switch_case ctx node = raise NotImplemented
 
 let build_symbol_table ast =
