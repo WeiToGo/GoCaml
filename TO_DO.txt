@@ -46,11 +46,11 @@ We no longer have lvalues since that was a massive parsing PITA
 So weeder needs to take care of lvalue checking.
 
 - Weed custom type of blank id [DONE]
-- Weed out short variable decl in for loop post statement
+- Weed out short variable decl in for loop post statement [DONE]
 - Weed out blank statement rule.  For example, these are not allowed:
-    x = _
-    x := _
-    var x int = _
+    x = _ [DONE]
+    x := _ [DONE]
+    var x int = _ [DONE]
 There might be more such rules. 
 
 - Note that in the real go compiler, this passes fine: 
