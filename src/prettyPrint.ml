@@ -313,17 +313,23 @@ let print_ast prog pretty level =
 				insert_tab(level);
 				print_expr level e;
 			end
-		| AssignmentStatement (l)->
-			begin
-				insert_tab(level);
-			 	List.iter (fun (e1,e2) -> 
-			 		begin
-				 		print_expr level e1;
-			 			print_string " = ";
-			 			print_expr level e2;
-			 		end
-			 	) l
-			 end 
+		| AssignmentStatement (l)-> 
+			let proj1 = function (e1, e2) -> e1 in
+			let proj2 = function (e1, e2) -> e2 in
+			let e1s = List.map proj1 l in
+			let e2s = List.map proj2 l in
+			let rec list_printer lyst printer_fun = match lyst with
+			| a :: (b :: _ as t)  ->(
+									 printer_fun a;
+									 print_string ", ";
+								 	 list_printer t printer_fun
+								 	)
+			| a :: [] -> printer_fun a;
+			| [] -> ()
+			in
+			list_printer e1s (print_expr level);
+			print_string " = ";
+			list_printer e2s (print_expr level); 
 		| TypeDeclBlockStatement (decl_list)-> 
 			begin
 				List.iter (fun x -> print_type_decl level x) decl_list;

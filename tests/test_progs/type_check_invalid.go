@@ -164,9 +164,9 @@ func if_stmts() {
 	// 	a
 	// 	b
 	// }
-
+	var x string
 	// init has wrong type
-	if x < 0; x == 0 {
+	if x = 0; x == 0 {
 		return
 	}
 
@@ -177,42 +177,91 @@ func if_stmts() {
 		print(x+1)
 	}
 
-	// if/then/else with empty init statement
+	// empty init statement, expr not bool
 	if ; x+1 {
 		return
 	} else {
 		return
 	}
 
-	// if/then/else with init statement
-	if x; true {
-		a
+	// statement body wrong type of x
+	if x = x; true {
+		print((x+1)/5)
 	} else {
-		b
-		c
+		return
 	}
 
-	// if/else-if/else
+	// expr in else not bool
 	if false {
-		1
-	} else if false {
-		2
+		print((4+3)/2)
+	} else if y++ {
+		return
 	} else {
-		3
+		return
 	}
 
-	// if/else-if/else with init statement
+	// statement body in else if has wrong type
 	if false {
-		1
-	} else if x; false {
-		2
+		return
+	} else if x = x; false {
+		print(x+6.4)
 	} else {
-		3
+		return
+	}
+	// statement body in else doesn't type check
+	if false {
+		return
+	} else if x = x; false {
+		print(x)
+	} else {
+		print(x+'def')
 	}
 }
 
 // switch statement
+var y int = 1
+func switch_stmts() {
+	// init does not type check
+	switch (3+0.5); y {
+	case 0: "zero"
+	default: "valid"
+	case 1, 3, 5: "odd"
+	}
 
+	// expr not well typed
+	switch y+"str" {
+	case 0: "zero"
+	case 1, 3: "odd" 
+	}
+
+	// no expr, case e1, e2 not bool
+	switch z:=0; {
+	case 0: "zero"
+	case 1: "odd" 
+	}
+
+	// case e1, e2 not well-typed
+	switch z:=0; {
+	case y < 0.5: "str1"
+	case y > 1.6: "str2"
+	default: "str"
+	}
+
+	// case e1, e2 well-typed but not the same type then expr
+	switch z:=0; (x+z){
+	case y < 0: "str1"
+	case y > 1: "str2"
+	default: "str"
+	}
+
+	// statement not well typed
+	switch {
+	case y < 0: print("string" + 3)
+	case y > 0: print(4+1)
+	default: "zero"
+	}
+
+}
 // EXPRESSIONS
 
 // identifiers
@@ -230,7 +279,23 @@ func if_stmts() {
 ^(45.5)
 ^("ewr")
 
+
 // binary expression
+var a, b int 0,1
+var c, d float64 4.5, 6.4
+var e, f string "s1", 's2'
+var g, h [2]int
+type st1, st2 struct {
+	x,y int
+}
+(y<4) || (y++)
+(y--) && (y==0)
+==
+!=
+<
+<=
+>
+>=
 
 // function call
 
