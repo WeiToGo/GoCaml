@@ -14,6 +14,7 @@ exception NotImplemented
 exception TypeCheckError of string
 exception VariableRedeclaration of string
 exception InternalError of string
+exception Abort
 
 (* Statement type checking errors come bundled with line number *)
 exception StmtTypeCheckError of (string * int)
@@ -26,6 +27,9 @@ let prev_decl_msg scope id = match id with
   "Previous declaration of " ^ name ^ " at line " ^
   (string_of_int ln) ^ "."
 
+let assign_error_msg left_type right_type = 
+  "Trying to assign value to type " ^ (string_of_type right_type) ^
+  " to a vairable of type " ^ (string_of_type left_type)
 
 (* --~~~~~~--*** Helper Functions ***--~~~~~~-- *)
 
@@ -180,6 +184,8 @@ let rec get_expression_type ctx e = match e with
         | _ -> raise (TypeCheckError
                       "Operand of bitwise negation must be of type int or rune") )
   )
+| _ -> raise NotImplemented
+
 (* | BinaryExp of (binary_op * expression * expression)
 | FunctionCallExp of (expression * (expression list))
 | AppendExp of (identifier * expression)
@@ -221,10 +227,12 @@ and tc_lined_top_decl ctx = function
       | TypeCheckError s ->
         fprintf err_channel "Typing Error at line %d:\n" ln;
         fprintf err_channel "%s\n" s;
+        raise Abort
       | StmtTypeCheckError (s, ln) ->
         fprintf err_channel "Typing Error at line %d:\n" ln;
         fprintf err_channel "%s\n" s;
-
+        raise Abort
+        
 and tc_top_decl ln ctx = function
   | FunctionDecl(id, fsig, body) -> 
       if (id_in_current_scope ctx id) then 
@@ -319,13 +327,37 @@ and tc_type_declaration ln ctx = function
       let new_type = NewType (gotype_of_typspec ctx ts) in
       add_id ctx id new_type ln
 
-and tc_expression ctx node = ignore (get_expression_type ctx node)
+and tc_expression ctx node = let _ = get_expression_type ctx node in ()
 
 and tc_statement ctx = function
   | LinedStatement(ln, s) -> tc_plain_statement ln ctx s
 and tc_plain_statement ln ctx = function
+  | EmptyStatement -> ()
+  | BreakStatement -> ()
+  | ContinueStatement -> ()
+  | ExpressionStatement e -> tc_expression ctx e
   | ReturnStatement(Some(e)) -> tc_expression ctx e
   | ReturnStatement(None) -> ()
+  | VarDeclBlockStatement mvd_list -> List.iter (tc_multiple_var_declaration ln ctx) mvd_list
+  | TypeDeclBlockStatement std_list -> List.iter (tc_type_declaration ln ctx) std_list
+  | ShortVarDeclStatement svd_list -> 
+      let exps = List.map (fun (ShortVarDecl(_, exp)) -> exp) svd_list in
+      let () = List.iter (tc_expression ctx) exps in
+      let id_list = List.map (fun (ShortVarDecl(id, _)) -> id) svd_list in
+      let all_old = List.fold_left (fun x id -> x && id_in_current_scope ctx id) true id_list in
+      let () = 
+        ( if all_old then 
+            raise (TypeCheckError "No new variables in short variable declaration statement")
+          else () ) in
+      let check_svd (ShortVarDecl(id, exp)) =
+        let rhs_type = get_expression_type ctx exp in
+        if (not (id_in_current_scope ctx id)) then
+          add_id ctx id rhs_type ln
+        else
+          let cur_type = lookup_id ctx id in
+          if (cur_type == rhs_type) then ()
+          else raise (TypeCheckError (assign_error_msg cur_type rhs_type) )
+      in List.iter check_svd svd_list
   | _ -> raise NotImplemented
 and tc_switch_case ctx node = raise NotImplemented
 
