@@ -7,8 +7,9 @@ let weed_ast prog outchann =
 	let println s =
 		fprintf outchann "%s\n" s
 	in
-	let loops = ref 0 in
-	let shortvardcl = ref 1 in
+	let loops = ref 0 in (* Nested loop level *)
+	let shortvardcl = ref 1 in (* is shortvardcl allowed? *)
+	let blankid = ref 0 in (* Is there a blankid currently? *)
 	let rec visit_program prog =
 		let Program(pack, decls) = prog in
 		visit_package_decl pack;
@@ -79,7 +80,7 @@ let weed_ast prog outchann =
 	and visit_id id =
 		match id with
 		| ID(str, _) -> ()
-		| BlankID -> ()
+		| BlankID -> blankid := 1
 	and visit_function_signature fs =
 		let FunctionSig(args, top) = fs in
 		List.iter visit_function_argument args;
@@ -135,7 +136,14 @@ let weed_ast prog outchann =
 		| AssignmentStatement(epairs) ->
 			List.iter (fun (e1, e2) ->
 				visit_expression e1;
-				visit_expression e2) epairs
+				blankid := 0;
+				visit_expression e2;
+				(match !blankid with
+				| 0 -> ()
+				| _ ->
+					println ("Cannot use _ as a value. Line: " ^ (string_of_int linenum));
+					exit 0);
+				blankid := 0) epairs
 		| TypeDeclBlockStatement(tdcls) -> List.iter visit_type_dcl tdcls
 		| ShortVarDeclStatement(svdcls) ->
 			(match !shortvardcl with
@@ -165,7 +173,9 @@ let weed_ast prog outchann =
 			visit_expression e;
 			List.iter (fun x -> visit_switch_case x defcount) scs;
 			(match !defcount with
-			| x when x > 1 -> println ("Multiple defaults in switch. Line: " ^ (string_of_int linenum))
+			| x when x > 1 ->
+				println ("Multiple defaults in switch. Line: " ^ (string_of_int linenum));
+				exit 0
 			| _ -> ())
 		| ForStatement(stmtop1, e, stmtop2, stmts) -> (* init, cond, post, body *)
 			loops := !loops + 1;
