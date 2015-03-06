@@ -51,10 +51,13 @@ let weed_ast prog outchann =
 			visit_expression e;
 			checkForBlankReadError linenum;
 			blankid := 0);
-	and visit_short_var_dcl dcl =
+	and visit_short_var_dcl dcl linenum =
 		let ShortVarDecl(id, e) = dcl in
 		visit_id id;
-		visit_expression e
+		blankid := 0;
+		visit_expression e;
+		checkForBlankReadError linenum;
+		blankid := 0
 	and visit_type_dcl dcl =
 		let SingleTypeDecl(id, ts) = dcl in
 		visit_id id;
@@ -155,7 +158,7 @@ let weed_ast prog outchann =
 		| ShortVarDeclStatement(svdcls) ->
 			(match !shortvardcl with
 			| 0 -> println ("Cannot declare in the for increment. Line: " ^ (string_of_int linenum))
-			| _ -> List.iter visit_short_var_dcl svdcls)
+			| _ -> List.iter (fun x -> visit_short_var_dcl x linenum) svdcls)
 		| VarDeclBlockStatement(mvdcls) -> List.iter (fun x -> visit_mul_var_dcl x linenum) mvdcls
 		| PrintStatement(es) -> List.iter visit_expression es
 		| PrintlnStatement(es) -> List.iter visit_expression es
