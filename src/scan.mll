@@ -160,7 +160,7 @@ and read_rune buf = parse
   | '\\' '\\' { Buffer.add_char buf '\\'; read_rune buf lexbuf}
   | '\\' '\'' { Buffer.add_char buf '\''; read_rune buf lexbuf}
   | '\\' '"' { Buffer.add_char buf '"'; read_rune buf lexbuf}
-  | [^''' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_rune buf lexbuf}
+  | [^''' '\\' '\n']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_rune buf lexbuf}
 
   
 and read_raw_str buf = parse
@@ -178,7 +178,7 @@ and read_string buf = parse
   | '\\' 'v' { Buffer.add_char buf '\013'; read_string buf lexbuf}
   | '\\' '\\' { Buffer.add_char buf '\\'; read_string buf lexbuf}
   | '\\' '"' { Buffer.add_char buf '"'; read_string buf lexbuf}
-  | [^'"' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_string buf lexbuf}
+  | [^'"' '\\' '\n']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_string buf lexbuf}
 
 and read_comment last_token = parse
   | "*/" { scan last_token lexbuf }

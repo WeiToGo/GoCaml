@@ -10,12 +10,20 @@ let weed_ast prog outchann =
 	let loops = ref 0 in (* Nested loop level *)
 	let shortvardcl = ref 1 in (* is shortvardcl allowed? *)
 	let blankid = ref 0 in (* Is there a blankid currently? *)
+	let lvalue = ref 0 in (* Was the last expression a left value? *)
 	let checkForBlankReadError linenum =
 		match !blankid with
 		| 0 -> ()
 		| _ ->
 			println ("Cannot use _ as a value. Line: " ^ (string_of_int linenum));
-			exit 0;
+			exit 1
+	in
+	let checkForLeftValueError linenum =
+		match !lvalue with
+		| 0 ->
+			println ("Cannot assign to expression. Line: " ^ (string_of_int linenum));
+			exit 1
+		| _ -> ()
 	in
 	let rec visit_program prog =
 		let Program(pack, decls) = prog in
@@ -108,26 +116,43 @@ let weed_ast prog outchann =
 		let FunctionArg(id, ts) = arg in
 		visit_id id;
 		visit_type_spec ts linenum
-	and visit_expression e linenum =
+	and visit_expression e linenum = (*TODO check for lvalues*)
 		match e with
-		| IdExp(id) -> visit_id id
-		| LiteralExp(lit) -> visit_literal lit
-		| UnaryExp(uoper, e) -> visit_expression e linenum (* ignore unary op *)
+		| IdExp(id) ->
+			visit_id id;
+			lvalue := 1
+		| LiteralExp(lit) ->
+			visit_literal lit;
+			lvalue := 0
+		| UnaryExp(uoper, e) ->
+			visit_expression e linenum; (* ignore unary op *)
+			lvalue := 0 (* Unary op breaks an lvalue *)
 		| BinaryExp(boper, e1, e2) -> (* ignore binary op *)
 			visit_expression e1 linenum;
-			visit_expression e2 linenum
+			visit_expression e2 linenum;
+			lvalue := 0 (* Unary op breaks an lvalue *)
 		| FunctionCallExp(e, es) ->
 			visit_expression e linenum;
-			List.iter (fun x -> visit_expression x linenum) es
+			blankid := 0;
+			List.iter (fun x -> visit_expression x linenum) es;
+			checkForBlankReadError linenum;
+			blankid := 0;
+			lvalue := 0 (* cannot assign to function calls *)
 		| AppendExp(id, e) ->
 			visit_id id;
-			visit_expression e linenum
+			visit_expression e linenum;
+			lvalue := 0 (* cannot assign to append *)
 		| TypeCastExp(ts, e) ->
 			visit_type_spec ts linenum;
-			visit_expression e linenum
+			blankid := 0;
+			visit_expression e linenum;
+			checkForBlankReadError linenum;
+			blankid := 0;
+			lvalue := 0 (* cannot assign to casts *)
 		| IndexExp(e1, e2) ->
 			visit_expression e1 linenum;
-			visit_expression e2 linenum
+			visit_expression e2 linenum;
+			lvalue := 1
 		| SelectExp(e, id) ->
 			visit_expression e linenum;
 			visit_id id
@@ -153,6 +178,7 @@ let weed_ast prog outchann =
 		| AssignmentStatement(epairs) ->
 			List.iter (fun (e1, e2) ->
 				visit_expression e1 linenum;
+				checkForLeftValueError linenum;
 				blankid := 0;
 				visit_expression e2 linenum;
 				checkForBlankReadError linenum;
@@ -160,7 +186,9 @@ let weed_ast prog outchann =
 		| TypeDeclBlockStatement(tdcls) -> List.iter (fun x -> visit_type_dcl x linenum) tdcls
 		| ShortVarDeclStatement(svdcls) ->
 			(match !shortvardcl with
-			| 0 -> println ("Cannot declare in the for increment. Line: " ^ (string_of_int linenum))
+			| 0 ->
+				println ("Cannot declare in the for increment. Line: " ^ (string_of_int linenum));
+				exit 1
 			| _ -> List.iter (fun x -> visit_short_var_dcl x linenum) svdcls)
 		| VarDeclBlockStatement(mvdcls) -> List.iter (fun x -> visit_mul_var_dcl x linenum) mvdcls
 		| PrintStatement(es) -> List.iter (fun x -> visit_expression x linenum) es
@@ -188,7 +216,7 @@ let weed_ast prog outchann =
 			(match !defcount with
 			| x when x > 1 ->
 				println ("Multiple defaults in switch. Line: " ^ (string_of_int linenum));
-				exit 0
+				exit 1
 			| _ -> ())
 		| ForStatement(stmtop1, e, stmtop2, stmts) -> (* init, cond, post, body *)
 			loops := !loops + 1;
@@ -207,13 +235,13 @@ let weed_ast prog outchann =
 			(match !loops with
 			| 0 ->
 				println ("Break statement is not in a loop. Line: " ^ (string_of_int linenum));
-				exit 0
+				exit 1
 			| _ -> ())
 		| ContinueStatement ->
 			(match !loops with
 			| 0 ->
 				println ("Continue statement is not in a loop. Line: " ^ (string_of_int linenum));
-				exit 0
+				exit 1
 			| _ -> ())
 		| BlockStatement(stmts) -> List.iter visit_statement stmts
 	and visit_switch_case sc defcount linenum =
