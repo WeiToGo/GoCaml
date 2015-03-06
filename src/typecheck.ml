@@ -148,8 +148,15 @@ let rec resolve_to_base typ = match typ with
   ( match ret with
   | None -> GoFunction (List.map resolve_to_base args, None)
   | Some(t) -> GoFunction (List.map resolve_to_base args, Some(resolve_to_base t)) )
-| GoCustom(name, t) -> t
+| GoCustom(name, t) -> resolve_to_base t
 | NewType(t) -> NewType (resolve_to_base t)
+
+(* 
+let rec resolve_type_declaration typ = match type with
+| patt -> expr
+| _ -> expr2
+(* We should have *)
+let rec  *)
 
 
 let rec is_comparable gtype = match gtype with
@@ -182,6 +189,17 @@ let rec is_num_string gtype = match is_numeric gtype, gtype with
 | false, GoString -> true
 | false, GoCustom(name, t) -> is_num_string (resolve_to_base t)
 | false, _ -> false
+
+let is_exp_an_id = function
+| IdExp(_) -> true
+| _ -> false
+
+let id_from_exp = function
+| IdExp(id) -> id
+| _ -> raise (InternalError "Tried to extract ID from non-id expression")
+
+
+
 
 let merge_type t1 t2 = 
   if t1 = t2 then t1
@@ -251,9 +269,65 @@ let rec get_expression_type ctx e = match e with
     | BinBitAndNot | BinBitXor -> 
         get_bin_exp_type is_numeric "numeric"
   )     
+| FunctionCallExp (caller, args_list) -> ( 
+    (* Careful - this can be a type cast expression *)
+    match caller with  
+    | IdExp(BlankID) -> raise (TypeCheckError "Trying to read from BlankID") 
+    | IdExp(id) -> 
+      ( try 
+        ( match (resolve_to_base (lookup_id ctx id)) with 
+          | NewType(_) as t -> 
+              let exp_to_cast = (match args_list with
+              | [] -> raise (TypeCheckError "Typecast statement with empty argument")
+              | a :: b :: t -> raise (TypeCheckError "Typecast statement with more that one argument")
+              | h :: [] -> h ) 
+              in
+              type_cast_custom_type ctx (Some id) t exp_to_cast
+          | GoFunction(arg_types, ret)-> function_call_type ctx arg_types args_list ret
+          | GoCustom(_) -> raise (InternalError "You should resolve custom types before matching")
+          | _ -> raise (TypeCheckError ((string_of_id id) ^ "is not a function") ) )
+       with Not_found -> raise (TypeCheckError ("Functino " ^ (string_of_id id) ^ " not defined.")) )
+    | _ as exp -> ( match get_expression_type ctx exp with
+        | GoFunction(arg_types, ret) -> function_call_type ctx arg_types args_list ret
+        | _ -> raise (TypeCheckError "Only function expressions can be called.") )
+    )
+
 | _ -> raise NotImplemented
-(* | FunctionCallExp of (expression * (expression list))
-| AppendExp of (identifier * expression)
+
+and function_call_type ctx arg_types args_list ret = 
+  let rec aux l1 l2 = ( match l1, l2 with
+  | a :: s, b :: t -> 
+      let b_type = get_expression_type ctx b in
+      if (a == b_type) then aux s t
+      else raise (TypeCheckError ("Argument expected of type " ^ (string_of_type a) ^
+        "  but argument received of type " ^ (string_of_type b_type)))
+
+  | [], [] -> () 
+  | _, _ -> raise (TypeCheckError "Function called with wrong number of arguments") )(*TODO: print how many *)
+  in
+  let () = aux arg_types args_list
+  in
+  ( match ret with
+  | None -> raise (TypeCheckError "Void function call used as a value")
+  | Some(t) -> t )
+
+and type_cast_custom_type ctx id_op typ exp = 
+  let exp_type = get_expression_type ctx exp in
+  ( match (resolve_to_base exp_type) with
+    | GoInt | GoFloat | GoBool | GoRune 
+    | NewType(GoInt) | NewType(GoFloat)
+    | NewType(GoBool) | NewType(GoRune) -> 
+      ( match (resolve_to_base typ) with
+        | GoInt | GoFloat | GoBool | GoRune -> typ
+        | NewType(t) -> (match (resolve_to_base t) with
+            | GoInt | GoFloat | GoBool | GoRune -> (match id_op with 
+                | None -> raise (InternalError "No custom type id supplied")
+                | Some(id) -> GoCustom((string_of_id id), t) )
+            | _ -> raise (TypeCheckError ("Casting to type " ^ (string_of_type t) ^ " is not supported")) )
+        | _ -> raise (TypeCheckError ("Casting to type " ^ (string_of_type typ) ^ " is not supported")) )
+    | _ -> raise (TypeCheckError ("Casting types of type "  ^ (string_of_type exp_type) ^ " is not supported")) )
+
+(* | AppendExp of (identifier * expression)
 | TypeCastExp of (type_spec * expression)
 | IndexExp of (expression * expression)
 | SelectExp of (expression * identifier) *)
@@ -269,7 +343,13 @@ let gotype_of_function_sig ctx fsig =
   in
   GoFunction (arg_types, ret_type)
 
-
+ 
+let is_void_function_call ctx exp = match exp with
+| FunctionCallExp(IdExp(id), args) -> 
+  ( match lookup_id ctx id with
+    | GoFunction(arg_types, None) -> true
+    | _ -> false )
+| _ -> false
 
 
 (* --~~~~~~--*** The Type Checker ***--~~~~~~-- *)
@@ -404,7 +484,10 @@ and tc_plain_statement ln ctx = function
   | EmptyStatement -> ()
   | BreakStatement -> ()
   | ContinueStatement -> ()
-  | ExpressionStatement e -> tc_expression ctx e
+  | ExpressionStatement e -> 
+      (* Check for a void function first *)
+      if is_void_function_call ctx e then ()
+      else tc_expression ctx e
   | ReturnStatement(Some(e)) -> tc_expression ctx e
   | ReturnStatement(None) -> ()
   | VarDeclBlockStatement mvd_list -> List.iter (tc_multiple_var_declaration ln ctx) mvd_list
