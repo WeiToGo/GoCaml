@@ -93,30 +93,25 @@ let print_ast prog pretty level =
 		| RuneType -> print_string " rune"
 		| StringType -> print_string " string"
 	in
-	let rec print_multi_struct_field level sfd = match sfd with
-		| MultipleStructFieldDecl (sf_list) -> 
-				let rec print_struct_field_helper sl = match sl with
-					| [] -> ()
-					| h::[] -> 
-						begin
-							insert_tab(level);
-							print_single_struct_field level h;
-						end
-					| h::t ->
-					begin
-						insert_tab(level);
-						print_single_struct_field level h;
-						print_string "; ";
-						print_struct_field_helper t;
-					end 
-				in print_struct_field_helper sf_list;
-				print_string ";\n";
-	and print_single_struct_field level sf = match sf with
-		| SingleStructFieldDecl (id, ty) ->
-			begin
-				print_identifier id;
-				print_type_spec level ty;
-			end
+	let rec print_multi_struct_field level msf= match msf with
+		| MultipleStructFieldDecl (ssf_list) ->
+			let svd_proj1 = function SingleStructFieldDecl(id, ty) -> id in
+			let svd_proj2 = function SingleStructFieldDecl(id, ty) -> ty in
+			let ids = List.map svd_proj1 ssf_list in
+			let tys = List.map svd_proj2 ssf_list in
+			let rec list_printer lyst printer_fun = match lyst with
+			| a :: (b :: _ as t)  ->(
+									 printer_fun a;
+									 print_string ", ";
+								 	 list_printer t printer_fun
+								 	)
+			| a :: [] -> printer_fun a;
+			| [] -> ()
+		  in
+		  insert_tab(level);
+		  list_printer ids print_identifier;
+		  print_type_spec level (List.hd tys);
+		  print_string ";\n";
 	and print_type_spec level ts = match ts with
 		| BasicType (bt) -> print_basic_type bt
 		| SliceType (t) -> 
