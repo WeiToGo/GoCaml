@@ -232,7 +232,7 @@ and tc_lined_top_decl ctx = function
         fprintf err_channel "Typing Error at line %d:\n" ln;
         fprintf err_channel "%s\n" s;
         raise Abort
-        
+
 and tc_top_decl ln ctx = function
   | FunctionDecl(id, fsig, body) -> 
       if (id_in_current_scope ctx id) then 
@@ -330,7 +330,12 @@ and tc_type_declaration ln ctx = function
 and tc_expression ctx node = let _ = get_expression_type ctx node in ()
 
 and tc_statement ctx = function
-  | LinedStatement(ln, s) -> tc_plain_statement ln ctx s
+  | LinedStatement(ln, s) -> 
+      ( try tc_plain_statement ln ctx s
+        with TypeCheckError s ->
+          fprintf err_channel "Typing Error at line %d:\n" ln;
+          fprintf err_channel "%s\n" s;
+          raise Abort )
 and tc_plain_statement ln ctx = function
   | EmptyStatement -> ()
   | BreakStatement -> ()
@@ -358,8 +363,92 @@ and tc_plain_statement ln ctx = function
           if (cur_type == rhs_type) then ()
           else raise (TypeCheckError (assign_error_msg cur_type rhs_type) )
       in List.iter check_svd svd_list
-  | _ -> raise NotImplemented
-and tc_switch_case ctx node = raise NotImplemented
+  | BlockStatement stmt_list -> 
+      let block_scope = open_scope ctx in
+      let () = List.iter (tc_statement block_scope) stmt_list in
+      close_scope block_scope
+
+  | AssignmentStatement a_list -> 
+      let left_exp_list = List.map (fun (x,y) -> x) a_list in
+      let right_exp_list = List.map (fun (x,y) -> y) a_list in
+      let () = List.iter (tc_expression ctx) left_exp_list in
+      let () = List.iter (tc_expression ctx) right_exp_list in
+      let check_assignment (e1, e2) =
+        let e1_type = get_expression_type ctx e1 in
+        let e2_type = get_expression_type ctx e2 in
+        if e1_type = e2_type then ()
+        else raise (TypeCheckError (assign_error_msg e1_type e2_type))
+      in
+      List.iter check_assignment a_list
+  
+  | PrintStatement exp_list
+  | PrintlnStatement exp_list -> List.iter (tc_expression ctx) exp_list
+  | ForStatement (s1, cond, s2, stmt_list) -> 
+      let init_scope = open_scope ctx in
+      let () = match s1 with
+      | None -> ()
+      | Some(s) -> tc_statement init_scope s
+      in
+      let () = match (get_expression_type init_scope cond) with
+      | GoBool -> ()
+      | _ -> raise (TypeCheckError "for loop condition type must be bool")
+      in
+      let () = match s2 with
+      | None -> ()
+      | Some(s) -> tc_statement init_scope s
+      in
+      let body_scope = open_scope init_scope in
+      let () = List.iter (tc_statement body_scope) stmt_list in
+      let () = close_scope body_scope in
+      close_scope init_scope
+  | IfStatement (init, exp, then_list, else_list) -> 
+      let init_scope = open_scope ctx in
+      let () = match init with
+      | None -> ()
+      | Some(s) -> tc_statement init_scope s
+      in
+      let () = match (get_expression_type init_scope exp) with
+      | GoBool -> ()
+      | _ -> raise (TypeCheckError "if loop condition type must be bool")
+      in
+      let then_scope = open_scope init_scope in
+      let () = List.iter (tc_statement then_scope) then_list in
+      let () = close_scope then_scope in
+      let () = match else_list with
+      | None -> ()
+      | Some(stmt_list) -> 
+          let else_scope = open_scope init_scope in
+          let () = List.iter (tc_statement else_scope) stmt_list in
+          close_scope else_scope
+      in close_scope init_scope
+  | SwitchStatement (init, exp, case_list) -> 
+      let init_scope = open_scope ctx in
+      let () = match init with
+      | None -> ()
+      | Some(s) -> tc_statement init_scope s
+      in
+      let switch_cond_type = get_expression_type init_scope exp in
+      let check_switch_case par_ctx = function
+      | SwitchCase(exp_list, stmt_list) -> 
+          let () = List.iter
+            ( fun x -> 
+                let case_type = get_expression_type par_ctx x in
+                if case_type = switch_cond_type then ()
+                else raise (TypeCheckError 
+                  ( "Case expression type " ^ (string_of_type case_type) ^
+                  " does not match switch condition type " ^ (string_of_type switch_cond_type) ) ) )
+            exp_list
+          in
+          let case_scope = open_scope par_ctx in
+          let () = List.iter (tc_statement case_scope) stmt_list in
+          close_scope case_scope
+      | DefaultCase(stmt_list) -> 
+          let case_scope = open_scope par_ctx in
+          let () = List.iter (tc_statement case_scope) stmt_list in
+          close_scope case_scope
+      in
+      let () = List.iter (check_switch_case init_scope) case_list in
+      close_scope init_scope
 
 let build_symbol_table ast =
   let global_scope = initial_scope ()  (* 1024 is the initial hash table size *)

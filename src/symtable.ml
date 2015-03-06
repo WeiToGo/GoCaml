@@ -120,7 +120,9 @@ let open_scope parent_scope =
 let close_scope scope = 
   if dumpsymtab then
     ( fprintf out_channel "##### Exiting scope #####\n";
-      print_sym_table scope )
+      print_sym_table scope;
+      fprintf out_channel "##### End of scope #####\n";
+      )
   else ()
 
 (* Returns the initial global scope with true and false pre-declared *)
