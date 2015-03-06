@@ -28,6 +28,7 @@ let type_of_entry entry =
   let Entry(_, typ, _, _) = entry in 
   typ 
 
+
 (* Adds the symbol for an identifier to scope, and also updates the ref field of id to point to the symbol table entry. *)
 let add_id scope id typ ln = match id with
   | BlankID -> ()
@@ -35,20 +36,21 @@ let add_id scope id typ ln = match id with
       let entry = add_sym scope name typ ln in
       sym_ref := Some(entry)
 
+
 (* Looks up id in scope. If found, updates the ref field of id to point to the symbol table entry. *)
-(* Early exit if id already contains reference to symbol table entry *)
 let lookup_id scope id = match id with
 | BlankID -> raise (InternalError "Attempted lookup of BlankID in symbol table")
-| ID(name, sym_ref) -> match !sym_ref with
-  | None -> 
+| ID(name, sym_ref) -> 
       let entry = lookup scope name in
       sym_ref := Some(entry); type_of_entry entry
-  | Some(entry) -> type_of_entry entry 
+
+
 
 let int_of_int_lit lit = match lit with 
   | DecInt(s) -> int_of_string s
   | HexInt(s) -> int_of_string s  (* OCaml automatically processes hex strings *)
   | OctalInt(s) -> int_of_string ("0o" ^ s) 
+
 
 (* Converts an AST type_spec to a gotype defined for symbol table *)
 let rec gotype_of_typspec ctx tspec = match tspec with
@@ -62,7 +64,7 @@ let rec gotype_of_typspec ctx tspec = match tspec with
   )
   | SliceType(t) -> GoSlice(gotype_of_typspec ctx t)
   | ArrayType(int_lit, t) -> GoArray(int_of_int_lit int_lit, gotype_of_typspec ctx t)
-  | StructType(msfd_list) -> GoStruct(map_of_struct_fields msfd_list)
+  | StructType(msfd_list) -> GoStruct(map_of_struct_fields ctx msfd_list)
   | FunctionType(ts_list, ts_ret) -> (
       let args = List.map (gotype_of_typspec ctx) ts_list in
       match ts_ret with
@@ -72,12 +74,46 @@ let rec gotype_of_typspec ctx tspec = match tspec with
   | CustomType(id) -> ( match id with
     | BlankID -> raise (TypeCheckError "Blank ID cannot be used as a type")
     | ID(name, _) -> (
-        try lookup_id ctx id
-        with Not_found -> raise (TypeCheckError (name ^ " was not previously declared as a type"))
+        let declared_type = (
+          try lookup_id ctx id
+          with Not_found -> raise (TypeCheckError (name ^ " was not previously declared as a type"))
+        )
+        in
+        match declared_type with
+        | NewType gt -> GoCustom (name, gt)
+        | _ -> raise (TypeCheckError (name ^ " was not declared as a type."))
     )
   )
 
-and map_of_struct_fields msfd_list = raise NotImplemented
+
+(* Converts a multi struct field declaration list into a StructField map *)
+and map_of_struct_fields ctx msfd_list = 
+  let struct_map_merge key a b = 
+    (* Function to merge to two struct field maps *)
+    match a,b with
+    | None, None -> None
+    | Some p, None -> Some p
+    | None, Some q -> Some q
+    | Some p, Some q -> raise (TypeCheckError "Duplicate field declaration in struct")
+  in
+  let map_of_msfd = function
+  | MultipleStructFieldDecl(ssfd_list) -> 
+      let singleton_svd_map svd = 
+        let SingleStructFieldDecl(identifier, type_spec) = svd in
+        ( match identifier with 
+          | BlankID -> raise (TypeCheckError "Blank ID not allowed as struct field")
+          | ID(name, _) -> StructFields.singleton name (gotype_of_typspec ctx type_spec) 
+        )
+      in
+      let single_maps_list = List.map singleton_svd_map ssfd_list in
+      List.fold_left 
+        (fun x y -> StructFields.merge struct_map_merge x y)
+        StructFields.empty single_maps_list
+  in
+  let multi_maps_list = List.map map_of_msfd msfd_list in
+  List.fold_left 
+    (fun x y -> StructFields.merge struct_map_merge x y) 
+    StructFields.empty multi_maps_list
 
 let get_expression_type ctx e = raise NotImplemented
 
@@ -136,6 +172,7 @@ and tc_single_var_declaration ln ctx = function
                   (string_of_type t2)
                 )
               )
+
 and tc_short_var_decl ctx node = raise NotImplemented
 and tc_type_declaration ctx node = raise NotImplemented
 and tc_type_spec ctx node = raise NotImplemented

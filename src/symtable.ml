@@ -101,6 +101,7 @@ let rec print_sym_table scope =
   Hashtbl.iter print_entry hashmap
 
 
+
 (* --- Symbol Table utils --- *)
 
 (* Adds a symbol with type typ to scope. Returns the symbol table entry *)
@@ -109,8 +110,6 @@ let add_sym scope symbol typ ln =
   let entry = Entry(symbol, typ, scope, ln) in
   let () = Hashtbl.replace hashmap symbol entry in
   entry
-
-
 
 (* Opens a new scope with given parent. *)
 let open_scope parent_scope = 
