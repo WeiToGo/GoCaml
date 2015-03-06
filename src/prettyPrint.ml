@@ -243,70 +243,86 @@ let print_ast prog pretty level =
 					| Some t_op -> print_type_spec level t_op
 			end
 	in
-	let print_type_decl level td = match td with
+	let print_single_type_decl level td = match td with
 		| SingleTypeDecl (id,ts) ->
 			begin
 				insert_tab(level);
-				print_string "type ";
 				print_identifier id;
 				print_type_spec level ts;
-				(* print_string ";\n"; *)
 			end
 	in
-		let print_multi_var_decl level mvd = match mvd with
-		| MultipleVarDecl (svd_list) -> 
+	let print_type_decl level tdl = match tdl with
+		| [] -> ()
+		| h ::[] -> 
 			insert_tab(level);
-			let proj1 = function SingleVarDecl(id, ty_op, exp_op) -> id in
-			let proj2 = function SingleVarDecl(id, ty_op, exp_op) -> ty_op in
-			let proj3 = function SingleVarDecl(id, ty_op, exp_op) -> exp_op in
-			let ids = List.map proj1 svd_list in
-			let types = List.map proj2 svd_list in
-			let exps = List.map proj3 svd_list in
-			let rec list_printer lyst printer_fun = match lyst with
-				| a :: (b :: _ as t)  ->(
-										 printer_fun a;
-										 print_string ", ";
-									 	 list_printer t printer_fun
-									 	)
-				| a :: [] -> printer_fun a;
-				| [] -> ()
+			print_string "type ";
+			print_single_type_decl level h;
+		| h::t ->	
+			insert_tab(level);
+			print_string "type (\n";
+			List.iter 
+			(fun x -> 
+				print_single_type_decl (level+1) x;
+				print_string ";\n";
+			) 
+			tdl;
+			insert_tab(level);
+			print_string ")";
+	in
+	let print_multi_var_decl level mvd = match mvd with
+	| MultipleVarDecl (svd_list) -> 
+		insert_tab(level);
+		let proj1 = function SingleVarDecl(id, ty_op, exp_op) -> id in
+		let proj2 = function SingleVarDecl(id, ty_op, exp_op) -> ty_op in
+		let proj3 = function SingleVarDecl(id, ty_op, exp_op) -> exp_op in
+		let ids = List.map proj1 svd_list in
+		let types = List.map proj2 svd_list in
+		let exps = List.map proj3 svd_list in
+		let rec list_printer lyst printer_fun = match lyst with
+			| a :: (b :: _ as t)  ->(
+									 printer_fun a;
+									 print_string ", ";
+								 	 list_printer t printer_fun
+								 	)
+			| a :: [] -> printer_fun a;
+			| [] -> ()
+		in
+		let rec all_exists sth_list = match sth_list with
+		| Some(_) :: t -> all_exists t
+		| None :: t -> false
+		| [] -> true
+		in
+		let () = list_printer ids print_identifier in
+		match all_exists types, all_exists exps with
+		| false, false -> failwith "Internal error: Invalid variable declaration"
+		| true, false -> (
+			let var_type = (match List.hd types with
+				| Some(t) -> t
+				| None -> failwith "This should never happen" )
+			in 
+			print_type_spec level var_type;
+		)
+		| false, true -> (
+			print_string " = ";
+			let extract_from_some exp = (match exp with
+				| Some(e) -> e
+				| None -> failwith "This should never happen")
 			in
-			let rec all_exists sth_list = match sth_list with
-			| Some(_) :: t -> all_exists t
-			| None :: t -> false
-			| [] -> true
+			list_printer (List.map extract_from_some exps) (print_expr level);
+		)
+		| true, true -> (
+			let var_type = (match List.hd types with
+								| Some(t) -> t
+								| None -> failwith "This should never happen" )
+			in 
+			print_type_spec level var_type;
+			print_string " = ";
+			let extract_from_some exp = (match exp with
+				| Some(e) -> e
+				| None -> failwith "This should never happen")
 			in
-			let () = list_printer ids print_identifier in
-			match all_exists types, all_exists exps with
-			| false, false -> failwith "Internal error: Invalid variable declaration"
-			| true, false -> (
-				let var_type = (match List.hd types with
-					| Some(t) -> t
-					| None -> failwith "This should never happen" )
-				in 
-				print_type_spec level var_type;
-			)
-			| false, true -> (
-				print_string " = ";
-				let extract_from_some exp = (match exp with
-					| Some(e) -> e
-					| None -> failwith "This should never happen")
-				in
-				list_printer (List.map extract_from_some exps) (print_expr level);
-			)
-			| true, true -> (
-				let var_type = (match List.hd types with
-									| Some(t) -> t
-									| None -> failwith "This should never happen" )
-				in 
-				print_type_spec level var_type;
-				print_string " = ";
-				let extract_from_some exp = (match exp with
-					| Some(e) -> e
-					| None -> failwith "This should never happen")
-				in
-				list_printer (List.map extract_from_some exps) (print_expr level);
-			)
+			list_printer (List.map extract_from_some exps) (print_expr level);
+		)
 	in
 	let print_var_decl level mvd_list = 
 		insert_tab(level);
@@ -360,13 +376,11 @@ let print_ast prog pretty level =
 			| a :: [] -> printer_fun a;
 			| [] -> ()
 			in
+			insert_tab(level);
 			list_printer e1s (print_expr level);
 			print_string " = ";
 			list_printer e2s (print_expr level); 
-		| TypeDeclBlockStatement (decl_list)-> 
-			begin
-				List.iter (fun x -> print_type_decl level x) decl_list;
-			end
+		| TypeDeclBlockStatement (decl_list)-> print_type_decl level decl_list
 		| VarDeclBlockStatement (decl_list)->  print_var_decl (level) decl_list
 		| ShortVarDeclStatement(decl_list)->
 			begin
@@ -517,9 +531,9 @@ let print_ast prog pretty level =
 				insert_tab(level);
 				print_statement_list level stmt_list;
 				insert_tab(level);
-				print_string "}; \n";
+				print_string "}";
 			end
-		| TypeDeclBlock (tl) -> List.iter (fun x -> print_type_decl level x) tl
+		| TypeDeclBlock (tl) -> print_type_decl level tl
 		| VarDeclBlock (vl) -> print_var_decl level vl
 	in
 	let print_lined_top_decl_list level ldl = 
