@@ -3,6 +3,7 @@ open Parser
 open Ast
 open Typecheck
 open PrettyPrint
+open Weeder 
 
 let get_ast input = 
   let ic = match input with

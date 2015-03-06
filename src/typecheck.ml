@@ -15,10 +15,12 @@ exception TypeCheckError of string
 exception VariableRedeclaration of string
 exception InternalError of string
 
-let prev_decl_msg scope sym = 
-  let entry = lookup_current scope sym in
+let prev_decl_msg scope id = match id with
+| BlankID -> raise (InternalError "BlankID is never defined before")
+| ID(name, _) -> 
+  let entry = lookup_current scope name in
   let Entry(_, _, _, ln) = entry in
-  "Previous declaration of " ^ sym ^ " at line " ^
+  "Previous declaration of " ^ name ^ " at line " ^
   (string_of_int ln) ^ "."
 
 
@@ -28,8 +30,13 @@ let type_of_entry entry =
   let Entry(_, typ, _, _) = entry in 
   typ 
 
+let string_of_id id = match id with
+| BlankID -> "BlankID"
+| ID(name, _) -> name
 
-(* Adds the symbol for an identifier to scope, and also updates the ref field of id to point to the symbol table entry. *)
+(* Adds the symbol for an identifier to scope, and also updates
+ * the ref field of id to point to the symbol table entry.
+ * Silently ignores attempts to add blank id *)
 let add_id scope id typ ln = match id with
   | BlankID -> ()
   | ID(name, sym_ref) -> 
@@ -37,14 +44,21 @@ let add_id scope id typ ln = match id with
       sym_ref := Some(entry)
 
 
-(* Looks up id in scope. If found, updates the ref field of id to point to the symbol table entry. *)
+(* Looks up id in scope. If found, updates the ref field of id to
+ * point to the symbol table entry.
+ * If BlankID has been properly weeded out, you should never have
+ * to do a lookup with BlankID *)
 let lookup_id scope id = match id with
 | BlankID -> raise (InternalError "Attempted lookup of BlankID in symbol table")
 | ID(name, sym_ref) -> 
       let entry = lookup scope name in
       sym_ref := Some(entry); type_of_entry entry
 
-
+(* Returns whether ID is defined in current scope.
+ * BlankID is never defined in current scope. *)
+let id_in_current_scope scope id = match id with
+| BlankID -> false
+| ID(name, sym_ref) -> in_current_scope scope name
 
 let int_of_int_lit lit = match lit with 
   | DecInt(s) -> int_of_string s
@@ -85,7 +99,6 @@ let rec gotype_of_typspec ctx tspec = match tspec with
     )
   )
 
-
 (* Converts a multi struct field declaration list into a StructField map *)
 and map_of_struct_fields ctx msfd_list = 
   let struct_map_merge key a b = 
@@ -115,7 +128,58 @@ and map_of_struct_fields ctx msfd_list =
     (fun x y -> StructFields.merge struct_map_merge x y) 
     StructFields.empty multi_maps_list
 
-let get_expression_type ctx e = raise NotImplemented
+
+(* resolve_to_base (GoCustom("foo", GoInt)) -> GoInt 
+ * resolve_to_base (GoArray (42, GoCustom("foo", GoInt))) -> GoArray (42, GoInt)
+ * resolve_to_base GoRune -> GoRune  *)
+let rec resolve_to_base typ = match typ with
+| GoInt | GoFloat | GoBool | GoRune | GoString -> typ
+| GoSlice t -> GoSlice (resolve_to_base t)
+| GoArray(size, t) -> GoArray(size, resolve_to_base t)
+| GoStruct(flds) -> GoStruct (StructFields.map resolve_to_base flds)
+| GoFunction(args, ret) -> 
+  ( match ret with
+  | None -> GoFunction (List.map resolve_to_base args, None)
+  | Some(t) -> GoFunction (List.map resolve_to_base args, Some(resolve_to_base t)) )
+| GoCustom(name, t) -> t
+| NewType(t) -> NewType (resolve_to_base t)
+
+let rec get_expression_type ctx e = match e with
+| IdExp(id) ->  lookup_id ctx id
+| LiteralExp(lit_exp) ->
+  ( match lit_exp with
+  | IntLit _ -> GoInt
+  | FloatLit _ -> GoFloat
+  | RuneLit _ -> GoRune
+  | StringLit _ -> GoString
+  | RawStringLit _ -> GoString )
+| UnaryExp(op, exp) ->
+  ( match op with
+    | UPlus | UMinus -> 
+      let exp_type = get_expression_type ctx exp in
+      ( match resolve_to_base exp_type with
+        | GoInt | GoFloat | GoRune -> exp_type
+        | _ -> raise (TypeCheckError 
+                      "Operand of arithmatic unary operand must be of type int, float, or rune") )
+    | UNot -> 
+        let exp_type = get_expression_type ctx exp in
+        ( match resolve_to_base exp_type with
+        | GoBool -> exp_type
+        | _ -> raise (TypeCheckError
+                      "Operand of unary not must be of type bool") )
+    | UCaret -> 
+        let exp_type = get_expression_type ctx exp in
+        ( match resolve_to_base exp_type with
+        | GoInt | GoRune -> exp_type
+        | _ -> raise (TypeCheckError
+                      "Operand of bitwise negation must be of type int or rune") )
+  )
+(* | BinaryExp of (binary_op * expression * expression)
+| FunctionCallExp of (expression * (expression list))
+| AppendExp of (identifier * expression)
+| TypeCastExp of (type_spec * expression)
+| IndexExp of (expression * expression)
+| SelectExp of (expression * identifier) *)
 
 (* --~~~~~~--*** The Type Checker ***--~~~~~~-- *)
 
@@ -133,13 +197,14 @@ and tc_package_decl ctx = function
 and tc_lined_top_decl ctx = function
   | LinedTD(tdcl, ln) -> 
       try tc_top_decl ln ctx tdcl
-      with (TypeCheckError s) -> 
+      with (TypeCheckError s) -> (
         fprintf err_channel "%s" ("Typing Error at line " ^ (string_of_int ln) ^ ":\n");
-        fprintf err_channel "%s" s
+        fprintf err_channel "%s\n" s;
+      )
 
 and tc_top_decl ln ctx = function
   | FunctionDecl(_, _, _) -> raise NotImplemented
-  | TypeDeclBlock(_) -> raise NotImplemented
+  | TypeDeclBlock(std_list) -> List.iter (tc_type_declaration ln ctx) std_list
   | VarDeclBlock(mvd_list) -> 
       List.iter (tc_multiple_var_declaration ln ctx) mvd_list
 
@@ -148,33 +213,37 @@ and tc_multiple_var_declaration ln ctx = function
 
 and tc_single_var_declaration ln ctx = function
   | SingleVarDecl(id, typ_spec, exp) -> 
-    match id with
-    | BlankID -> () (* if id is blank_id do nothing *)
-    | ID(name, sym_entry) ->  (* Otherwise:  *)
-        if (in_current_scope ctx name) then (* Cannot be a redeclaration in the same scope *)
-          raise (VariableRedeclaration (prev_decl_msg ctx name))
-        else
-          let decl_type = (match typ_spec with  (* Determine the declared type *)
-          | None -> None
-          | Some(t) -> Some(gotype_of_typspec ctx t)) in
-          let exp_type = (match exp with  (* Determine the expression type *)
-          | None -> None
-          | Some(e) -> Some(get_expression_type ctx e)) in
-          match decl_type, exp_type with
-          | None, None -> raise (TypeCheckError "Invalid variable declration") (* This is not even a valid declaration *)
-          | Some(t), None -> add_id ctx id t ln  (* Sure *)
-          | None, Some(t) -> add_id ctx id t ln  (* Okay *)
-          | (Some(t1), Some(t2)) when (t1 = t2) -> add_id ctx id t1 ln (* Cool *)
-          | Some(t1), Some(t2) ->  (* Mismatching type. I no longer know what to do *)
-              raise (
-                TypeCheckError ("Variable " ^ name ^ " is declared to be of type " ^ 
-                  (string_of_type t1) ^ " but the initial value is of type " ^
-                  (string_of_type t2)
-                )
-              )
-
+    if (id_in_current_scope ctx id) then (* Cannot be a redeclaration in the same scope *)
+      raise (VariableRedeclaration (prev_decl_msg ctx id))
+    else
+      let decl_type = (match typ_spec with  (* Determine the declared type *)
+      | None -> None
+      | Some(t) -> Some(gotype_of_typspec ctx t))
+      in
+      let exp_type = (match exp with  (* Determine the expression type *)
+      | None -> None
+      | Some(e) -> Some(get_expression_type ctx e))
+      in
+      match decl_type, exp_type with
+      | None, None -> raise (TypeCheckError "Invalid variable declration") (* This is not even a valid declaration *)
+      | Some(t), None -> add_id ctx id t ln  (* Sure *)
+      | None, Some(t) -> add_id ctx id t ln  (* Okay *)
+      | (Some(t1), Some(t2)) when (t1 = t2) -> add_id ctx id t1 ln (* Cool *)
+      | Some(t1), Some(t2) ->  (* Mismatching type. I no longer know what to do *)
+          raise (
+            TypeCheckError ("Variable " ^ (string_of_id id) ^ " is declared to be of type " ^ 
+              (string_of_type t1) ^ " but the initial value is of type " ^
+              (string_of_type t2)
+            )
+          )
 and tc_short_var_decl ctx node = raise NotImplemented
-and tc_type_declaration ctx node = raise NotImplemented
+and tc_type_declaration ln ctx = function
+  | SingleTypeDecl(id, ts) -> 
+    if (id_in_current_scope ctx id) then 
+      raise (VariableRedeclaration (prev_decl_msg ctx id))
+    else
+      let new_type = NewType (gotype_of_typspec ctx ts) in
+      add_id ctx id new_type ln
 and tc_type_spec ctx node = raise NotImplemented
 and tc_multi_struct_field_decl ctx node = raise NotImplemented
 and tc_single_struct_field_decl ctx node = raise NotImplemented

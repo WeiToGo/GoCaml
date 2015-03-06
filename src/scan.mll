@@ -11,6 +11,7 @@
   let needs_semicolon last_token = match last_token with
   | Some(BREAK)
   | Some(TID _)
+  | Some(TBLANKID)
   | Some(TINC) | Some(TDECR)
   | Some(RETURN) | Some(CONT)
   | Some(DEC_INT(_)) | Some(HEX_INT(_)) | Some(OCTAL_INT(_))
