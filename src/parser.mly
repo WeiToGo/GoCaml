@@ -128,7 +128,7 @@ typ:
   | array_typ { $1 }
   | struct_typ { $1 }
   | func_typ { $1 } 
-  | TID { CustomType(ID($1, ref None)) }
+  | identifier { CustomType($1) }
 
 func_typ:
   | FUNC TLPAR typ_list TRPAR option(typ)
