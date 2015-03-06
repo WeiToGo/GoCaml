@@ -53,7 +53,7 @@ let string_of_token tk = match tk with
 | TSTR(st) ->  "TSTR<" ^ st ^ ">"
 | TRWSTR(st) ->  "TRWSTR<" ^ st ^ ">"
 | TRUNE(st) ->  "TRUNE<" ^ st ^ ">"
-| ID(st) -> "ID<" ^ st ^ ">"
+| TID(st) -> "TID<" ^ st ^ ">"
 | TEOF ->  "TEOF"
 | BREAK ->  "BREAK"
 | CASE ->  "CASE"

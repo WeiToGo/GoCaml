@@ -1,7 +1,7 @@
 open Ast
 
 let print_ast prog pretty level = 
-	let Program(pack,dl) = prog in
+	let Program(pack,ldl) = prog in
 	let outfile = open_out pretty in 
 	let print_string = fun s -> output_string outfile s in
 	let print_char = fun c -> output_char outfile c in
@@ -36,7 +36,7 @@ let print_ast prog pretty level =
 		| UCaret -> print_string " ^ "
 	in
 	let print_identifier id = match id with
-		| IdName (s) -> print_string s 
+		| ID (s, _) -> print_string s 
 		| BlankID -> print_string "_ "
 	in
 	let print_int_literal lit = match lit with
@@ -486,12 +486,11 @@ let print_ast prog pretty level =
 		| TypeDeclBlock (tl) -> List.iter (fun x -> print_type_decl level x) tl
 		| VarDeclBlock (vl) -> List.iter (fun x -> print_var_decl level x) vl
 	in
-
-	let print_top_decl_list level dl =
-		List.iter (fun x -> print_top_decl level x) dl 
+	let print_lined_top_decl_list level ldl = 
+		List.iter (fun x -> let LinedTD(td, _) = x in print_top_decl level td) ldl
 	in
 	let print_package s = match s with
-		| Package (str) -> 
+		| Package (str, _) -> 
 			begin
 				print_string "package ";
 				print_string str;
@@ -499,7 +498,7 @@ let print_ast prog pretty level =
 			end
 	in 
 	print_package pack;
-	print_top_decl_list level dl;
+	print_lined_top_decl_list level ldl;
 	close_out outfile
 
 

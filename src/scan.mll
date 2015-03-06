@@ -10,7 +10,8 @@
 
   let needs_semicolon last_token = match last_token with
   | Some(BREAK)
-  | Some(ID _)
+  | Some(TID _)
+  | Some(TBLANKID)
   | Some(TINC) | Some(TDECR)
   | Some(RETURN) | Some(CONT)
   | Some(DEC_INT(_)) | Some(HEX_INT(_)) | Some(OCTAL_INT(_))
@@ -83,7 +84,7 @@ rule scan last_token = parse
   | "print"       { PRINT }
   | "println"     { PRINTLN }
   | "append"      { APPEND }
-  | letter (letter|digit|uscore)* | uscore (letter|digit|uscore)+ as id_string  { ID(id_string) }
+  | letter (letter|digit|uscore)* | uscore (letter|digit|uscore)+ as id_string  { TID(id_string) }
 
   (* Symbols and operators *)
   | '+'   { TPLUS }

@@ -10,23 +10,24 @@ type assignment_ops = | SinADD
                       | SinRas
                       | SinAneq
 
-type program = Program of package_decl * (top_decl list)
-and package_decl = Package of string
+type program = Program of package_decl * (lined_top_decl list)
+and package_decl = Package of (string * int)  (* Package of package_name * line_number *)
+and lined_top_decl = LinedTD of (top_decl * int) 
 and top_decl = FunctionDecl of (identifier * function_signature * (statement list) )
       | TypeDeclBlock of (type_declaration list)
       | VarDeclBlock of (multiple_var_declaration list)
 (* This is a var decl block: 
-  var(
-      a,b int = 1,2      <----- MultipleVarDecl           
-      c string = "foo"   <----- MultipleVarDecl
-    ) 
-
-  In total, [MultipleVarDecl(~~first one~~), MultipleVarDecl(~~second one~~)] 
-
-  Looking at the first MultipleVarDecl:
-    a,b int = 1,2
-==  [SingleVarDecl a int 1, SingleVarDecl b int 2]
-*)
+ *  var(
+ *      a,b int = 1,2      <----- MultipleVarDecl           
+ *      c string = "foo"   <----- MultipleVarDecl
+ *    ) 
+ *
+ *  In total, [MultipleVarDecl(~~first one~~), MultipleVarDecl(~~second one~~)] 
+ *
+ *  Looking at the first MultipleVarDecl:
+ *    a,b int = 1,2
+ * => [SingleVarDecl a int 1, SingleVarDecl b int 2]
+  *)
 and multiple_var_declaration = MultipleVarDecl of (single_var_declaration list)
 and single_var_declaration = SingleVarDecl of (identifier * (type_spec option) * (expression option))
 and short_var_decl = ShortVarDecl of (identifier * expression)
@@ -42,7 +43,7 @@ and type_spec =
 and multi_struct_field_decl = MultipleStructFieldDecl of (single_struct_field_decl list)
 and single_struct_field_decl = SingleStructFieldDecl of (identifier * type_spec) 
 and basic_type = IntType | FloatType | BoolType | RuneType | StringType
-and identifier = IdName of string | BlankID
+and identifier = ID of (string * Symtable.sym_table_entry option ref) | BlankID
 and function_signature = FunctionSig of ((function_arg list) * (type_spec option))
 and function_arg = FunctionArg of (identifier * type_spec)
 and expression =
