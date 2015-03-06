@@ -43,7 +43,7 @@ weeder todo:
 We no longer have lvalues since that was a massive parsing PITA
 (In particular, I could not get `(x)[0] = 1` to parse).
 So weeder needs to take care of lvalue checking.
-
+- Weed custom type of blank id
 - Weed out short variable decl in for loop post statement
 - Weed out blank statement rule.  For example, these are not allowed:
     x = _
