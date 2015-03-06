@@ -1,0 +1,51 @@
+assign_stmt1.go : assign wrong type to struct field 
+assign_stmt2.go : assign wrong type to int
+binary_exp1.go :
+binary_exp2.go
+binary_exp3.go
+binary_exp4.go
+binary_exp5.go
+binary_exp6.go
+for_loop10.go
+for_loop1.go : statement doesn't type check
+for_loop2.go :  expression not type bool
+for_loop3.go : init ill-typed
+for_loop4.go : increment expression ill-typed
+func_call1.go : wrong arg type
+func_call2.go : too many arguments
+func_decl1.go : extra return value
+func_decl2.go : duplicate function argument
+func_decl3.go : variable already declared
+func_decl4.go : missing return value
+func_decl5.go : statement ill-typed
+if_stmt1.go : init ill-typed
+if_stmt2.go : expression not bool
+if_stmt3.go : statement body has the wron type of x
+if_stmt4.go : expression in 'else' not bool
+if_stmt5.go : statement body in 'else if' has wrong type
+if_stmt6.go : statement body in 'else' doesn't type check
+print1.go : can't print struct field
+print2.go : one of the expression ill-typed
+println.go : expression ill-typed
+return_stmt1.go : return value not the same as expected
+return_stmt2.go : return value ill-typed
+short_var_decl1.go : ill-typed value on right hand side
+short_var_decl2.go : no new variable on left hand side
+short_var_decl3.go : try assigning a variable to a different type
+switch1.go : init does not type check
+switch2.go : expr not well typed
+switch3.go : case e1, e2 not bool
+switch4.go : case e1, e2 not well-typed
+switch5.go : case e1, e2 well-typed but not the same type then expr
+switch6.go : statement not well typed
+type_decl1.go
+type_decl2.go
+unary_exp1.go
+unary_exp2.go
+unary_exp3.go
+unary_exp4.go
+unary_exp5.go
+unary_exp6.go
+var_decl1.go : expression is not of type T 
+var_decl2.go
+var_decl3.go

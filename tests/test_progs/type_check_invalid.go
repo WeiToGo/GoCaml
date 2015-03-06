@@ -29,91 +29,114 @@ var e num = 4  //should be var e num = num(4)
 
 // function decl
 
+// too many return arguments
+// func f0(){
+// 	return(3)
+// }
 
-func f1(a int, a string) {
-}
+// duplicate argument
+// func f1(a int, a string) {
+// }
+
+// var already declared
+// func f2(a int, b int) {
+// 	var b string
+// }
+
+// no return value
+// func f3() int {
+// 	return 
+// }
+
+// statement ill-typed
+// func f4(a int) {
+// 	a = (3.4/4)
+// }
 
 
-func f1(a int, b int) {
-	var b string
-}
 // STATEMENTS
+
+// func f5(a int, b int) {}
+// func f6(a, b int) {}
+
+// // function call
+
+// f5(5.4, 3) //wrong arg type
+// f(3, 4, 5) // too many arguments
+
 
 // return statement
 
+// func f()[4]int {
+// 	var x [4]rune 
+// 	return x
+// }
 
-func f()int {
-	return 
-}
+// ill-typed expression in return
+// func foo()rune {
+// 	return 'rune'
+// }
 
-func f() {
-	var x string
-	return x 
-}
-
-func f()[4]int {
-	var x [4]rune 
-	return x
-}
 
 // short declaration
 
-func short_decl() {
-	a ,b := 5, 10
-	x := "hello"
-	a, b := 0, 1
-}
+// func short_decl() {
+// 	a ,b := 5, 10
+// 	x := "hello"
+// 	a, b := 0, 1
+// }
 
-func short_decl() {
-	a := 5.5 
-	x := "hello"
-	a, b := 0, 1 //a was assigned float
-}
+// func short_decl() {
+// 	a := 5.5 
+// 	x := "hello"
+// 	a, b := 0, 1 //a was assigned float
+// }
 
 // declaration
 
 // assignment
 
-func assign_stmts() {
-	var c [2]int
-	var point struct { x float64 }
-	c[0], point.x = "hi", 3.1415; 
-}
+// 1
+// func assign_stmts() {
+// 	var c [2]int
+// 	var point struct { x float64 }
+// 	c[0], point.x = "hi", 3.1415; 
+// }
 
+//2
+// func assign_stmts() {
+// 	var a,b int;
+// 	a, b = 0, 1.5
 
-func assign_stmts() {
-	var a,b int;
-	a, b = 0, 1.5
-
-}
+// }
 // op-assignment
 
 // block
 
 // print/println
-func printing(){
-	type t4 struct {
-		x float64
-		y, z float64
-	}
-	var arr[4]rune
-	arr[0] = 'r1'
-	println(t4.x)
-	print(arr[0])
-}
+// func printing(){
+// 	type t4 struct {
+// 		x float64
+// 		y, z float64
+// 	}
+// 	var arr[4]rune
+// 	arr[0] = 'r1'
+// 	println(t4.x)
+// 	print(arr[0])
+// }
 
 // for loop
 
 func for_stmts() { 
-	for {
-		5 + 6.7
-		break		
-	}
+	// for {
+	// 	5 + 6.7
+	// 	break		
+	// }
 
 	// "while" loop
-	for 5+2 {
-		continue	
-	}
+	// for 5+2 {
+	// 	continue	
+	// }
 	for a < b {
 		300.5 % 4
 		continue	
@@ -128,12 +151,12 @@ func for_stmts() {
 	}
 
 	// three-part loop, expression only
-	for 34.5 + 'a'; a < 10; {
-	}
+	// for 34.5 + 'a'; a < 10; {
+	// }
 
 	// three-part loop, update statement only
-	for ; ; 10.4++ {
-	}
+	// for ; ; 10.4++ {
+	// }
 
 	// three-part loop, init statement and expression
 	for a := 0; a = 10; {
@@ -154,28 +177,19 @@ func for_stmts() {
 // if statement
 
 func if_stmts() {
-	// if/then
-	// if true {
-	// 	a
-	// }
 
-	// // if/then with empty init statement
-	// if ; true {
-	// 	a
-	// 	b
-	// }
 	var x string
 	// init has wrong type
-	if x = 0; x == 0 {
-		return
-	}
+	// if x = 0; x == 0 {
+	// 	return
+	// }
 
 	// expr not bool
-	if  x:= 2 {
-		print(x)
-	} else {
-		print(x+1)
-	}
+	// if  x:= 2 {
+	// 	print(x)
+	// } else {
+	// 	print(x+1)
+	// }
 
 	// empty init statement, expr not bool
 	if ; x+1 {
@@ -185,81 +199,81 @@ func if_stmts() {
 	}
 
 	// statement body wrong type of x
-	if x = x; true {
-		print((x+1)/5)
-	} else {
-		return
-	}
+	// if x = x; true {
+	// 	print((x+1)/5)
+	// } else {
+	// 	return
+	// }
 
 	// expr in else not bool
-	if false {
-		print((4+3)/2)
-	} else if y++ {
-		return
-	} else {
-		return
-	}
+	// if false {
+	// 	print((4+3)/2)
+	// } else if y++ {
+	// 	return
+	// } else {
+	// 	return
+	// }
 
 	// statement body in else if has wrong type
-	if false {
-		return
-	} else if x = x; false {
-		print(x+6.4)
-	} else {
-		return
-	}
+	// if false {
+	// 	return
+	// } else if x = x; false {
+	// 	print(x+6.4)
+	// } else {
+	// 	return
+	// }
 	// statement body in else doesn't type check
-	if false {
-		return
-	} else if x = x; false {
-		print(x)
-	} else {
-		print(x+'def')
-	}
+	// if false {
+	// 	return
+	// } else if x = x; false {
+	// 	print(x)
+	// } else {
+	// 	print(x+'def')
+	// }
 }
 
 // switch statement
 var y int = 1
 func switch_stmts() {
 	// init does not type check
-	switch (3+0.5); y {
-	case 0: "zero"
-	default: "valid"
-	case 1, 3, 5: "odd"
-	}
+	// switch (3+0.5); y {
+	// case 0: "zero"
+	// default: "valid"
+	// case 1, 3, 5: "odd"
+	// }
 
 	// expr not well typed
-	switch y+"str" {
-	case 0: "zero"
-	case 1, 3: "odd" 
-	}
+	// switch y+"str" {
+	// case 0: "zero"
+	// case 1, 3: "odd" 
+	// }
 
 	// no expr, case e1, e2 not bool
-	switch z:=0; {
-	case 0: "zero"
-	case 1: "odd" 
-	}
+	// switch z:=0; {
+	// case 0: "zero"
+	// case 1: "odd" 
+	// }
 
 	// case e1, e2 not well-typed
-	switch z:=0; {
-	case y < 0.5: "str1"
-	case y > 1.6: "str2"
-	default: "str"
-	}
+	// switch z:=0; {
+	// case y < 0.5: "str1"
+	// case y > 1.6: "str2"
+	// default: "str"
+	// }
 
 	// case e1, e2 well-typed but not the same type then expr
-	switch z:=0; (x+z){
-	case y < 0: "str1"
-	case y > 1: "str2"
-	default: "str"
-	}
+	// switch z:=0; (x+z){
+	// case y < 0: "str1"
+	// case y > 1: "str2"
+	// default: "str"
+	// }
 
 	// statement not well typed
-	switch {
-	case y < 0: print("string" + 3)
-	case y > 0: print(4+1)
-	default: "zero"
-	}
+	// switch {
+	// case y < 0: print("string" + 3)
+	// case y > 0: print(4+1)
+	// default: "zero"
+	// }
 
 }
 // EXPRESSIONS
@@ -281,6 +295,7 @@ func switch_stmts() {
 
 
 // binary expression
+// defining comparable variables
 var a, b int 0,1
 var c, d float64 4.5, 6.4
 var e, f string "s1", 's2'
@@ -290,14 +305,7 @@ type st1, st2 struct {
 }
 (y<4) || (y++)
 (y--) && (y==0)
-==
-!=
-<
-<=
->
->=
 
-// function call
 
 // indexing
 

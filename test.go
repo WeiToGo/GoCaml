@@ -3,6 +3,11 @@ package main
 
 // Var declarations
 
+var (
+	a, b, c int = 1,2,3
+	d,e string
+)
+
 var a1 int
 var a2 float64 = a1
 var a6 = 12
@@ -20,7 +25,11 @@ var (
 	b3, b4, b5 string
 	k struct{
 		a,b float64
-		c string
+		c,d, e string
+		f struct {
+			xx, yy int
+			zz float64
+		}
 	}
 )
 
