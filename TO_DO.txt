@@ -39,7 +39,7 @@ Create typed ast for type checker to create
 weeder todo:
 - Break and continue outside loops are not allowed. [DONE]
 - Default statement count check [DONE]
-- Weeding for assignment[DONE], variable decl[DONE] , and inc/decr
+- Weeding for assignment[DONE], variable decl[DONE] , and inc/decr[DONE]
 We no longer have lvalues since that was a massive parsing PITA
 (In particular, I could not get `(x)[0] = 1` to parse).
 So weeder needs to take care of lvalue checking.

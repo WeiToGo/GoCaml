@@ -15,9 +15,7 @@ let build_ast input =
 			let ast = Parser.program Scan.wrapped_scan lexbuf in
 			(* print_string "VALID \n"; *)
 			PrettyPrint.print_ast ast "out.go" 0;
-			let outFile = open_out "WeedErrors.txt" in
-			Weeder.weed_ast ast outFile;
-			close_out outFile
+			Weeder.weed_ast ast stderr;
 		with Parser.Error
 		-> (
           Printf.eprintf "%s" ("Syntax Error at line " 

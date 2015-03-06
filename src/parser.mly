@@ -116,7 +116,7 @@ var_spec_list:
   | var_spec_list var_spec TSEMCOL { $2 :: $1 } 
 
 typ_spec:
-  | TID typ  { SingleTypeDecl(ID($1, ref None), $2) }
+  | identifier typ  { SingleTypeDecl($1, $2) }
 
 typ_spec_list:
   | (* empty *) { [] }
