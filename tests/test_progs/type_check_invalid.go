@@ -91,10 +91,125 @@ func assign_stmts() {
 // block
 
 // print/println
+func printing(){
+	type t4 struct {
+		x float64
+		y, z float64
+	}
+	var arr[4]rune
+	arr[0] = 'r1'
+	println(t4.x)
+	print(arr[0])
+}
 
 // for loop
 
+func for_stmts() { 
+	for {
+		5 + 6.7
+		break		
+	}
+
+	// "while" loop
+	for 5+2 {
+		continue	
+	}
+	for a < b {
+		300.5 % 4
+		continue	
+	}
+	for ;; {
+		"etvd" + 'rv'
+	}
+
+	// three-part loop, init statement only
+	for ; ; {
+		45.6 * "srr"
+	}
+
+	// three-part loop, expression only
+	for 34.5 + 'a'; a < 10; {
+	}
+
+	// three-part loop, update statement only
+	for ; ; 10.4++ {
+	}
+
+	// three-part loop, init statement and expression
+	for a := 0; a = 10; {
+	}
+
+	// three-part loop, init and update statements
+	for a := 10; ; 3.4++ {
+	}
+
+	// three-part loop, expr and update statements
+	for ; a = 10; a++ {
+	}
+
+	// three-part loop, all parts
+	for a := 0; a < 10; "srt"++ {
+	}
+}
 // if statement
+
+func if_stmts() {
+	// if/then
+	// if true {
+	// 	a
+	// }
+
+	// // if/then with empty init statement
+	// if ; true {
+	// 	a
+	// 	b
+	// }
+
+	// init has wrong type
+	if x < 0; x == 0 {
+		return
+	}
+
+	// expr not bool
+	if  x:= 2 {
+		print(x)
+	} else {
+		print(x+1)
+	}
+
+	// if/then/else with empty init statement
+	if ; x+1 {
+		return
+	} else {
+		return
+	}
+
+	// if/then/else with init statement
+	if x; true {
+		a
+	} else {
+		b
+		c
+	}
+
+	// if/else-if/else
+	if false {
+		1
+	} else if false {
+		2
+	} else {
+		3
+	}
+
+	// if/else-if/else with init statement
+	if false {
+		1
+	} else if x; false {
+		2
+	} else {
+		3
+	}
+}
 
 // switch statement
 
@@ -103,6 +218,17 @@ func assign_stmts() {
 // identifiers
 
 // unary expression
++(5+5.6)
++("terf")
++('rser')
++(5+5.6)
++("terf")
++('rser')
+!((34 <= 32.5) && (4 >= 23.4) )
+!((34==3) != 5)
+!((4<5.5) || (5.7 > 'r'))
+^(45.5)
+^("ewr")
 
 // binary expression
 

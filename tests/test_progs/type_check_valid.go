@@ -80,10 +80,79 @@ func assign_stmts() {
 
 // block
 
+func block() {
+	x := 5
+	println(x)
+	{
+		x := 10
+		println(x) 
+	}
+	x++
+	println(x)
+}
+
 // print/println
 
-// for loop
+func printing(){
+	a, b, c := "str1", 'rune1', 14
+	print(4+(5*6)/2)
+	println(a,b,c)
 
+}
+
+// aliases of basic types
+func printing2(){
+	type num int
+	type name string
+	var a num = 5
+	var b name = "asiefa"
+	print(a,b)
+	println(b,a)
+
+}
+// for loop
+func for_stmts() { 
+	for {
+		(420/45+3)/3
+		break		// break statement
+	}
+
+	// "while" loop
+	for 4 < 5 {
+		continue	// continue statement
+	}
+	for ;; {
+
+	}
+
+	// three-part loop, init statement only
+	for a := 0; ; {
+	}
+
+	// three-part loop, expression only
+	for ; a < 10; {
+	}
+
+	// three-part loop, update statement only
+	for ; ; a++ {
+	}
+
+	// three-part loop, init statement and expression
+	for a := 0; a < 10; {
+	}
+
+	// three-part loop, init and update statements
+	for a := 10; ; a++ {
+	}
+
+	// three-part loop, expr and update statements
+	for ; a < 10; a++ {
+	}
+
+	// three-part loop, all parts
+	for a := 0; a < 10; a++ {
+	}
+}
 // if statement
 
 // switch statement
@@ -93,6 +162,17 @@ func assign_stmts() {
 // identifiers
 
 // unary expression
++(5)
++(46.5/8.0)
++('r')
+-(5)
+-(46.5/8.0)
+-('r')
+!((34<=32) && (4.6>=23.4) )
+!(34 != 5)
+!((4<5) || (5.7 > 4.6))
+^(45)
+^('r')
 
 // binary expression
 
