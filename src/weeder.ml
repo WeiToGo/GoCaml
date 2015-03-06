@@ -7,8 +7,16 @@ let weed_ast prog outchann =
 	let println s =
 		fprintf outchann "%s\n" s
 	in
-	let loops = ref 0 in
-	let shortvardcl = ref 1 in
+	let loops = ref 0 in (* Nested loop level *)
+	let shortvardcl = ref 1 in (* is shortvardcl allowed? *)
+	let blankid = ref 0 in (* Is there a blankid currently? *)
+	let checkForBlankReadError linenum =
+		match !blankid with
+		| 0 -> ()
+		| _ ->
+			println ("Cannot use _ as a value. Line: " ^ (string_of_int linenum));
+			exit 0;
+	in
 	let rec visit_program prog =
 		let Program(pack, decls) = prog in
 		visit_package_decl pack;
@@ -17,32 +25,39 @@ let weed_ast prog outchann =
 		let Package(_, _) = pack in
 		()
 	and visit_lined_top_dcl ldl = 
-		let LinedTD(dcl, _) = ldl in
-		visit_top_dcl dcl
-	and visit_top_dcl dcl =
+		let LinedTD(dcl, linenum) = ldl in
+		visit_top_dcl dcl linenum
+	and visit_top_dcl dcl linenum =
 		match dcl with
 		| FunctionDecl (id,fs, stmts) ->
 			visit_id id;
 			visit_function_signature fs;
 			List.iter visit_statement stmts
 		| TypeDeclBlock (tds) -> List.iter visit_type_dcl tds
-		| VarDeclBlock (mvdcls) -> List.iter visit_mul_var_dcl mvdcls
-	and visit_mul_var_dcl dcl =
+		| VarDeclBlock (mvdcls) -> List.iter (fun x -> visit_mul_var_dcl x linenum) mvdcls
+	and visit_mul_var_dcl dcl linenum =
 		let MultipleVarDecl(svdcls) = dcl in
-		List.iter visit_sin_var_dcl svdcls
-	and visit_sin_var_dcl dcl =
+		List.iter (fun x -> visit_sin_var_dcl x linenum) svdcls
+	and visit_sin_var_dcl dcl linenum =
 		let SingleVarDecl(id, top, eop) = dcl in
 		visit_id id;
-		match top with
+		(match top with
 		| None -> ()
-		| Some(t) -> visit_type_spec t;
-		match eop with
+		| Some(t) -> visit_type_spec t);
+		(match eop with
 		| None -> ()
-		| Some(e) -> visit_expression e
-	and visit_short_var_dcl dcl =
+		| Some(e) ->
+			blankid := 0;
+			visit_expression e;
+			checkForBlankReadError linenum;
+			blankid := 0);
+	and visit_short_var_dcl dcl linenum =
 		let ShortVarDecl(id, e) = dcl in
 		visit_id id;
-		visit_expression e
+		blankid := 0;
+		visit_expression e;
+		checkForBlankReadError linenum;
+		blankid := 0
 	and visit_type_dcl dcl =
 		let SingleTypeDecl(id, ts) = dcl in
 		visit_id id;
@@ -79,7 +94,7 @@ let weed_ast prog outchann =
 	and visit_id id =
 		match id with
 		| ID(str, _) -> ()
-		| BlankID -> ()
+		| BlankID -> blankid := 1
 	and visit_function_signature fs =
 		let FunctionSig(args, top) = fs in
 		List.iter visit_function_argument args;
@@ -135,13 +150,16 @@ let weed_ast prog outchann =
 		| AssignmentStatement(epairs) ->
 			List.iter (fun (e1, e2) ->
 				visit_expression e1;
-				visit_expression e2) epairs
+				blankid := 0;
+				visit_expression e2;
+				checkForBlankReadError linenum;
+				blankid := 0) epairs
 		| TypeDeclBlockStatement(tdcls) -> List.iter visit_type_dcl tdcls
 		| ShortVarDeclStatement(svdcls) ->
 			(match !shortvardcl with
 			| 0 -> println ("Cannot declare in the for increment. Line: " ^ (string_of_int linenum))
-			| _ -> List.iter visit_short_var_dcl svdcls)
-		| VarDeclBlockStatement(mvdcls) -> List.iter visit_mul_var_dcl mvdcls
+			| _ -> List.iter (fun x -> visit_short_var_dcl x linenum) svdcls)
+		| VarDeclBlockStatement(mvdcls) -> List.iter (fun x -> visit_mul_var_dcl x linenum) mvdcls
 		| PrintStatement(es) -> List.iter visit_expression es
 		| PrintlnStatement(es) -> List.iter visit_expression es
 		| IfStatement(stmtop, e, stmts, stmtsop) ->
@@ -165,7 +183,9 @@ let weed_ast prog outchann =
 			visit_expression e;
 			List.iter (fun x -> visit_switch_case x defcount) scs;
 			(match !defcount with
-			| x when x > 1 -> println ("Multiple defaults in switch. Line: " ^ (string_of_int linenum))
+			| x when x > 1 ->
+				println ("Multiple defaults in switch. Line: " ^ (string_of_int linenum));
+				exit 0
 			| _ -> ())
 		| ForStatement(stmtop1, e, stmtop2, stmts) -> (* init, cond, post, body *)
 			loops := !loops + 1;
