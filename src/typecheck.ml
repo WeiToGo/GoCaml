@@ -151,6 +151,44 @@ let rec resolve_to_base typ = match typ with
 | GoCustom(name, t) -> t
 | NewType(t) -> NewType (resolve_to_base t)
 
+
+let rec is_comparable gtype = match gtype with
+| GoBool | GoFloat | GoInt | GoString | GoRune -> true
+| GoSlice(_) | GoFunction(_) | NewType(_) -> false
+| GoArray(_, t) -> is_comparable t
+| GoStruct(fields) -> StructFields.for_all (fun name typ -> is_comparable typ) fields
+| GoCustom(_, t) -> is_comparable (resolve_to_base t)
+
+let rec is_ordered gtype = match gtype with
+| GoInt | GoFloat | GoString | GoRune -> true
+| GoArray(_) | GoSlice(_) | GoStruct(_) 
+| GoBool | GoFunction(_) | NewType(_) -> false
+| GoCustom(name, t) -> is_ordered (resolve_to_base t)
+
+let rec is_integer gtype = match gtype with
+| GoInt | GoRune -> true
+| GoArray(_) | GoSlice(_) | GoString | GoBool 
+| GoStruct(_) | GoFloat | GoFunction(_) | NewType(_) -> false
+| GoCustom(name, t) -> is_integer (resolve_to_base t)
+
+let rec is_numeric gtype = match gtype with
+| GoInt | GoFloat | GoRune  -> true
+| GoString | GoBool
+| GoFunction(_) | GoSlice(_) | GoArray(_) | NewType(_) | GoStruct(_) -> false
+| GoCustom(name, t) -> is_numeric (resolve_to_base t)
+
+let rec is_num_string gtype = match is_numeric gtype, gtype with
+| true, _ -> true
+| false, GoString -> true
+| false, GoCustom(name, t) -> is_num_string (resolve_to_base t)
+| false, _ -> false
+
+let merge_type t1 t2 = 
+  if t1 = t2 then t1
+  else raise (TypeCheckError 
+              ( "Unequal types in binary expressions:  " ^ (string_of_type t1) ^
+                " and " ^ (string_of_type t2) ) ) 
+
 let rec get_expression_type ctx e = match e with
 | IdExp(id) -> 
   ( try lookup_id ctx id
@@ -184,10 +222,37 @@ let rec get_expression_type ctx e = match e with
         | _ -> raise (TypeCheckError
                       "Operand of bitwise negation must be of type int or rune") )
   )
-| _ -> raise NotImplemented
 
-(* | BinaryExp of (binary_op * expression * expression)
-| FunctionCallExp of (expression * (expression list))
+| BinaryExp(op, e1, e2) -> 
+  let e1_type = (get_expression_type ctx e1) in
+  let e2_type = (get_expression_type ctx e2) in
+  let get_bin_exp_type property_func property_name = 
+    ( match property_func e1_type, property_func e2_type with
+      | true, true -> merge_type e1_type e2_type
+      | true, _ -> 
+          raise (TypeCheckError
+            ( (string_of_type e2_type) ^ " is not " ^ property_name ^ "." ) )
+      | _, _ -> 
+          raise (TypeCheckError
+            ( (string_of_type e1_type) ^ " is not " ^ property_name ^ "." ) ) )
+  in
+  ( match op with
+    | BinOr | BinAnd -> 
+        get_bin_exp_type (fun x -> x == GoBool) "of type boolean" 
+    | BinEq | BinNotEq -> 
+        get_bin_exp_type is_comparable "comparable"
+    | BinLess | BinLessEq | BinGreater | BinGreaterEq ->
+        get_bin_exp_type is_ordered "ordered"
+    | BinPlus -> 
+        get_bin_exp_type is_num_string "numeric or string"
+    | BinMinus | BinMult | BinDiv | BinMod ->
+        get_bin_exp_type is_numeric "numeric"
+    | BinBitOr | BinBitAnd | BinShiftLeft | BinShiftRight 
+    | BinBitAndNot | BinBitXor -> 
+        get_bin_exp_type is_numeric "numeric"
+  )     
+| _ -> raise NotImplemented
+(* | FunctionCallExp of (expression * (expression list))
 | AppendExp of (identifier * expression)
 | TypeCastExp of (type_spec * expression)
 | IndexExp of (expression * expression)
@@ -317,7 +382,6 @@ and tc_single_var_declaration ln ctx = function
               (string_of_type t2)
             )
           )
-and tc_short_var_decl ctx node = raise NotImplemented
 
 and tc_type_declaration ln ctx = function
   | SingleTypeDecl(id, ts) -> 
