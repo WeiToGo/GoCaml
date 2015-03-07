@@ -197,7 +197,7 @@ empty_stmt:
   | (* empty *) { EmptyStatement }
 
 expression_stmt:
-    | expr { ExpressionStatement($1) }
+    | expr { ExpressionStatement(Expression($1, ref None)) }
 
 assign_stmt:
   | lv = primary_expression; op = single_op; exp = expr 
@@ -214,14 +214,14 @@ assign_stmt:
       |SinRas -> BinShiftRight
       |SinAneq -> BinBitAndNot
       in
-      AssignmentStatement([(lv, BinaryExp(binop_of_assignment_op op, lv, exp))])
+      AssignmentStatement([(Expression(lv, ref None), Expression(BinaryExp(binop_of_assignment_op op, Expression(lv, ref None), Expression(exp, ref None)), ref None))])     
      }
   | expr_list TASSIGN expr_list
      { AssignmentStatement(list_zip $1 $3 []  (fun x y -> (x,y)) ) }
 
 expr_list:
-    | expr_list TCOM expr { $3 :: $1 }
-    | expr { [ $1 ] }
+    | expr_list TCOM expr { Expression($3, ref None) :: $1 }
+    | expr { [ Expression($1, ref None) ] }
 
 declaration_stmt:
     | var_decl 
@@ -233,7 +233,7 @@ shortvardecl_stmt:
     | expr_list TCOLEQ expr_list
       {
        let id_of_expr xp = match xp with
-        | IdExp(id) -> id
+        | Expression(IdExp(id), _) -> id
         | _ -> raise NonIDExpr 
         in
         let id_list = List.map id_of_expr $1 in
@@ -244,14 +244,25 @@ shortvardecl_stmt:
  
 incdec_stmt:
     | primary_expression TINC 
-        { AssignmentStatement([($1, BinaryExp(BinPlus, $1, 
-            LiteralExp(IntLit(DecInt("1")))
-          ))])
+        { AssignmentStatement([(Expression($1, ref None), 
+			Expression(
+				BinaryExp(BinPlus, Expression($1, ref None), 
+        			Expression(LiteralExp(IntLit(DecInt("1"))), ref None)
+      			),
+				ref None
+			)
+		)])
         }
     | primary_expression TDECR
-        { AssignmentStatement([($1, BinaryExp(BinMinus, $1,
-            LiteralExp(IntLit(DecInt("1")))
-          ))])    
+        { AssignmentStatement([(Expression($1, ref None),
+			Expression(
+				BinaryExp(
+					BinMinus, Expression($1, ref None),
+        			Expression(LiteralExp(IntLit(DecInt("1"))), ref None)
+				),
+				ref None
+			)
+		)])    
         }
 
 
@@ -265,42 +276,42 @@ println_stmt:
 
 return_stmt:
     | RETURN { ReturnStatement(None) }
-    | RETURN expr { ReturnStatement(Some $2) }
+    | RETURN expr { ReturnStatement(Some(Expression($2, ref None))) }
 
 
 
 
 if_stmt:
     | IF expr TLCUR stmt_list TRCUR 
-        { IfStatement(None, $2, List.rev $4, None) }
+        { IfStatement(None, Expression($2, ref None), List.rev $4, None) }
     | IF expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR 
-        { IfStatement(None, $2, List.rev $4, Some (List.rev $8)) }
+        { IfStatement(None, Expression($2, ref None), List.rev $4, Some (List.rev $8)) }
     | IF expr TLCUR stmt_list TRCUR ELSE if_stmt 
-        { IfStatement(None, $2, List.rev $4,
+        { IfStatement(None, Expression($2, ref None), List.rev $4,
            Some [LinedStatement($startpos.pos_lnum, $7)]) }
     | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR 
-        { IfStatement(Some $2, $4, List.rev $6, None) }
+        { IfStatement(Some $2, Expression($4, ref None), List.rev $6, None) }
     | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR 
-        { IfStatement(Some $2, $4, List.rev $6, Some (List.rev $10)) }
+        { IfStatement(Some $2, Expression($4, ref None), List.rev $6, Some (List.rev $10)) }
     | IF simple_stmt TSEMCOL expr TLCUR stmt_list TRCUR ELSE if_stmt 
-        { IfStatement(Some $2, $4, List.rev $6,
+        { IfStatement(Some $2, Expression($4, ref None), List.rev $6,
            Some [LinedStatement($startpos.pos_lnum, $9)]) }
 
 switch_stmt:
     | SWITCH TLCUR switch_clause_list TRCUR 
-        { SwitchStatement(None, IdExp(ID("true", ref None)), List.rev $3) }
+        { SwitchStatement(None, Expression(IdExp(ID("true", ref None)), ref None), List.rev $3) }
     | SWITCH expr TLCUR switch_clause_list TRCUR 
-        { SwitchStatement(None, $2, List.rev $4) }
+        { SwitchStatement(None, Expression($2, ref None), List.rev $4) }
     | SWITCH simple_stmt TSEMCOL TLCUR switch_clause_list TRCUR 
-        { SwitchStatement(Some $2, IdExp(ID("true", ref None)), List.rev $5)}
+        { SwitchStatement(Some $2, Expression(IdExp(ID("true", ref None)), ref None), List.rev $5)}
     | SWITCH simple_stmt TSEMCOL expr TLCUR switch_clause_list TRCUR 
-        { SwitchStatement(Some $2, $4, List.rev $6) } 
+        { SwitchStatement(Some $2, Expression($4, ref None), List.rev $6) } 
 
 for_stmt:
     | FOR TLCUR stmt_list TRCUR { ForStatement(None, None, None, List.rev $3) }
-    | FOR expr TLCUR stmt_list TRCUR { ForStatement(None, Some $2, None, List.rev $4) }
+    | FOR expr TLCUR stmt_list TRCUR { ForStatement(None, Some(Expression($2, ref None)), None, List.rev $4) }
     | FOR simple_stmt TSEMCOL expr TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
-        { ForStatement(Some $2, Some $4, Some $6, List.rev $8) } 
+        { ForStatement(Some $2, Some(Expression($4, ref None)), Some $6, List.rev $8) } 
     | FOR simple_stmt TSEMCOL TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
         { ForStatement(Some $2, None, Some $5, List.rev $7) }
 
@@ -366,7 +377,7 @@ raw_string_literal: TRWSTR { $1 }
 unary_exp:
   | TLPAR expr TRPAR { $2 }
   | primary_expression { $1 }
-  | unary_op unary_exp %prec uop { UnaryExp($1, $2) }  (* Unary operators have highest precedence *)
+  | unary_op unary_exp %prec uop { UnaryExp($1, Expression($2, ref None)) }  (* Unary operators have highest precedence *)
 
 primary_expression: 
   | identifier { IdExp $1 } 
@@ -389,30 +400,30 @@ unary_op:
 
 function_call:
   | unary_exp TLPAR function_arguments TRPAR
-      { FunctionCallExp($1, $3)}
+      { FunctionCallExp(Expression($1, ref None), $3)}
 
 function_arguments: 
   | (* empty *) { [] }
   | non_empty_function_arguments { List.rev $1 }
 
 non_empty_function_arguments:
-  | expr { [ $1 ] }
-  | non_empty_function_arguments TCOM expr { $3::$1 }
+  | expr { [ Expression($1, ref None) ] }
+  | non_empty_function_arguments TCOM expr { Expression($3, ref None)::$1 }
  
 index_exp: 
   | unary_exp TLBR expr TRBR 
-      { IndexExp($1, $3)} 
+      { IndexExp(Expression($1, ref None), Expression($3, ref None))} 
 
 append_exp:
-  | APPEND TLPAR TID TCOM expr TRPAR   { AppendExp(ID($3, ref None), $5) }
+  | APPEND TLPAR TID TCOM expr TRPAR   { AppendExp(ID($3, ref None), Expression($5, ref None)) }
 
 select_exp: 
   | unary_exp TDOT TID 
-      { SelectExp($1, ID($3, ref None)) }
+      { SelectExp(Expression($1, ref None), ID($3, ref None)) }
 
 type_cast_exp:
   | castable_type TLPAR expr TRPAR 
-      { TypeCastExp($1, $3) }
+      { TypeCastExp($1, Expression($3, ref None)) }
 
 castable_type: 
   | INT_TYP { BasicType(IntType) }
@@ -421,7 +432,7 @@ castable_type:
   | BOOL_TYP { BasicType(BoolType) } 
  
 binary_exp:
-  | e1 = expr; op = binary_op; e2 = expr { BinaryExp(op, e1, e2) }
+  | e1 = expr; op = binary_op; e2 = expr { BinaryExp(op, Expression(e1, ref None), Expression(e2, ref None)) }
 
 %inline binary_op:
   | TOR { BinOr }

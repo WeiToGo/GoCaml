@@ -46,7 +46,8 @@ and basic_type = IntType | FloatType | BoolType | RuneType | StringType
 and identifier = ID of (string * Symtable.sym_table_entry option ref) | BlankID
 and function_signature = FunctionSig of ((function_arg list) * (type_spec option))
 and function_arg = FunctionArg of (identifier * type_spec)
-and expression =
+and expression = Expression of (exp * Symtable.gotype option ref)
+and exp =
     | IdExp of identifier 
     | LiteralExp of literal
     | UnaryExp of (unary_op * expression) 
