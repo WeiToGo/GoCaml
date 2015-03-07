@@ -1,12 +1,18 @@
 assign_stmt1.go : assign wrong type to struct field 
 assign_stmt2.go : assign wrong type to int
-binary_exp1.go :
-binary_exp2.go
-binary_exp3.go
-binary_exp4.go
-binary_exp5.go
-binary_exp6.go
-for_loop10.go
+binary_exp1.go : '||' arg2 not bool
+binary_exp2.go : '&&' arg1 not bool
+binary_exp3.go : '==' arg1, arg2 not the same type of comparable type
+binary_exp4.go : '!=' arg1, arg2 not the same type of comparable type
+binary_exp5.go: '<' arg1 not ordered
+binary_exp6.go: '<=' arg1, arg2 not the same type of ordered type
+binary_exp7.go : '>' arg2 not  ordered
+binary_exp8.go: '>=' arg1, arg2 not the same type of ordered type
+binary_exp9.go: '+' args not string or num
+binary_exp10.go: '-' arg1 not numeric
+binary_exp11.go: '*' arg2 not numeric
+binary_exp12.go: '|' arg1 not integer
+binary_exp13.go: '&' arg2 not integer
 for_loop1.go : statement doesn't type check
 for_loop2.go :  expression not type bool
 for_loop3.go : init ill-typed
@@ -38,14 +44,12 @@ switch3.go : case e1, e2 not bool
 switch4.go : case e1, e2 not well-typed
 switch5.go : case e1, e2 well-typed but not the same type then expr
 switch6.go : statement not well typed
-type_decl1.go
-type_decl2.go
-unary_exp1.go
-unary_exp2.go
-unary_exp3.go
-unary_exp4.go
-unary_exp5.go
-unary_exp6.go
+type_decl1.go : need type cast
+type_decl2.go : type already declared in current scope
+unary_exp1.go : expression not numeric after unary '+' 
+unary_exp2.go : expression not numeric after unary '-' 
+unary_exp3.go : expression not bool after logical negation
+unary_exp4.go : expression not numerical after bitwise negation
 var_decl1.go : expression is not of type T 
-var_decl2.go
-var_decl3.go
+var_decl2.go : expressions on right side not well-typed
+var_decl3.go : variable already declared in the current scope
