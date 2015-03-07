@@ -1,6 +1,46 @@
 open Ast
 open Printf
 
+exception NotImplemented
+
+let rec check_return_statements stmt_list = 
+	let rec has_return (LinedStatement(_, plain_stmt)) = match plain_stmt with
+	| EmptyStatement | ExpressionStatement(_) | AssignmentStatement(_)
+	| TypeDeclBlockStatement(_) | VarDeclBlockStatement(_) | ShortVarDeclStatement(_)	
+	| PrintlnStatement(_) | PrintStatement(_) | BreakStatement | ContinueStatement
+	 -> false
+	| IfStatement(_, _, then_stmts, else_option) -> 
+		( match else_option with
+			| None -> false
+			| Some(else_stmts) -> (check_return_statements then_stmts) && (check_return_statements else_stmts)
+		)
+	| SwitchStatement(_, _, case_list) -> 
+			let check_switch_case case = 
+				( match case with 
+					| SwitchCase(_, slist) -> check_return_statements slist
+					| DefaultCase(slist) -> check_return_statements slist
+				)
+			in
+			let has_defeault = 
+				List.fold_left
+					(fun x y -> (match y with SwitchCase(_) -> x | DefaultCase(_) -> true))
+					false
+					case_list
+			in
+			if not has_defeault then false
+			else List.for_all check_switch_case case_list
+	| BlockStatement(slist) -> check_return_statements slist
+	| ForStatement(_, e_op, _, slist) ->
+		( match e_op with
+		| None -> check_return_statements slist
+		| Some(_) -> false )
+	| ReturnStatement(_) -> true
+	in
+	List.fold_left
+		(fun x y -> if (has_return y) then true else x)
+		false
+		stmt_list
+
 (* Weed the ast *)
 let weed_ast prog outchann =
 	(* Helper print function*)
@@ -40,6 +80,7 @@ let weed_ast prog outchann =
 		| FunctionDecl (id,fs, stmts) ->
 			visit_id id;
 			visit_function_signature fs linenum;
+			if check_return_statements(stmts) then () else failwith "HELP";
 			List.iter visit_statement stmts
 		| TypeDeclBlock (tds) -> List.iter (fun x -> visit_type_dcl x linenum) tds
 		| VarDeclBlock (mvdcls) -> List.iter (fun x -> visit_mul_var_dcl x linenum) mvdcls
@@ -218,12 +259,14 @@ let weed_ast prog outchann =
 				println ("Multiple defaults in switch. Line: " ^ (string_of_int linenum));
 				exit 1
 			| _ -> ())
-		| ForStatement(stmtop1, e, stmtop2, stmts) -> (* init, cond, post, body *)
+		| ForStatement(stmtop1, e_op, stmtop2, stmts) -> (* init, cond, post, body *)
 			loops := !loops + 1;
 			(match stmtop1 with
 			| None -> ()
 			| Some(stmt1) -> visit_statement stmt1);
-			visit_expression e linenum;
+			(match e_op with
+			| Some e -> visit_expression e linenum;
+			| None -> ());
 			shortvardcl := 0; (* disallow shortvardcl *)
 			(match stmtop2 with
 			| None -> ()
@@ -255,4 +298,3 @@ let weed_ast prog outchann =
 	in
 	visit_program prog
    
-

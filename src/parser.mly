@@ -297,12 +297,12 @@ switch_stmt:
         { SwitchStatement(Some $2, $4, List.rev $6) } 
 
 for_stmt:
-    | FOR TLCUR stmt_list TRCUR { ForStatement(None, IdExp(ID("true", ref None)), None, List.rev $3) }
-    | FOR expr TLCUR stmt_list TRCUR { ForStatement(None, $2, None, List.rev $4) }
+    | FOR TLCUR stmt_list TRCUR { ForStatement(None, None, None, List.rev $3) }
+    | FOR expr TLCUR stmt_list TRCUR { ForStatement(None, Some $2, None, List.rev $4) }
     | FOR simple_stmt TSEMCOL expr TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
-        { ForStatement(Some $2, $4, Some $6, List.rev $8) } 
+        { ForStatement(Some $2, Some $4, Some $6, List.rev $8) } 
     | FOR simple_stmt TSEMCOL TSEMCOL simple_stmt TLCUR stmt_list TRCUR 
-        { ForStatement(Some $2, IdExp(ID("true", ref None)), Some $5, List.rev $7) }
+        { ForStatement(Some $2, None, Some $5, List.rev $7) }
 
 break_stmt:
     | BREAK { BreakStatement }
