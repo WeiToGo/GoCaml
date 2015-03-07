@@ -149,19 +149,19 @@ rule scan last_token = parse
   | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
 
 and read_rune buf = parse
-  | ''' { TRUNE (Buffer.contents buf)}
-  | '\\' 'a' { Buffer.add_char buf '\007'}
-  | '\\' 'b' { Buffer.add_char buf '\010'}
-  | '\\' 'f' { Buffer.add_char buf '\014'}
-  | '\\' 'n' { Buffer.add_char buf '\012'}
-  | '\\' 'r' { Buffer.add_char buf '\015'}
-  | '\\' 't' { Buffer.add_char buf '\011'}
-  | '\\' 'v' { Buffer.add_char buf '\013'}
-  | '\\' '\\' { Buffer.add_char buf '\\'}
-  | '\\' '"' { Buffer.add_char buf '"'}
-  | [^''' '\\' '\n'] { Buffer.add_string buf (Lexing.lexeme lexbuf)}
+  | '\\' 'a' { Buffer.add_char buf '\007'; read_single_quote buf lexbuf}
+  | '\\' 'b' { Buffer.add_char buf '\010'; read_single_quote buf lexbuf}
+  | '\\' 'f' { Buffer.add_char buf '\014'; read_single_quote buf lexbuf}
+  | '\\' 'n' { Buffer.add_char buf '\012'; read_single_quote buf lexbuf}
+  | '\\' 'r' { Buffer.add_char buf '\015'; read_single_quote buf lexbuf}
+  | '\\' 't' { Buffer.add_char buf '\011'; read_single_quote buf lexbuf}
+  | '\\' 'v' { Buffer.add_char buf '\013'; read_single_quote buf lexbuf}
+  | '\\' '\\' { Buffer.add_char buf '\\'; read_single_quote buf lexbuf}
+  | '\\' ''' { Buffer.add_char buf '"'; read_single_quote buf lexbuf}
+  | [^''' '\\' '\n'] { Buffer.add_string buf (Lexing.lexeme lexbuf); read_single_quote buf lexbuf}
 
-  
+and read_single_quote buf = parse
+  | ''' { TRUNE (Buffer.contents buf) }
 and read_raw_str buf = parse
   | '`' { TRWSTR (Buffer.contents buf)}
   | [^'`' '\r']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_raw_str buf lexbuf}
