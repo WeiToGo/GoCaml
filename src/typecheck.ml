@@ -29,7 +29,7 @@ let prev_decl_msg scope id = match id with
 
 let assign_error_msg left_type right_type = 
   "Trying to assign value to type " ^ (string_of_type right_type) ^
-  " to a vairable of type " ^ (string_of_type left_type)
+  " to a variable of type " ^ (string_of_type left_type)
 
 (* --~~~~~~--*** Helper Functions ***--~~~~~~-- *)
 
@@ -256,11 +256,14 @@ let rec get_expression_type ctx e = match e with
   in
   ( match op with
     | BinOr | BinAnd -> 
-        get_bin_exp_type (fun x -> x == GoBool) "of type boolean" 
+        let _ = get_bin_exp_type (fun x -> x == GoBool) "of type boolean" in
+        GoBool
     | BinEq | BinNotEq -> 
-        get_bin_exp_type is_comparable "comparable"
+        let _ = get_bin_exp_type is_comparable "comparable" in
+        GoBool
     | BinLess | BinLessEq | BinGreater | BinGreaterEq ->
-        get_bin_exp_type is_ordered "ordered"
+        let _ = get_bin_exp_type is_ordered "ordered" in
+        GoBool
     | BinPlus -> 
         get_bin_exp_type is_num_string "numeric or string"
     | BinMinus | BinMult | BinDiv | BinMod ->
@@ -295,7 +298,7 @@ let rec get_expression_type ctx e = match e with
 | AppendExp(id, exp) -> ( match (get_expression_type ctx (IdExp id)) with
     | GoSlice(t) as gst ->
       ( let exp_type = get_expression_type ctx exp in
-        if (get_expression_type ctx exp = t) then t
+        if (get_expression_type ctx exp = t) then gst
         else raise (TypeCheckError ("Cannot append expression of type " ^ (string_of_type exp_type) ^ 
               " to slice of type " ^ (string_of_type gst ) ) ) ) 
     | _ -> raise (TypeCheckError ((string_of_id id) ^ " is not of type slice")) )
@@ -312,7 +315,7 @@ let rec get_expression_type ctx e = match e with
     ) 
 
 
-| SelectExp(exp, id) -> ( match (get_expression_type ctx exp) with 
+| SelectExp(exp, id) -> ( match resolve_to_base (get_expression_type ctx exp) with 
     | GoStruct(fields) -> (
         try StructFields.find (string_of_id id) fields
         with Not_found -> 
@@ -398,6 +401,9 @@ and tc_lined_top_decl ctx = function
       | StmtTypeCheckError (s, ln) ->
         fprintf err_channel "Typing Error at line %d:\n" ln;
         fprintf err_channel "%s\n" s;
+        raise Abort
+      | Not_found -> 
+        fprintf err_channel "Undeclared indentifier at line %d\n" ln;
         raise Abort
 
 and tc_top_decl ln ctx = function
@@ -498,9 +504,13 @@ and tc_expression ctx node = let _ = get_expression_type ctx node in ()
 and tc_statement ctx = function
   | LinedStatement(ln, s) -> 
       ( try tc_plain_statement ln ctx s
-        with TypeCheckError s ->
+        with 
+        | TypeCheckError s ->
           fprintf err_channel "Typing Error at line %d:\n" ln;
           fprintf err_channel "%s\n" s;
+          raise Abort 
+        | Not_found -> 
+          fprintf err_channel "Undeclared indentifier at line %d\n" ln;
           raise Abort )
 and tc_plain_statement ln ctx = function
   | EmptyStatement -> ()

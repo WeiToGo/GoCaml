@@ -10,12 +10,10 @@ let build_ast input =
 	| filename -> open_in filename
 	in
 	let lexbuf = Lexing.from_channel ic in
-	let () = 
+	let ast = 
 		try
 			let ast = Parser.program Scan.wrapped_scan lexbuf in
-			(* print_string "VALID \n"; *)
-			PrettyPrint.print_ast ast "out.go" 0;
-			Weeder.weed_ast ast stderr;
+			Weeder.weed_ast ast stderr; ast
 		with Parser.Error
 		-> (
           Printf.eprintf "%s" ("Syntax Error at line " 
@@ -26,11 +24,20 @@ let build_ast input =
             ^ (string_of_int (lexbuf.lex_curr_p.pos_cnum - lexbuf.lex_curr_p.pos_bol))
             ^ "\n"); raise Parser.Error
         )
-    
+    | Scan.Error s
+    -> (
+          Printf.eprintf "%s" ("Syntax Error at line " 
+            ^ (string_of_int lexbuf.lex_curr_p.pos_lnum)
+            ^ ", column " 
+            ^ (string_of_int (lexbuf.lex_start_p.pos_cnum - lexbuf.lex_start_p.pos_bol))
+            ^ "-"
+            ^ (string_of_int (lexbuf.lex_curr_p.pos_cnum - lexbuf.lex_curr_p.pos_bol))
+            ^ "\n"); raise (Scan.Error s)
+        )
   in
-  match input with
+  (match input with
   | "stdin" -> ()
-  | filename -> close_in ic
+  | filename -> close_in ic); ast
 
 
 let _ = if (Array.length Sys.argv) < 2 then
@@ -49,7 +56,7 @@ let filebuf = Lexing.from_channel inp
 let ast = build_ast in_file_name
 ;;
 
-
+let _ = Typecheck.build_symbol_table ast
 
 (* let out_channel = open_out "lexer_stream.out" in 
 let _ = Printer.loop_token_printer Scan.wrapped_scan (Lexing.from_channel stdin) out_channel
