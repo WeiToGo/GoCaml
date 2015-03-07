@@ -157,7 +157,7 @@ and read_rune buf = parse
   | '\\' 't' { Buffer.add_char buf '\011'; read_single_quote buf lexbuf}
   | '\\' 'v' { Buffer.add_char buf '\013'; read_single_quote buf lexbuf}
   | '\\' '\\' { Buffer.add_char buf '\\'; read_single_quote buf lexbuf}
-  | '\\' ''' { Buffer.add_char buf '"'; read_single_quote buf lexbuf}
+  | '\\' ''' { Buffer.add_char buf '\''; read_single_quote buf lexbuf}
   | [^''' '\\' '\n'] { Buffer.add_string buf (Lexing.lexeme lexbuf); read_single_quote buf lexbuf}
 
 and read_single_quote buf = parse

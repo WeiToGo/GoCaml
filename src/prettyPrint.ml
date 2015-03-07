@@ -492,9 +492,9 @@ let print_ast prog pretty level =
 				| Some s1_op -> 
 					print_stmt_wrap level s1_op);
 				print_string "; ";
-				match e_op with
+				(match e_op with
 				| None -> ()
-				| Some(e) -> print_expr level e;
+				| Some(e) -> print_expr level e);
 				print_string "; ";
 				(match s2_op with
 				| None ->()
