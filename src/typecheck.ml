@@ -73,7 +73,6 @@ let int_of_int_lit lit = match lit with
   | HexInt(s) -> int_of_string s  (* OCaml automatically processes hex strings *)
   | OctalInt(s) -> int_of_string ("0o" ^ s) 
 
-
 (* Converts an AST type_spec to a gotype defined for symbol table *)
 let rec gotype_of_typspec ctx tspec = match tspec with
   | BasicType(bt) -> (
@@ -152,13 +151,6 @@ let rec resolve_to_base typ = match typ with
 | GoCustom(name, t) -> resolve_to_base t
 | NewType(t) -> NewType (resolve_to_base t)
 
-(* 
-let rec resolve_type_declaration typ = match type with
-| patt -> expr
-| _ -> expr2
-(* We should have *)
-let rec  *)
-
 
 let rec is_comparable gtype = match gtype with
 | GoBool | GoFloat | GoInt | GoString | GoRune -> true
@@ -200,15 +192,21 @@ let id_from_exp = function
 | _ -> raise (InternalError "Tried to extract ID from non-id expression")
 
 
-
-
 let merge_type t1 t2 = 
   if t1 = t2 then t1
   else raise (TypeCheckError 
               ( "Unequal types in binary expressions:  " ^ (string_of_type t1) ^
                 " and " ^ (string_of_type t2) ) ) 
 
-let rec get_expression_type ctx expression =
+
+let allowed_for_cast ctx typ = match resolve_to_base typ with
+| GoInt | GoFloat | GoBool | GoRune 
+| NewType(GoInt) | NewType(GoFloat)
+| NewType(GoBool) | NewType(GoRune) -> true
+| _ -> false
+
+(* Resolves the type of an expression. Also, caches the type in the AST. *)
+let rec resolve_exp_type ctx expression =
 let Expression(e, etype_ref) = expression in
 let e_type = match e with
   | IdExp(id) -> 
@@ -225,19 +223,19 @@ let e_type = match e with
   | UnaryExp(op, exp) ->
     ( match op with
       | UPlus | UMinus -> 
-        let exp_type = get_expression_type ctx exp in
+        let exp_type = resolve_exp_type ctx exp in
         ( match resolve_to_base exp_type with
           | GoInt | GoFloat | GoRune -> exp_type
           | _ -> raise (TypeCheckError 
                         "Operand of arithmatic unary operand must be of type int, float, or rune") )
       | UNot -> 
-          let exp_type = get_expression_type ctx exp in
+          let exp_type = resolve_exp_type ctx exp in
           ( match resolve_to_base exp_type with
           | GoBool -> exp_type
           | _ -> raise (TypeCheckError
                         "Operand of unary not must be of type bool") )
       | UCaret -> 
-          let exp_type = get_expression_type ctx exp in
+          let exp_type = resolve_exp_type ctx exp in
           ( match resolve_to_base exp_type with
           | GoInt | GoRune -> exp_type
           | _ -> raise (TypeCheckError
@@ -245,8 +243,8 @@ let e_type = match e with
     )
 
   | BinaryExp(op, e1, e2) -> 
-    let e1_type = (get_expression_type ctx e1) in
-    let e2_type = (get_expression_type ctx e2) in
+    let e1_type = (resolve_exp_type ctx e1) in
+    let e2_type = (resolve_exp_type ctx e2) in
     let get_bin_exp_type property_func property_name = 
       ( match property_func e1_type, property_func e2_type with
         | true, true -> merge_type e1_type e2_type
@@ -276,51 +274,33 @@ let e_type = match e with
           get_bin_exp_type is_numeric "numeric"
     )     
   | FunctionCallExp (expr, args_list) -> ( 
+    (* Careful - this can be a type cast expression *)
+    match resolve_exp_type ctx expr with
+    | GoFunction(arg_types, ret_type) -> resolve_func_call_type ctx arg_types ret_type args_list
+    | NewType(_) as t -> resolve_custom_type_cast_type ctx expr t args_list
+    | _ -> raise (TypeCheckError "Only function expressions can be called.") )
 
-      (* Careful - this can be a type cast expression *)
-  	let Expression(caller, _) = expr in
-      match caller with  
-      | IdExp(BlankID) -> raise (TypeCheckError "Trying to read from BlankID") 
-      | IdExp(id) -> 
-        ( try 
-          ( match (lookup_id ctx id) with 
-            | NewType(_) as t -> 
-                let exp_to_cast = (match args_list with
-                | [] -> raise (TypeCheckError "Typecast statement with empty argument")
-                | a :: b :: t -> raise (TypeCheckError "Typecast statement with more that one argument")
-                | h :: [] -> h ) 
-                in
-                get_type_cast_exp_type ctx (Some id) t exp_to_cast
-            | GoFunction(arg_types, ret)-> function_call_type ctx arg_types args_list ret
-            | GoCustom(_) -> raise (InternalError "You should resolve custom types before matching")
-            | _ -> raise (TypeCheckError ((string_of_id id) ^ "is not a function") ) )
-         with Not_found -> raise (TypeCheckError ("Functioon " ^ (string_of_id id) ^ " not defined.")) )
-      | _ -> ( match get_expression_type ctx expr with
-          | GoFunction(arg_types, ret) -> function_call_type ctx arg_types args_list ret
-          | _ -> raise (TypeCheckError "Only function expressions can be called.") )
-      )
-
-  | AppendExp(id, exp) -> ( match (get_expression_type ctx (Expression((IdExp id), ref None)) ) with
+  | AppendExp(id, exp) -> ( match (resolve_exp_type ctx (Expression((IdExp id), ref None)) ) with
       | GoSlice(t) as gst ->
-        ( let exp_type = get_expression_type ctx exp in
-          if (get_expression_type ctx exp = t) then gst
+        ( let exp_type = resolve_exp_type ctx exp in
+          if (resolve_exp_type ctx exp = t) then gst
           else raise (TypeCheckError ("Cannot append expression of type " ^ (string_of_type exp_type) ^ 
                 " to slice of type " ^ (string_of_type gst ) ) ) ) 
       | _ -> raise (TypeCheckError ((string_of_id id) ^ " is not of type slice")) )
 
   | IndexExp(lexp, ind_exp) -> 
-      let () = ( match get_expression_type ctx ind_exp with
+      let () = ( match resolve_exp_type ctx ind_exp with
       | GoInt -> ()
       | _ -> raise (TypeCheckError "Array index must be an integer") )
       in
-      ( match (get_expression_type ctx lexp) with
+      ( match (resolve_exp_type ctx lexp) with
         | GoArray(_, t) -> t
         | GoSlice(t) -> t
         | _ -> raise (TypeCheckError "You can only index into arrays or structs")
       ) 
 
 
-  | SelectExp(exp, id) -> ( match resolve_to_base (get_expression_type ctx exp) with 
+  | SelectExp(exp, id) -> ( match resolve_to_base (resolve_exp_type ctx exp) with 
       | GoStruct(fields) -> (
           try StructFields.find (string_of_id id) fields
           with Not_found -> 
@@ -328,46 +308,49 @@ let e_type = match e with
                 (string_of_id id) ) ) )
       | _ -> raise (TypeCheckError "Trying to access field in non-struct expresison") )
 
-  | TypeCastExp(ts, exp) -> get_type_cast_exp_type ctx None (gotype_of_typspec ctx ts) exp
+  | TypeCastExp(ts, exp) -> resolve_type_cast_type ctx (gotype_of_typspec ctx ts) [exp;]
   in
   let () = etype_ref := Some(e_type) in
   e_type
 
+and resolve_func_call_type ctx param_types ret_type arg_exps = 
+  let num_params = List.length param_types in
+  let num_args = List.length arg_exps in
+  let () = ( if num_params != num_args then
+    raise (TypeCheckError ("Function requires " ^ (string_of_int num_params) ^ 
+      " arguments but was called with " ^ (string_of_int num_args) ^ " arguments."))
+    else () ) in
+  let passed_types = List.map (resolve_exp_type ctx) arg_exps in
+  let _ = List.map2 
+            (fun x y -> if x != y then raise (TypeCheckError  
+              ( "Function expected arguemnt of type " ^ (string_of_type x) ^
+                " but it was called with argument of type " ^ (string_of_type y) ) ) 
+              else () ) param_types passed_types in
+  match ret_type with
+  | Some(t) -> t
+  | None -> raise (VoidFunctionCall "Trying to use void function call as value.")
 
-and function_call_type ctx arg_types args_list ret = 
-  let rec aux l1 l2 = ( match l1, l2 with
-  | a :: s, b :: t ->
-      let b_type = (get_expression_type ctx b) in
-      if (a = b_type) then aux s t
-      else (raise (TypeCheckError ("Argument expected of type " ^ (string_of_type a) ^
-        "  but argument received of type " ^ (string_of_type b_type))) )
+and resolve_type_cast_type ctx typ args_list =
+  let () = ( if List.length args_list != 1 then
+    raise (TypeCheckError "This is a type cast expression and must be called with a single argument")
+    else () ) in
+  let arg = List.hd args_list in 
+  let arg_type = resolve_exp_type ctx arg in 
+  let () = ( if not (allowed_for_cast ctx arg_type) then
+    raise (TypeCheckError ("Casting expressions of type " ^
+      (string_of_type arg_type) ^ " is not supported.") ) 
+    else () ) in
+  if not (allowed_for_cast ctx typ) then
+    raise (TypeCheckError ("Casting to type " ^ (string_of_type typ) ^ 
+      " is not supported.") ) 
+  else typ
 
-  | [], [] -> () 
-  | _, _ -> raise (TypeCheckError "Function called with wrong number of arguments") )(*TODO: print how many *)
-  in
-  let () = aux arg_types args_list
-  in
-  ( match ret with
-  | None -> raise (VoidFunctionCall "Void function call used as a value")
-  | Some(t) -> t )
-
-
-and get_type_cast_exp_type ctx id_op typ exp = 
-  let exp_type = get_expression_type ctx exp in
-  ( match (resolve_to_base exp_type) with
-    | GoInt | GoFloat | GoBool | GoRune 
-    | NewType(GoInt) | NewType(GoFloat)
-    | NewType(GoBool) | NewType(GoRune) -> 
-      ( match (resolve_to_base typ) with
-        | GoInt | GoFloat | GoBool | GoRune -> typ
-        | NewType(t) -> (match (resolve_to_base t) with
-            | GoInt | GoFloat | GoBool | GoRune -> (match id_op with 
-                | None -> raise (InternalError "No custom type id supplied")
-                | Some(id) -> GoCustom((string_of_id id), t) )
-            | _ -> raise (TypeCheckError ("Casting to type " ^ (string_of_type t) ^ " is not supported")) )
-        | _ -> raise (TypeCheckError ("Casting to type " ^ (string_of_type typ) ^ " is not supported")) )
-    | _ -> raise (TypeCheckError ("Casting types of type "  ^ (string_of_type exp_type) ^ " is not supported")) )
-
+and resolve_custom_type_cast_type ctx id_exp typ args_list = 
+  let Expression(exp, _) = id_exp in
+  let type_name = string_of_id (id_from_exp exp) in
+  match resolve_type_cast_type ctx typ args_list with
+  | NewType(t) -> GoCustom(type_name, t)
+  | _ -> raise (InternalError "This was not a custom type")
 
 let gotype_of_function_sig ctx fsig = 
   let FunctionSig(args_list, ret) = fsig in
@@ -459,13 +442,13 @@ and tc_top_decl ln ctx = function
            | None, None -> ()
            | Some(e), None -> raise (StmtTypeCheckError ("Too many arguments to return", ln))
            | None, Some(t) -> raise (StmtTypeCheckError ("Not enough arguments to return", ln))
-           | Some(e1), Some(t) when (get_expression_type body_scope e1 = t) -> ()
+           | Some(e1), Some(t) when (resolve_exp_type body_scope e1 = t) -> ()
            | Some(e1), Some(t) -> 
               raise 
                 (StmtTypeCheckError
                   ( "The return type of the function is " ^ (string_of_type t) ^
                     " but this statement is returning an expression of type " ^
-                    (string_of_type (get_expression_type body_scope e1)), ln ) ) ) 
+                    (string_of_type (resolve_exp_type body_scope e1)), ln ) ) ) 
           ret_exps
         in close_scope body_scope
 
@@ -488,7 +471,7 @@ and tc_single_var_declaration ln ctx = function
       in
       let exp_type = (match exp with  (* Determine the expression type *)
       | None -> None
-      | Some(e) -> Some(get_expression_type ctx e))
+      | Some(e) -> Some(resolve_exp_type ctx e))
       in
       match decl_type, exp_type with
       | None, None -> raise (TypeCheckError "Invalid variable declration") (* This is not even a valid declaration *)
@@ -511,7 +494,7 @@ and tc_type_declaration ln ctx = function
       let new_type = NewType (gotype_of_typspec ctx ts) in
       add_id ctx id new_type ln
 
-and tc_expression ctx node = let _ = get_expression_type ctx node in ()
+and tc_expression ctx node = let _ = resolve_exp_type ctx node in ()
 
 and tc_statement ctx = function
   | LinedStatement(ln, s) -> 
@@ -529,7 +512,7 @@ and tc_plain_statement ln ctx = function
   | BreakStatement -> ()
   | ContinueStatement -> ()
   | ExpressionStatement expression ->
-		let Expression(e, _) = expression in 
+    let Expression(e, _) = expression in 
       (* Check for a void function first *)
       (try tc_expression ctx expression with
        | VoidFunctionCall s -> if (is_void_function_call ctx e) then () else 
@@ -548,7 +531,7 @@ and tc_plain_statement ln ctx = function
             raise (TypeCheckError "No new variables in short variable declaration statement")
           else () ) in
       let check_svd (ShortVarDecl(id, exp)) =
-        let rhs_type = get_expression_type ctx exp in
+        let rhs_type = resolve_exp_type ctx exp in
         if (not (id_in_current_scope ctx id)) then
           add_id ctx id rhs_type ln
         else
@@ -567,8 +550,8 @@ and tc_plain_statement ln ctx = function
       let () = List.iter (tc_expression ctx) left_exp_list in
       let () = List.iter (tc_expression ctx) right_exp_list in
       let check_assignment (e1, e2) =
-        let e1_type = get_expression_type ctx e1 in
-        let e2_type = get_expression_type ctx e2 in
+        let e1_type = resolve_exp_type ctx e1 in
+        let e2_type = resolve_exp_type ctx e2 in
         if e1_type = e2_type then ()
         else raise (TypeCheckError (assign_error_msg e1_type e2_type))
       in
@@ -577,7 +560,7 @@ and tc_plain_statement ln ctx = function
   | PrintStatement exp_list
   | PrintlnStatement exp_list -> 
       let valid_print_type exp = 
-      ( match (resolve_to_base (get_expression_type ctx exp)) with
+      ( match (resolve_to_base (resolve_exp_type ctx exp)) with
       | GoInt | GoBool | GoFloat | GoRune | GoString -> ()
       | _ -> raise (TypeCheckError "You can only print basic types") )
       in
@@ -590,7 +573,7 @@ and tc_plain_statement ln ctx = function
       in
       let () = ( match cond_op with
       | Some(cond) ->
-        ( match (get_expression_type init_scope cond) with
+        ( match (resolve_exp_type init_scope cond) with
           | GoBool -> ()
           | _ -> raise (TypeCheckError "for loop condition type must be bool")
         )
@@ -610,7 +593,7 @@ and tc_plain_statement ln ctx = function
       | None -> ()
       | Some(s) -> tc_statement init_scope s
       in
-      let () = match (get_expression_type init_scope exp) with
+      let () = match (resolve_exp_type init_scope exp) with
       | GoBool -> ()
       | _ -> raise (TypeCheckError "if loop condition type must be bool")
       in
@@ -630,12 +613,12 @@ and tc_plain_statement ln ctx = function
       | None -> ()
       | Some(s) -> tc_statement init_scope s
       in
-      let switch_cond_type = get_expression_type init_scope exp in
+      let switch_cond_type = resolve_exp_type init_scope exp in
       let check_switch_case par_ctx = function
       | SwitchCase(exp_list, stmt_list) -> 
           let () = List.iter
             ( fun x -> 
-                let case_type = get_expression_type par_ctx x in
+                let case_type = resolve_exp_type par_ctx x in
                 if case_type = switch_cond_type then ()
                 else raise (TypeCheckError 
                   ( "Case expression type " ^ (string_of_type case_type) ^

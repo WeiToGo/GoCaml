@@ -8,3 +8,5 @@ gocaml.sublime-workspace
 *.byte
 lexer_stream.out
 *.stripped.mly
+*.pretty.go
+

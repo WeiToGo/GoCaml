@@ -9,7 +9,7 @@ var (
 )
 
 var a1 int
-var a2 float64 = a1
+var a2 float64 = 2.3
 var a6 = 12
 var a3, a4, a5 string
 var a, _ int
@@ -350,7 +350,7 @@ func exprs() {
 	c = '\n'
 	c = '\r'
 	c = '\t'
-	c = '\"'
+	c = '"'
 	c = '\v'
 
 	// Interpreted strings
