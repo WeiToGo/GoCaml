@@ -1,3 +1,5 @@
+Type checking errors in invalid test files explained:
+
 append1.go : id is not of type Slice
 append2.go : expr is not type T
 assign_stmt1.go : assign wrong type to struct field 
@@ -37,6 +39,12 @@ if_stmt5.go : statement body in 'else if' has wrong type
 if_stmt6.go : statement body in 'else' doesn't type check
 indexing1.go : expr is not of type Slice or Array
 indexing2.go : index is not int
+op_assignment1.go : '+=' expr of left ill-typed
+op_assignment2.go : '&=' expr on left ill-typed
+op_assignment3.go : '/=' expr on right ill-typed
+op_assignment4.go : '<<=' expr on left is blank_id
+op_assignment5.go : '%=' expressions on both side not the same type
+op_assignment6.go : '&^=' expressions on both side not the same type
 print1.go : can't print struct field
 print2.go : one of the expression ill-typed
 println.go : expression ill-typed
