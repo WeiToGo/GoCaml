@@ -177,17 +177,7 @@ let print_ast prog pretty level =
 			begin
 				print_expr level exp;
 				print_string "(";
-				let rec print_func_call_helper l = (match l with
-					| [] -> ()
-					| h::[] -> print_expr level h 
-					| h::t ->
-						begin
-							print_expr level h ;
-							print_string ", ";
-							print_func_call_helper t;
-						end)
-				in
-				print_func_call_helper e_list;
+				print_list_helper e_list;
 				print_string ")";
 			end
 		| AppendExp (id,e) ->
@@ -220,7 +210,16 @@ let print_ast prog pretty level =
 				print_identifier id;
 			end) in
 		print_gotype ! gotype;
-	in 
+	and print_list_helper l = (match l with
+		| [] -> ()
+		| h::[] -> print_expr level h 
+		| h::t ->
+			begin
+				print_expr level h ;
+				print_string ", ";
+				print_list_helper t;
+			end)
+	in
 	let print_func_arg level fa = match fa with
 		| FunctionArg (id,t) ->
 			begin
@@ -240,7 +239,7 @@ let print_ast prog pretty level =
 						print_func_arg level h;
 						print_string ", ";
 						print_func_sign_helper t;
-					end 
+					end
 				in
 				print_func_sign_helper f_list;
 				print_string ")";
@@ -254,6 +253,7 @@ let print_ast prog pretty level =
 			begin
 				insert_tab(level);
 				print_identifier id;
+				print_string " ";
 				print_type_spec level ts;
 			end
 	in
@@ -398,7 +398,7 @@ let print_ast prog pretty level =
 				insert_tab(level);
 				print_string "print ";
 				print_string "(";
-				List.iter (fun x -> print_expr level x) e_list;
+				print_list_helper e_list;
 				print_string ")";
 			end
 		| PrintlnStatement (e_list)->
@@ -406,7 +406,7 @@ let print_ast prog pretty level =
 				insert_tab(level);
 				print_string "println ";
 				print_string "(";
-				List.iter (fun x  -> print_expr level x) e_list;
+				print_list_helper e_list;
 				print_string ")";
 			end
 		| IfStatement (s, e, s1_list, s2_list) ->
