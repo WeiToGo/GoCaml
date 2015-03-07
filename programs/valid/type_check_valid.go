@@ -9,15 +9,14 @@ type g point
 
 /* Var declarations */
 
-var a float64 = (3.0*4/5.3)
+var a float64 = (3.0*4.0/5.3)
 var b int = 3
 var c, d rune = 't', 's'
 
 var (
-	x1, x2 rune = `str`, 'r'
+	x1, x2 rune = 'u', 'r'
 	y1, y2 string = `raw`, "str" 
-	z int = (4+5)/6.0	
-	x1 string
+	z int = (4+5)/6	
 )
 
 
@@ -45,16 +44,16 @@ func f4(a, b int, c, d bool) {
 
 // return statement
 
-func f() {
+func foo() {
 	return 
 }
 
-func f()string {
+func foo1()string {
 	var x string
 	return x 
 }
 
-func f()[]rune {
+func foo2()[]rune {
 	var x []rune 
 	return x
 }
@@ -105,15 +104,16 @@ func printing(){
 // aliases of basic types
 func printing2(){
 	type num int
-	type name string
-	var a num = 5
-	var b name = "asiefa"
+	type name rune
+	var a num = num(5)
+	var b name = name('w')
 	print(a,b)
 	println(b,a)
 
 }
 // for loop
 func for_stmts() { 
+	var a int = 0
 	for {
 		(420/45+3)/3
 		break		// break statement
@@ -166,16 +166,16 @@ func for_stmts() {
 // unary expression
 func unary(){
 	var a = +(5)
-	a = +(46.5/8.0)
-	a = +('r')
-	a = -(5)
-	a = -(46.5/8.0)
-	a = -('r')
-	a = !((34<=32) && (4.6>=23.4) )
-	a = !(34 != 5)
-	a = !((4<5) || (5.7 > 4.6))
-	a = ^(45)
-	a = ^('r')
+	a1 := +(46.5/8.0)
+	a2 := +('r')
+	a3  := -(5)
+	a4 := -(46.5/8.0)
+	a5 := -('r')
+	a6 := !((34<=32) && (4.6>=23.4) )
+	a7 := !(34 != 5)
+	a8 := !((4<5) || (5.7 > 4.6))
+	a9 := ^(45)
+	a10  := ^('r')
 }
 
 // binary expression
