@@ -11,20 +11,20 @@ false		bool
 
 // Var declarations:
 
-var a float64 = (3*4/5)
+// var a float64 = (3*4/5)
 var b int = 3.4
 var c, d string = "str1", 6
-var {
-	x1, x2 rune = `str`, 'r1'
-	y1, y2 string = `raw`, 'str' 
-	z int = (4+5)/6.0	
-	x1 string
-}
+// var {
+// 	x1, x2 rune = `str`, 'r1'
+// 	y1, y2 string = `raw`, 'str' 
+// 	z int = (4+5)/6.0	
+// 	x1 string
+// }
 
 // type declarations:
 
-type num int
-var e num = 4  //should be var e num = num(4)
+// type num int
+// var e num = 4  //should be var e num = num(4)
 
 
 // function decl
@@ -283,7 +283,7 @@ func switch_stmts() {
 // unary expression
 +(5+5.6)
 +("terf")
-+('rser')
+// +("string")
 +(5+5.6)
 +("terf")
 +('rser')
