@@ -80,7 +80,12 @@ let weed_ast prog outchann =
 		| FunctionDecl (id,fs, stmts) ->
 			visit_id id;
 			visit_function_signature fs linenum;
-			if check_return_statements(stmts) then () else failwith "HELP";
+			(match fs with 
+			| FunctionSig(_, Some(_)) -> 
+				if check_return_statements(stmts) then () else
+					println ("missing return at end of function. Line:  " ^ (string_of_int linenum));
+					exit 1;
+			| _ -> ());
 			List.iter visit_statement stmts
 		| TypeDeclBlock (tds) -> List.iter (fun x -> visit_type_dcl x linenum) tds
 		| VarDeclBlock (mvdcls) -> List.iter (fun x -> visit_mul_var_dcl x linenum) mvdcls
@@ -228,7 +233,7 @@ let weed_ast prog outchann =
 		| ShortVarDeclStatement(svdcls) ->
 			(match !shortvardcl with
 			| 0 ->
-				println ("Cannot declare in the for increment. Line: " ^ (string_of_int linenum));
+				println ("Function does not have return statement  " ^ (string_of_int linenum));
 				exit 1
 			| _ -> List.iter (fun x -> visit_short_var_dcl x linenum) svdcls)
 		| VarDeclBlockStatement(mvdcls) -> List.iter (fun x -> visit_mul_var_dcl x linenum) mvdcls

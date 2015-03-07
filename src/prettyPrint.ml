@@ -1,6 +1,6 @@
 open Ast
 
-exception NotImplemented 
+
 
 let print_ast prog pretty level = 
 	let Program(pack,ldl) = prog in

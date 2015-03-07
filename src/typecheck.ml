@@ -14,6 +14,7 @@ exception NotImplemented
 exception TypeCheckError of string
 exception VariableRedeclaration of string
 exception InternalError of string
+exception VoidFunctionCall of string
 exception Abort
 
 (* Statement type checking errors come bundled with line number *)
@@ -273,6 +274,7 @@ let rec get_expression_type ctx e = match e with
         get_bin_exp_type is_numeric "numeric"
   )     
 | FunctionCallExp (caller, args_list) -> ( 
+
     (* Careful - this can be a type cast expression *)
     match caller with  
     | IdExp(BlankID) -> raise (TypeCheckError "Trying to read from BlankID") 
@@ -339,7 +341,7 @@ and function_call_type ctx arg_types args_list ret =
   let () = aux arg_types args_list
   in
   ( match ret with
-  | None -> raise (TypeCheckError "Void function call used as a value")
+  | None -> raise (VoidFunctionCall "Void function call used as a value")
   | Some(t) -> t )
 
 and get_type_cast_exp_type ctx id_op typ exp = 
@@ -518,8 +520,9 @@ and tc_plain_statement ln ctx = function
   | ContinueStatement -> ()
   | ExpressionStatement e -> 
       (* Check for a void function first *)
-      if is_void_function_call ctx e then ()
-      else tc_expression ctx e
+      (try tc_expression ctx e with
+       | VoidFunctionCall s -> if (is_void_function_call ctx e) then () else 
+            raise (TypeCheckError s) )
   | ReturnStatement(Some(e)) -> tc_expression ctx e
   | ReturnStatement(None) -> ()
   | VarDeclBlockStatement mvd_list -> List.iter (tc_multiple_var_declaration ln ctx) mvd_list
