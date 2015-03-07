@@ -327,11 +327,11 @@ let rec get_expression_type ctx e = match e with
 
 and function_call_type ctx arg_types args_list ret = 
   let rec aux l1 l2 = ( match l1, l2 with
-  | a :: s, b :: t -> 
-      let b_type = get_expression_type ctx b in
-      if (a == b_type) then aux s t
-      else raise (TypeCheckError ("Argument expected of type " ^ (string_of_type a) ^
-        "  but argument received of type " ^ (string_of_type b_type)))
+  | a :: s, b :: t ->
+      let b_type = (get_expression_type ctx b) in
+      if (a = b_type) then aux s t
+      else (raise (TypeCheckError ("Argument expected of type " ^ (string_of_type a) ^
+        "  but argument received of type " ^ (string_of_type b_type))) )
 
   | [], [] -> () 
   | _, _ -> raise (TypeCheckError "Function called with wrong number of arguments") )(*TODO: print how many *)
@@ -561,7 +561,13 @@ and tc_plain_statement ln ctx = function
       List.iter check_assignment a_list
   
   | PrintStatement exp_list
-  | PrintlnStatement exp_list -> List.iter (tc_expression ctx) exp_list
+  | PrintlnStatement exp_list -> 
+      let valid_print_type exp = 
+      ( match (resolve_to_base (get_expression_type ctx exp)) with
+      | GoInt | GoBool | GoFloat | GoRune | GoString -> ()
+      | _ -> raise (TypeCheckError "You can only print basic types") )
+      in
+      List.iter valid_print_type exp_list
   | ForStatement (s1, cond, s2, stmt_list) -> 
       let init_scope = open_scope ctx in
       let () = match s1 with

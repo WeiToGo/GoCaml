@@ -272,7 +272,7 @@ return_stmt:
 
 if_stmt:
     | IF expr TLCUR stmt_list TRCUR 
-        { IfStatement(None, $2, $4, None) }
+        { IfStatement(None, $2, List.rev $4, None) }
     | IF expr TLCUR stmt_list TRCUR ELSE TLCUR stmt_list TRCUR 
         { IfStatement(None, $2, List.rev $4, Some (List.rev $8)) }
     | IF expr TLCUR stmt_list TRCUR ELSE if_stmt 
