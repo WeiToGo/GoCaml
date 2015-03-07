@@ -209,126 +209,130 @@ let merge_type t1 t2 =
                 " and " ^ (string_of_type t2) ) ) 
 
 let rec get_expression_type ctx expression =
-let Expression(e, _) = expression in
-match e with
-| IdExp(id) -> 
-  ( try lookup_id ctx id
-    with Not_found -> 
-      raise (TypeCheckError ("Undeclared identifier " ^ (string_of_id id)) ) )
-| LiteralExp(lit_exp) ->
-  ( match lit_exp with
-  | IntLit _ -> GoInt
-  | FloatLit _ -> GoFloat
-  | RuneLit _ -> GoRune
-  | StringLit _ -> GoString
-  | RawStringLit _ -> GoString )
-| UnaryExp(op, exp) ->
-  ( match op with
-    | UPlus | UMinus -> 
-      let exp_type = get_expression_type ctx exp in
-      ( match resolve_to_base exp_type with
-        | GoInt | GoFloat | GoRune -> exp_type
-        | _ -> raise (TypeCheckError 
-                      "Operand of arithmatic unary operand must be of type int, float, or rune") )
-    | UNot -> 
+let Expression(e, etype_ref) = expression in
+let e_type = match e with
+  | IdExp(id) -> 
+    ( try lookup_id ctx id
+      with Not_found -> 
+        raise (TypeCheckError ("Undeclared identifier " ^ (string_of_id id)) ) )
+  | LiteralExp(lit_exp) ->
+    ( match lit_exp with
+    | IntLit _ -> GoInt
+    | FloatLit _ -> GoFloat
+    | RuneLit _ -> GoRune
+    | StringLit _ -> GoString
+    | RawStringLit _ -> GoString )
+  | UnaryExp(op, exp) ->
+    ( match op with
+      | UPlus | UMinus -> 
         let exp_type = get_expression_type ctx exp in
         ( match resolve_to_base exp_type with
-        | GoBool -> exp_type
-        | _ -> raise (TypeCheckError
-                      "Operand of unary not must be of type bool") )
-    | UCaret -> 
-        let exp_type = get_expression_type ctx exp in
-        ( match resolve_to_base exp_type with
-        | GoInt | GoRune -> exp_type
-        | _ -> raise (TypeCheckError
-                      "Operand of bitwise negation must be of type int or rune") )
-  )
-
-| BinaryExp(op, e1, e2) -> 
-  let e1_type = (get_expression_type ctx e1) in
-  let e2_type = (get_expression_type ctx e2) in
-  let get_bin_exp_type property_func property_name = 
-    ( match property_func e1_type, property_func e2_type with
-      | true, true -> merge_type e1_type e2_type
-      | true, _ -> 
-          raise (TypeCheckError
-            ( (string_of_type e2_type) ^ " is not " ^ property_name ^ "." ) )
-      | _, _ -> 
-          raise (TypeCheckError
-            ( (string_of_type e1_type) ^ " is not " ^ property_name ^ "." ) ) )
-  in
-  ( match op with
-    | BinOr | BinAnd -> 
-        let _ = get_bin_exp_type (fun x -> x == GoBool) "of type boolean" in
-        GoBool
-    | BinEq | BinNotEq -> 
-        let _ = get_bin_exp_type is_comparable "comparable" in
-        GoBool
-    | BinLess | BinLessEq | BinGreater | BinGreaterEq ->
-        let _ = get_bin_exp_type is_ordered "ordered" in
-        GoBool
-    | BinPlus -> 
-        get_bin_exp_type is_num_string "numeric or string"
-    | BinMinus | BinMult | BinDiv | BinMod ->
-        get_bin_exp_type is_numeric "numeric"
-    | BinBitOr | BinBitAnd | BinShiftLeft | BinShiftRight 
-    | BinBitAndNot | BinBitXor -> 
-        get_bin_exp_type is_numeric "numeric"
-  )     
-| FunctionCallExp (expr, args_list) -> ( 
-
-    (* Careful - this can be a type cast expression *)
-	let Expression(caller, _) = expr in
-    match caller with  
-    | IdExp(BlankID) -> raise (TypeCheckError "Trying to read from BlankID") 
-    | IdExp(id) -> 
-      ( try 
-        ( match (lookup_id ctx id) with 
-          | NewType(_) as t -> 
-              let exp_to_cast = (match args_list with
-              | [] -> raise (TypeCheckError "Typecast statement with empty argument")
-              | a :: b :: t -> raise (TypeCheckError "Typecast statement with more that one argument")
-              | h :: [] -> h ) 
-              in
-              get_type_cast_exp_type ctx (Some id) t exp_to_cast
-          | GoFunction(arg_types, ret)-> function_call_type ctx arg_types args_list ret
-          | GoCustom(_) -> raise (InternalError "You should resolve custom types before matching")
-          | _ -> raise (TypeCheckError ((string_of_id id) ^ "is not a function") ) )
-       with Not_found -> raise (TypeCheckError ("Functioon " ^ (string_of_id id) ^ " not defined.")) )
-    | _ -> ( match get_expression_type ctx expr with
-        | GoFunction(arg_types, ret) -> function_call_type ctx arg_types args_list ret
-        | _ -> raise (TypeCheckError "Only function expressions can be called.") )
+          | GoInt | GoFloat | GoRune -> exp_type
+          | _ -> raise (TypeCheckError 
+                        "Operand of arithmatic unary operand must be of type int, float, or rune") )
+      | UNot -> 
+          let exp_type = get_expression_type ctx exp in
+          ( match resolve_to_base exp_type with
+          | GoBool -> exp_type
+          | _ -> raise (TypeCheckError
+                        "Operand of unary not must be of type bool") )
+      | UCaret -> 
+          let exp_type = get_expression_type ctx exp in
+          ( match resolve_to_base exp_type with
+          | GoInt | GoRune -> exp_type
+          | _ -> raise (TypeCheckError
+                        "Operand of bitwise negation must be of type int or rune") )
     )
 
-| AppendExp(id, exp) -> ( match (get_expression_type ctx (Expression((IdExp id), ref None)) ) with
-    | GoSlice(t) as gst ->
-      ( let exp_type = get_expression_type ctx exp in
-        if (get_expression_type ctx exp = t) then gst
-        else raise (TypeCheckError ("Cannot append expression of type " ^ (string_of_type exp_type) ^ 
-              " to slice of type " ^ (string_of_type gst ) ) ) ) 
-    | _ -> raise (TypeCheckError ((string_of_id id) ^ " is not of type slice")) )
-
-| IndexExp(lexp, ind_exp) -> 
-    let () = ( match get_expression_type ctx ind_exp with
-    | GoInt -> ()
-    | _ -> raise (TypeCheckError "Array index must be an integer") )
+  | BinaryExp(op, e1, e2) -> 
+    let e1_type = (get_expression_type ctx e1) in
+    let e2_type = (get_expression_type ctx e2) in
+    let get_bin_exp_type property_func property_name = 
+      ( match property_func e1_type, property_func e2_type with
+        | true, true -> merge_type e1_type e2_type
+        | true, _ -> 
+            raise (TypeCheckError
+              ( (string_of_type e2_type) ^ " is not " ^ property_name ^ "." ) )
+        | _, _ -> 
+            raise (TypeCheckError
+              ( (string_of_type e1_type) ^ " is not " ^ property_name ^ "." ) ) )
     in
-    ( match (get_expression_type ctx lexp) with
-      | GoArray(_, t) -> t
-      | GoSlice(t) -> t
-      | _ -> raise (TypeCheckError "You can only index into arrays or structs")
-    ) 
+    ( match op with
+      | BinOr | BinAnd -> 
+          let _ = get_bin_exp_type (fun x -> x == GoBool) "of type boolean" in
+          GoBool
+      | BinEq | BinNotEq -> 
+          let _ = get_bin_exp_type is_comparable "comparable" in
+          GoBool
+      | BinLess | BinLessEq | BinGreater | BinGreaterEq ->
+          let _ = get_bin_exp_type is_ordered "ordered" in
+          GoBool
+      | BinPlus -> 
+          get_bin_exp_type is_num_string "numeric or string"
+      | BinMinus | BinMult | BinDiv | BinMod ->
+          get_bin_exp_type is_numeric "numeric"
+      | BinBitOr | BinBitAnd | BinShiftLeft | BinShiftRight 
+      | BinBitAndNot | BinBitXor -> 
+          get_bin_exp_type is_numeric "numeric"
+    )     
+  | FunctionCallExp (expr, args_list) -> ( 
+
+      (* Careful - this can be a type cast expression *)
+  	let Expression(caller, _) = expr in
+      match caller with  
+      | IdExp(BlankID) -> raise (TypeCheckError "Trying to read from BlankID") 
+      | IdExp(id) -> 
+        ( try 
+          ( match (lookup_id ctx id) with 
+            | NewType(_) as t -> 
+                let exp_to_cast = (match args_list with
+                | [] -> raise (TypeCheckError "Typecast statement with empty argument")
+                | a :: b :: t -> raise (TypeCheckError "Typecast statement with more that one argument")
+                | h :: [] -> h ) 
+                in
+                get_type_cast_exp_type ctx (Some id) t exp_to_cast
+            | GoFunction(arg_types, ret)-> function_call_type ctx arg_types args_list ret
+            | GoCustom(_) -> raise (InternalError "You should resolve custom types before matching")
+            | _ -> raise (TypeCheckError ((string_of_id id) ^ "is not a function") ) )
+         with Not_found -> raise (TypeCheckError ("Functioon " ^ (string_of_id id) ^ " not defined.")) )
+      | _ -> ( match get_expression_type ctx expr with
+          | GoFunction(arg_types, ret) -> function_call_type ctx arg_types args_list ret
+          | _ -> raise (TypeCheckError "Only function expressions can be called.") )
+      )
+
+  | AppendExp(id, exp) -> ( match (get_expression_type ctx (Expression((IdExp id), ref None)) ) with
+      | GoSlice(t) as gst ->
+        ( let exp_type = get_expression_type ctx exp in
+          if (get_expression_type ctx exp = t) then gst
+          else raise (TypeCheckError ("Cannot append expression of type " ^ (string_of_type exp_type) ^ 
+                " to slice of type " ^ (string_of_type gst ) ) ) ) 
+      | _ -> raise (TypeCheckError ((string_of_id id) ^ " is not of type slice")) )
+
+  | IndexExp(lexp, ind_exp) -> 
+      let () = ( match get_expression_type ctx ind_exp with
+      | GoInt -> ()
+      | _ -> raise (TypeCheckError "Array index must be an integer") )
+      in
+      ( match (get_expression_type ctx lexp) with
+        | GoArray(_, t) -> t
+        | GoSlice(t) -> t
+        | _ -> raise (TypeCheckError "You can only index into arrays or structs")
+      ) 
 
 
-| SelectExp(exp, id) -> ( match resolve_to_base (get_expression_type ctx exp) with 
-    | GoStruct(fields) -> (
-        try StructFields.find (string_of_id id) fields
-        with Not_found -> 
-          raise (TypeCheckError ("This struct has no field named " ^
-              (string_of_id id) ) ) )
-    | _ -> raise (TypeCheckError "Trying to access field in non-struct expresison") )
+  | SelectExp(exp, id) -> ( match resolve_to_base (get_expression_type ctx exp) with 
+      | GoStruct(fields) -> (
+          try StructFields.find (string_of_id id) fields
+          with Not_found -> 
+            raise (TypeCheckError ("This struct has no field named " ^
+                (string_of_id id) ) ) )
+      | _ -> raise (TypeCheckError "Trying to access field in non-struct expresison") )
 
-| TypeCastExp(ts, exp) -> get_type_cast_exp_type ctx None (gotype_of_typspec ctx ts) exp
+  | TypeCastExp(ts, exp) -> get_type_cast_exp_type ctx None (gotype_of_typspec ctx ts) exp
+  in
+  let () = etype_ref := Some(e_type) in
+  e_type
+
 
 and function_call_type ctx arg_types args_list ret = 
   let rec aux l1 l2 = ( match l1, l2 with
@@ -346,6 +350,7 @@ and function_call_type ctx arg_types args_list ret =
   ( match ret with
   | None -> raise (VoidFunctionCall "Void function call used as a value")
   | Some(t) -> t )
+
 
 and get_type_cast_exp_type ctx id_op typ exp = 
   let exp_type = get_expression_type ctx exp in
@@ -649,5 +654,5 @@ and tc_plain_statement ln ctx = function
       close_scope init_scope
 
 let build_symbol_table ast =
-  let global_scope = initial_scope ()  (* 1024 is the initial hash table size *)
+  let global_scope = initial_scope ()
   in tc_program global_scope ast
