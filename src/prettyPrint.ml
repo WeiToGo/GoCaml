@@ -303,6 +303,7 @@ let print_ast prog pretty level =
 		| [] -> true
 		in
 		let () = list_printer ids print_identifier in
+		print_string " ";
 		match all_exists types, all_exists exps with
 		| false, false -> failwith "Internal error: Invalid variable declaration"
 		| true, false -> (
