@@ -468,7 +468,7 @@ let print_ast prog pretty level =
 						begin
 							insert_tab(level);
 							print_string "case ";
-							List.iter (fun x -> print_expr level x) e_list;
+							print_list_helper e_list;
 							print_string ":";
 							print_statement_list level stmt_list
 						end
