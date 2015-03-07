@@ -1,6 +1,8 @@
 open Ast
 open Printf
 
+exception WeederError
+
 let rec check_return_statements stmt_list = 
 	let rec has_return (LinedStatement(_, plain_stmt)) = match plain_stmt with
 	| EmptyStatement | ExpressionStatement(_) | AssignmentStatement(_)
@@ -43,7 +45,8 @@ let rec check_return_statements stmt_list =
 let weed_ast prog outchann =
 	(* Helper print function*)
 	let println s =
-		fprintf outchann "%s\n" s
+		fprintf outchann "%s\n" s;
+		flush outchann;
 	in
 	let loops = ref 0 in (* Nested loop level *)
 	let shortvardcl = ref 1 in (* is shortvardcl allowed? *)
@@ -54,13 +57,13 @@ let weed_ast prog outchann =
 		| 0 -> ()
 		| _ ->
 			println ("Cannot use _ as a value. Line: " ^ (string_of_int linenum));
-			exit 1
+			raise WeederError;
 	in
 	let checkForLeftValueError linenum =
 		match !lvalue with
 		| 0 ->
 			println ("Cannot assign to expression. Line: " ^ (string_of_int linenum));
-			exit 1
+			raise WeederError;
 		| _ -> ()
 	in
 	let rec visit_program prog =
@@ -82,7 +85,7 @@ let weed_ast prog outchann =
 			| FunctionSig(_, Some(_)) -> 
 				if check_return_statements(stmts) then () else
 					println ("missing return at end of function. Line:  " ^ (string_of_int linenum));
-					exit 1;
+					raise WeederError;
 			| _ -> ());
 			List.iter visit_statement stmts
 		| TypeDeclBlock (tds) -> List.iter (fun x -> visit_type_dcl x linenum) tds
@@ -233,7 +236,7 @@ let weed_ast prog outchann =
 			(match !shortvardcl with
 			| 0 ->
 				println ("Function does not have return statement  " ^ (string_of_int linenum));
-				exit 1
+				raise WeederError;
 			| _ -> List.iter (fun x -> visit_short_var_dcl x linenum) svdcls)
 		| VarDeclBlockStatement(mvdcls) -> List.iter (fun x -> visit_mul_var_dcl x linenum) mvdcls
 		| PrintStatement(es) -> List.iter (fun x -> visit_expression x linenum) es
@@ -261,7 +264,7 @@ let weed_ast prog outchann =
 			(match !defcount with
 			| x when x > 1 ->
 				println ("Multiple defaults in switch. Line: " ^ (string_of_int linenum));
-				exit 1
+				raise WeederError;
 			| _ -> ())
 		| ForStatement(stmtop1, e_op, stmtop2, stmts) -> (* init, cond, post, body *)
 			loops := !loops + 1;
@@ -282,13 +285,13 @@ let weed_ast prog outchann =
 			(match !loops with
 			| 0 ->
 				println ("Break statement is not in a loop. Line: " ^ (string_of_int linenum));
-				exit 1
+				raise WeederError;
 			| _ -> ())
 		| ContinueStatement ->
 			(match !loops with
 			| 0 ->
 				println ("Continue statement is not in a loop. Line: " ^ (string_of_int linenum));
-				exit 1
+				raise WeederError;
 			| _ -> ())
 		| BlockStatement(stmts) -> List.iter visit_statement stmts
 	and visit_switch_case sc defcount linenum =
