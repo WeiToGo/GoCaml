@@ -145,7 +145,16 @@ let print_ast prog pretty level =
 			end
 		| CustomType (id) -> print_identifier id
 	in
-	let rec print_expr level exp = match exp with
+	let print_gotype gotype = match gotype with 
+		| None ->()
+		| Some gotype -> 
+			begin
+				print_string "/* type: ";
+				print_string (Symtable.string_of_type gotype);
+				print_string "*/\n"
+			end
+	in
+	let rec print_expr level (Expression(exp, gotype)) = match exp with
 		| IdExp (i) -> print_identifier i
 		| LiteralExp (l) -> print_literal l
 		| UnaryExp (op, e) -> 
@@ -160,7 +169,7 @@ let print_ast prog pretty level =
 				print_string "(";
 				print_expr level e1;
 				print_binop op;
-				print_expr level e2;
+				print_expr level e2 ;
 				print_string ")";
 			end
 		| FunctionCallExp (exp,e_list) ->
@@ -169,10 +178,10 @@ let print_ast prog pretty level =
 				print_string "(";
 				let rec print_func_call_helper l = (match l with
 					| [] -> ()
-					| h::[] -> print_expr level h
+					| h::[] -> print_expr level h 
 					| h::t ->
 						begin
-							print_expr level h;
+							print_expr level h ;
 							print_string ", ";
 							print_func_call_helper t;
 						end)
@@ -186,29 +195,30 @@ let print_ast prog pretty level =
 				print_string "(";
 				print_identifier id;
 				print_string ",";
-				print_expr level e;
+				print_expr level e ;
 				print_string ")";
 			end
 		| TypeCastExp (t,e) ->
 			begin
 				print_type_spec level t;
 				print_string "(";
-				print_expr level e;
+				print_expr level e ;
 				print_string ")";
 			end
 		| IndexExp (e1,e2) ->
 			begin
-				print_expr level e1;
+				print_expr level e1 ;
 				print_string "[";
-				print_expr level e2;
+				print_expr level e2 ;
 				print_string "]";
 			end
 		| SelectExp (e,id) ->
 			begin
-				print_expr level e;
+				print_expr level e ;
 				print_string ".";
 				print_identifier id;
 			end
+		print_gotype gotype;
 	in 
 	let print_func_arg level fa = match fa with
 		| FunctionArg (id,t) ->
@@ -303,7 +313,7 @@ let print_ast prog pretty level =
 				| Some(e) -> e
 				| None -> failwith "This should never happen")
 			in
-			list_printer (List.map extract_from_some exps) (print_expr level);
+			list_printer (List.map extract_from_some exps) (print_expr level );
 		)
 		| true, true -> (
 			let var_type = (match List.hd types with
@@ -316,7 +326,7 @@ let print_ast prog pretty level =
 				| Some(e) -> e
 				| None -> failwith "This should never happen")
 			in
-			list_printer (List.map extract_from_some exps) (print_expr level);
+			list_printer (List.map extract_from_some exps) (print_expr level );
 		)
 	in
 	let print_var_decl level mvd_list = 
@@ -331,7 +341,7 @@ let print_ast prog pretty level =
 		insert_tab(level);
 		print_string ")";
 	in
-	let print_short_var_decl level svd_list = 
+	let print_short_var_decl level svd_list  = 
 		let svd_proj1 = function ShortVarDecl(id, exp) -> id in
 		let svd_proj2 = function ShortVarDecl(id, exp) -> exp in
 		let ids = List.map svd_proj1 svd_list in
@@ -347,7 +357,7 @@ let print_ast prog pretty level =
 	  in
 	  list_printer ids print_identifier;
 	  print_string ":= ";
-	  list_printer exps (print_expr level); 
+	  list_printer exps (print_expr level ); 
 	in
 	let rec print_stmt level stmt = 
 		match stmt with
@@ -355,7 +365,7 @@ let print_ast prog pretty level =
 		| ExpressionStatement (e) -> 
 			begin 
 				insert_tab(level);
-				print_expr level e;
+				print_expr level e ;
 			end
 		| AssignmentStatement (l)-> 
 			let proj1 = function (e1, e2) -> e1 in
@@ -372,15 +382,15 @@ let print_ast prog pretty level =
 			| [] -> ()
 			in
 			insert_tab(level);
-			list_printer e1s (print_expr level);
+			list_printer e1s (print_expr level );
 			print_string " = ";
-			list_printer e2s (print_expr level); 
+			list_printer e2s (print_expr level ); 
 		| TypeDeclBlockStatement (decl_list)-> print_type_decl level decl_list
 		| VarDeclBlockStatement (decl_list)->  print_var_decl (level) decl_list
 		| ShortVarDeclStatement(decl_list)->
 			begin
 				insert_tab(level);
-				print_short_var_decl level decl_list
+				print_short_var_decl level decl_list 
 			end
 		| PrintStatement (e_list)-> 
 			begin
@@ -395,7 +405,7 @@ let print_ast prog pretty level =
 				insert_tab(level);
 				print_string "println ";
 				print_string "(";
-				List.iter (fun x -> print_expr level x) e_list;
+				List.iter (fun x  -> print_expr level x) e_list;
 				print_string ")";
 			end
 		| IfStatement (s, e, s1_list, s2_list) ->
@@ -406,7 +416,7 @@ let print_ast prog pretty level =
 				| None -> ()
 				| Some s -> print_stmt_wrap level s);
 				print_string ";";
-				print_expr level e;
+				print_expr level e ;
 				print_string " { \n";
 				print_statement_list (level + 1) s1_list;
 				insert_tab(level);
@@ -444,7 +454,7 @@ let print_ast prog pretty level =
 						print_stmt_wrap level s_op;
 						print_string "; ";
 					end);
-				print_expr level e;
+				print_expr level e; 
 				print_string " { \n";
 				let print_case_list sl = 
 					(match sl with
