@@ -116,7 +116,7 @@ let weed_ast prog outchann =
 		let FunctionArg(id, ts) = arg in
 		visit_id id;
 		visit_type_spec ts linenum
-	and visit_expression e linenum = (*TODO check for lvalues*)
+	and visit_expression e linenum =
 		match e with
 		| IdExp(id) ->
 			visit_id id;
