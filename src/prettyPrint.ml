@@ -154,7 +154,8 @@ let print_ast prog pretty level =
 				print_string "*/\n"
 			end
 	in
-	let rec print_expr level (Expression(exp, gotype)) = match exp with
+	let rec print_expr level (Expression(exp, gotype)) = 
+		let () = (match exp with
 		| IdExp (i) -> print_identifier i
 		| LiteralExp (l) -> print_literal l
 		| UnaryExp (op, e) -> 
@@ -217,8 +218,8 @@ let print_ast prog pretty level =
 				print_expr level e ;
 				print_string ".";
 				print_identifier id;
-			end
-		print_gotype gotype;
+			end) in
+		print_gotype ! gotype;
 	in 
 	let print_func_arg level fa = match fa with
 		| FunctionArg (id,t) ->
