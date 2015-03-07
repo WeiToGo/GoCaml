@@ -418,7 +418,7 @@ castable_type:
   | INT_TYP { BasicType(IntType) }
   | FL_TYP { BasicType(FloatType) } 
   | RUNE_TYP { BasicType(RuneType) }
-  | BOOL_TYP { BasicType(StringType) } 
+  | BOOL_TYP { BasicType(BoolType) } 
  
 binary_exp:
   | e1 = expr; op = binary_op; e2 = expr { BinaryExp(op, e1, e2) }

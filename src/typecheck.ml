@@ -29,7 +29,7 @@ let prev_decl_msg scope id = match id with
 
 let assign_error_msg left_type right_type = 
   "Trying to assign value to type " ^ (string_of_type right_type) ^
-  " to a vairable of type " ^ (string_of_type left_type)
+  " to a variable of type " ^ (string_of_type left_type)
 
 (* --~~~~~~--*** Helper Functions ***--~~~~~~-- *)
 
@@ -256,11 +256,14 @@ let rec get_expression_type ctx e = match e with
   in
   ( match op with
     | BinOr | BinAnd -> 
-        get_bin_exp_type (fun x -> x == GoBool) "of type boolean" 
+        let _ = get_bin_exp_type (fun x -> x == GoBool) "of type boolean" in
+        GoBool
     | BinEq | BinNotEq -> 
-        get_bin_exp_type is_comparable "comparable"
+        let _ = get_bin_exp_type is_comparable "comparable" in
+        GoBool
     | BinLess | BinLessEq | BinGreater | BinGreaterEq ->
-        get_bin_exp_type is_ordered "ordered"
+        let _ = get_bin_exp_type is_ordered "ordered" in
+        GoBool
     | BinPlus -> 
         get_bin_exp_type is_num_string "numeric or string"
     | BinMinus | BinMult | BinDiv | BinMod ->
@@ -275,14 +278,14 @@ let rec get_expression_type ctx e = match e with
     | IdExp(BlankID) -> raise (TypeCheckError "Trying to read from BlankID") 
     | IdExp(id) -> 
       ( try 
-        ( match (resolve_to_base (lookup_id ctx id)) with 
+        ( match (lookup_id ctx id) with 
           | NewType(_) as t -> 
               let exp_to_cast = (match args_list with
               | [] -> raise (TypeCheckError "Typecast statement with empty argument")
               | a :: b :: t -> raise (TypeCheckError "Typecast statement with more that one argument")
               | h :: [] -> h ) 
               in
-              type_cast_custom_type ctx (Some id) t exp_to_cast
+              get_type_cast_exp_type ctx (Some id) t exp_to_cast
           | GoFunction(arg_types, ret)-> function_call_type ctx arg_types args_list ret
           | GoCustom(_) -> raise (InternalError "You should resolve custom types before matching")
           | _ -> raise (TypeCheckError ((string_of_id id) ^ "is not a function") ) )
@@ -292,7 +295,35 @@ let rec get_expression_type ctx e = match e with
         | _ -> raise (TypeCheckError "Only function expressions can be called.") )
     )
 
-| _ -> raise NotImplemented
+| AppendExp(id, exp) -> ( match (get_expression_type ctx (IdExp id)) with
+    | GoSlice(t) as gst ->
+      ( let exp_type = get_expression_type ctx exp in
+        if (get_expression_type ctx exp = t) then gst
+        else raise (TypeCheckError ("Cannot append expression of type " ^ (string_of_type exp_type) ^ 
+              " to slice of type " ^ (string_of_type gst ) ) ) ) 
+    | _ -> raise (TypeCheckError ((string_of_id id) ^ " is not of type slice")) )
+
+| IndexExp(lexp, ind_exp) -> 
+    let () = ( match get_expression_type ctx ind_exp with
+    | GoInt -> ()
+    | _ -> raise (TypeCheckError "Array index must be an integer") )
+    in
+    ( match (get_expression_type ctx lexp) with
+      | GoArray(_, t) -> t
+      | GoSlice(t) -> t
+      | _ -> raise (TypeCheckError "You can only index into arrays or structs")
+    ) 
+
+
+| SelectExp(exp, id) -> ( match resolve_to_base (get_expression_type ctx exp) with 
+    | GoStruct(fields) -> (
+        try StructFields.find (string_of_id id) fields
+        with Not_found -> 
+          raise (TypeCheckError ("This struct has no field named " ^
+              (string_of_id id) ) ) )
+    | _ -> raise (TypeCheckError "Trying to access field in non-struct expresison") )
+
+| TypeCastExp(ts, exp) -> get_type_cast_exp_type ctx None (gotype_of_typspec ctx ts) exp
 
 and function_call_type ctx arg_types args_list ret = 
   let rec aux l1 l2 = ( match l1, l2 with
@@ -311,7 +342,7 @@ and function_call_type ctx arg_types args_list ret =
   | None -> raise (TypeCheckError "Void function call used as a value")
   | Some(t) -> t )
 
-and type_cast_custom_type ctx id_op typ exp = 
+and get_type_cast_exp_type ctx id_op typ exp = 
   let exp_type = get_expression_type ctx exp in
   ( match (resolve_to_base exp_type) with
     | GoInt | GoFloat | GoBool | GoRune 
@@ -326,12 +357,6 @@ and type_cast_custom_type ctx id_op typ exp =
             | _ -> raise (TypeCheckError ("Casting to type " ^ (string_of_type t) ^ " is not supported")) )
         | _ -> raise (TypeCheckError ("Casting to type " ^ (string_of_type typ) ^ " is not supported")) )
     | _ -> raise (TypeCheckError ("Casting types of type "  ^ (string_of_type exp_type) ^ " is not supported")) )
-
-(* | AppendExp of (identifier * expression)
-| TypeCastExp of (type_spec * expression)
-| IndexExp of (expression * expression)
-| SelectExp of (expression * identifier) *)
-
 
 
 let gotype_of_function_sig ctx fsig = 
@@ -377,6 +402,9 @@ and tc_lined_top_decl ctx = function
         fprintf err_channel "Typing Error at line %d:\n" ln;
         fprintf err_channel "%s\n" s;
         raise Abort
+      | Not_found -> 
+        fprintf err_channel "Undeclared indentifier at line %d\n" ln;
+        raise Abort
 
 and tc_top_decl ln ctx = function
   | FunctionDecl(id, fsig, body) -> 
@@ -419,7 +447,7 @@ and tc_top_decl ln ctx = function
            | None, None -> ()
            | Some(e), None -> raise (StmtTypeCheckError ("Too many arguments to return", ln))
            | None, Some(t) -> raise (StmtTypeCheckError ("Not enough arguments to return", ln))
-           | Some(e1), Some(t) when get_expression_type body_scope e1 == t -> ()
+           | Some(e1), Some(t) when (get_expression_type body_scope e1 = t) -> ()
            | Some(e1), Some(t) -> 
               raise 
                 (StmtTypeCheckError
@@ -476,9 +504,13 @@ and tc_expression ctx node = let _ = get_expression_type ctx node in ()
 and tc_statement ctx = function
   | LinedStatement(ln, s) -> 
       ( try tc_plain_statement ln ctx s
-        with TypeCheckError s ->
+        with 
+        | TypeCheckError s ->
           fprintf err_channel "Typing Error at line %d:\n" ln;
           fprintf err_channel "%s\n" s;
+          raise Abort 
+        | Not_found -> 
+          fprintf err_channel "Undeclared indentifier at line %d\n" ln;
           raise Abort )
 and tc_plain_statement ln ctx = function
   | EmptyStatement -> ()
