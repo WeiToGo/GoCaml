@@ -1,6 +1,6 @@
 package main
 
 type x string
-type (
+var (
 	x, y int
 )

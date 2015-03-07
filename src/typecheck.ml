@@ -289,7 +289,7 @@ let rec get_expression_type ctx e = match e with
           | GoFunction(arg_types, ret)-> function_call_type ctx arg_types args_list ret
           | GoCustom(_) -> raise (InternalError "You should resolve custom types before matching")
           | _ -> raise (TypeCheckError ((string_of_id id) ^ "is not a function") ) )
-       with Not_found -> raise (TypeCheckError ("Functino " ^ (string_of_id id) ^ " not defined.")) )
+       with Not_found -> raise (TypeCheckError ("Functioon " ^ (string_of_id id) ^ " not defined.")) )
     | _ as exp -> ( match get_expression_type ctx exp with
         | GoFunction(arg_types, ret) -> function_call_type ctx arg_types args_list ret
         | _ -> raise (TypeCheckError "Only function expressions can be called.") )
