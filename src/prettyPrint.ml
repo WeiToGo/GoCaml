@@ -3,6 +3,7 @@ open Ast
 
 
 let print_ast prog pretty level = 
+	let () = print_string "Running pretty printer..." in
 	let Program(pack,ldl) = prog in
 	let outfile = open_out pretty in 
 	let print_string = fun s -> output_string outfile s in
@@ -146,12 +147,15 @@ let print_ast prog pretty level =
 		| CustomType (id) -> print_identifier id
 	in
 	let print_gotype gotype = match gotype with 
-		| None ->()
+		| None ->
+			begin
+				print_string "/* None */";
+			end
 		| Some gotype -> 
 			begin
-				print_string "/* type: ";
+				print_string "/* ";
 				print_string (Symtable.string_of_type gotype);
-				print_string "*/\n"
+				print_string " */ "
 			end
 	in
 	let rec print_expr level (Expression(exp, gotype)) = 
