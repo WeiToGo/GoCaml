@@ -208,7 +208,9 @@ let merge_type t1 t2 =
               ( "Unequal types in binary expressions:  " ^ (string_of_type t1) ^
                 " and " ^ (string_of_type t2) ) ) 
 
-let rec get_expression_type ctx e = match e with
+let rec get_expression_type ctx expression =
+let Expression(e, _) = expression in
+match e with
 | IdExp(id) -> 
   ( try lookup_id ctx id
     with Not_found -> 
@@ -273,9 +275,10 @@ let rec get_expression_type ctx e = match e with
     | BinBitAndNot | BinBitXor -> 
         get_bin_exp_type is_numeric "numeric"
   )     
-| FunctionCallExp (caller, args_list) -> ( 
+| FunctionCallExp (expr, args_list) -> ( 
 
     (* Careful - this can be a type cast expression *)
+	let Expression(caller, _) = expr in
     match caller with  
     | IdExp(BlankID) -> raise (TypeCheckError "Trying to read from BlankID") 
     | IdExp(id) -> 
@@ -292,12 +295,12 @@ let rec get_expression_type ctx e = match e with
           | GoCustom(_) -> raise (InternalError "You should resolve custom types before matching")
           | _ -> raise (TypeCheckError ((string_of_id id) ^ "is not a function") ) )
        with Not_found -> raise (TypeCheckError ("Functioon " ^ (string_of_id id) ^ " not defined.")) )
-    | _ as exp -> ( match get_expression_type ctx exp with
+    | _ -> ( match get_expression_type ctx expr with
         | GoFunction(arg_types, ret) -> function_call_type ctx arg_types args_list ret
         | _ -> raise (TypeCheckError "Only function expressions can be called.") )
     )
 
-| AppendExp(id, exp) -> ( match (get_expression_type ctx (IdExp id)) with
+| AppendExp(id, exp) -> ( match (get_expression_type ctx (Expression((IdExp id), ref None)) ) with
     | GoSlice(t) as gst ->
       ( let exp_type = get_expression_type ctx exp in
         if (get_expression_type ctx exp = t) then gst
@@ -372,7 +375,7 @@ let gotype_of_function_sig ctx fsig =
 
  
 let is_void_function_call ctx exp = match exp with
-| FunctionCallExp(IdExp(id), args) -> 
+| FunctionCallExp(Expression(IdExp(id), _), args) -> 
   ( match lookup_id ctx id with
     | GoFunction(arg_types, None) -> true
     | _ -> false )
@@ -520,9 +523,10 @@ and tc_plain_statement ln ctx = function
   | EmptyStatement -> ()
   | BreakStatement -> ()
   | ContinueStatement -> ()
-  | ExpressionStatement e -> 
+  | ExpressionStatement expression ->
+		let Expression(e, _) = expression in 
       (* Check for a void function first *)
-      (try tc_expression ctx e with
+      (try tc_expression ctx expression with
        | VoidFunctionCall s -> if (is_void_function_call ctx e) then () else 
             raise (TypeCheckError s) )
   | ReturnStatement(Some(e)) -> tc_expression ctx e

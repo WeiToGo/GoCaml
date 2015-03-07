@@ -160,7 +160,8 @@ let weed_ast prog outchann =
 		let FunctionArg(id, ts) = arg in
 		visit_id id;
 		visit_type_spec ts linenum
-	and visit_expression e linenum =
+	and visit_expression expr linenum =
+		let Expression(e, _) = expr in
 		match e with
 		| IdExp(id) ->
 			visit_id id;
