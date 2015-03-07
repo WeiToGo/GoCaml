@@ -1,7 +1,8 @@
 package main
 
 func if_stmts() {
-	if  x:= 2 {
+	var x = 3.5
+	if  x {
 		print(x)
 	} else {
 		print(x+1)

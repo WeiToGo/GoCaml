@@ -5,7 +5,6 @@ func printing(){
 		x float64 
 	}
 	var z t4
-	z.x = 5
-	println(z.x)
+	println(z)
 
 }

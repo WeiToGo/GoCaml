@@ -1,73 +1,77 @@
 Type checking errors in invalid test files explained:
 
-append1.go : id is not of type Slice
-append2.go : expr is not type T
-assign_stmt1.go : assign wrong type to struct field 
-assign_stmt2.go : assign wrong type to int
-binary_exp1.go : '||' arg2 not bool
-binary_exp2.go : '&&' arg1 not bool
-binary_exp3.go : '==' arg1, arg2 not the same type of comparable type
-binary_exp4.go : '!=' arg1, arg2 not the same type of comparable type
-binary_exp5.go: '<' arg1 not ordered
-binary_exp6.go: '<=' arg1, arg2 not the same type of ordered type
-binary_exp7.go : '>' arg2 not  ordered
-binary_exp8.go: '>=' arg1, arg2 not the same type of ordered type
-binary_exp9.go: '+' args not string or num
-binary_exp10.go: '-' arg1 not numeric
-binary_exp11.go: '*' arg2 not numeric
-binary_exp12.go: '|' arg1 not integer
-binary_exp13.go: '&' arg2 not integer
-block.go : statement ill-typed
-field_selection1.go : expr is not of type Struct
-field_selection2.go : id is not a field in struct S
-for_loop1.go : statement doesn't type check
-for_loop2.go :  expression not type bool
-for_loop3.go : init ill-typed
-for_loop4.go : increment expression ill-typed
-func_call1.go : wrong arg type
-func_call2.go : too many arguments
-func_decl1.go : extra return value
-func_decl2.go : duplicate function argument
-func_decl3.go : variable already declared
-func_decl4.go : missing return value
-func_decl5.go : statement ill-typed
-if_stmt1.go : init ill-typed
-if_stmt2.go : expression not bool
-if_stmt3.go : statement body has the wron type of x
-if_stmt4.go : expression in 'else' not bool
-if_stmt5.go : statement body in 'else if' has wrong type
-if_stmt6.go : statement body in 'else' doesn't type check
-indexing1.go : expr is not of type Slice or Array
-indexing2.go : index is not int
-op_assignment1.go : '+=' expr of left ill-typed
-op_assignment2.go : '&=' expr on left ill-typed
-op_assignment3.go : '/=' expr on right ill-typed
-op_assignment4.go : '<<=' expr on left is blank_id
-op_assignment5.go : '%=' expressions on both side not the same type
-op_assignment6.go : '&^=' expressions on both side not the same type
-print1.go : can't print struct field
-print2.go : one of the expression ill-typed
-println.go : expression ill-typed
-return_stmt1.go : return value not the same as expected
-return_stmt2.go : return value ill-typed
-short_var_decl1.go : ill-typed value on right hand side
-short_var_decl2.go : no new variable on left hand side
-short_var_decl3.go : try assigning a variable to a different type
-switch1.go : init does not type check
-switch2.go : expr not well typed
-switch3.go : case e1, e2 not bool
-switch4.go : case e1, e2 not well-typed
-switch5.go : case e1, e2 well-typed but not the same type then expr
-switch6.go : statement not well typed
-type_cast1.go : type is not any of the four allowed (nor their aliases)
-type_cast2.go : expr is ill-typed
-type_cast3.go : expr well-typed but if type not allowed
-type_decl1.go : need type cast
-type_decl2.go : type already declared in current scope
-unary_exp1.go : expression not numeric after unary '+' 
-unary_exp2.go : expression not numeric after unary '-' 
-unary_exp3.go : expression not bool after logical negation
-unary_exp4.go : expression not numerical after bitwise negation
-var_decl1.go : expression is not of type T 
-var_decl2.go : expressions on right side not well-typed
-var_decl3.go : variable already declared in the current scope
+-append1.go : id is not of type Slice
+-append2.go : expr is not type T
+-assign_stmt1.go : assign wrong type to struct field  
+-assign_stmt2.go : assign wrong type to int
+-binary_exp1.go : '||' arg2 not bool
+-binary_exp2.go : '&&' arg1 not bool
+-binary_exp3.go : '==' arg1, arg2 not the same type of comparable type
+-binary_exp4.go : '!=' arg1, arg2 not the same type of comparable type
+-binary_exp5.go: '<' arg1 not ordered
+-binary_exp6.go: '<=' arg1, arg2 not the same type of ordered type
+-binary_exp7.go : '>' arg2 not  ordered
+-binary_exp8.go: '>=' arg1, arg2 not the same type of ordered type
+-binary_exp9.go: '+' args not string or num
+-binary_exp10.go: '-' arg1 not numeric
+-binary_exp11.go: '*' arg2 not numeric
+-binary_exp12.go: '|' arg1 not integer
+-binary_exp13.go: '&' arg2 not integer
+-block.go : statement ill-typed
+-field_selection1.go : expr is not of type Struct
+-field_selection2.go : id is not a field in struct S 
+-for_loop1.go : statement doesn't type check
+-for_loop2.go :  expression not type bool
+-for_loop3.go : init ill-typed
+-for_loop4.go : increment expression ill-typed
+
+func_call1.go : wrong arg type ##
+func_call2.go : too many arguments  ##
+
+-func_decl1.go : extra return value
+
+func_decl2.go : duplicate function argument ##
+
+-func_decl3.go : variable already declared
+-func_decl4.go : missing return value
+-func_decl5.go : statement ill-typed
+-if_stmt1.go : init ill-typed
+-if_stmt2.go : expression not bool 
+-if_stmt3.go : statement body has the wrong type of x
+-if_stmt4.go : expression in 'else' not bool
+-if_stmt5.go : statement body in 'else if' has wrong type
+-if_stmt6.go : statement body in 'else' doesn't type check ##
+-indexing1.go : expr is not of type Slice or Array
+-indexing2.go : index is not int
+-op_assignment1.go : '+=' expr of left ill-typed
+-op_assignment2.go : '&=' expr on left ill-typed
+-op_assignment3.go : '/=' expr on both
+-op_assignment4.go : '<<=' expr on left is blank_id
+-op_assignment5.go : '%=' expressions on both side not the same type
+-op_assignment6.go : '&^=' expressions on both side not the same type
+-print1.go : can't print struct field
+-print2.go : one of the expression ill-typed
+-println.go : expression ill-typed
+-return_stmt1.go : return value not the same as expected
+-return_stmt2.go : return value ill-typed
+-short_var_decl1.go : ill-typed value on right hand side
+-short_var_decl2.go : no new variable on left hand side
+-short_var_decl3.go : try assigning a variable to a different type
+-switch1.go : init does not type check
+-switch2.go : expr not well typed
+-switch3.go : case e1, e2 not bool
+-switch4.go : case e1, e2 not well-typed
+-switch5.go : case e1, e2 well-typed but not the same type then expr
+-switch6.go : statement not well typed
+-type_cast1.go : type is not any of the four allowed (nor their aliases)
+-type_cast2.go : expr is ill-typed
+-type_cast3.go : expr well-typed but if type not allowed
+-type_decl1.go : need type cast
+-type_decl2.go : type already declared in current scope  
+-unary_exp1.go : expression not numeric after unary '+' 
+-unary_exp2.go : expression not numeric after unary '-' 
+-unary_exp3.go : expression not bool after logical negation 
+-unary_exp4.go : expression not numerical after bitwise negation
+-var_decl1.go : expression is not of type T 
+-var_decl2.go : expressions on right side not well-typed
+-var_decl3.go : variable already declared in the current scope

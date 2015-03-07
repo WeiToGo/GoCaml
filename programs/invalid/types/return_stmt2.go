@@ -1,5 +1,5 @@
 package main
 
 func foo()rune {
-	return 'rune'
+	return ("str"%4.5)
 }

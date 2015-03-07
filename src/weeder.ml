@@ -1,8 +1,6 @@
 open Ast
 open Printf
 
-exception NotImplemented
-
 let rec check_return_statements stmt_list = 
 	let rec has_return (LinedStatement(_, plain_stmt)) = match plain_stmt with
 	| EmptyStatement | ExpressionStatement(_) | AssignmentStatement(_)
