@@ -1,3 +1,5 @@
+append1.go : id is not of type Slice
+append2.go : expr is not type T
 assign_stmt1.go : assign wrong type to struct field 
 assign_stmt2.go : assign wrong type to int
 binary_exp1.go : '||' arg2 not bool
@@ -13,6 +15,9 @@ binary_exp10.go: '-' arg1 not numeric
 binary_exp11.go: '*' arg2 not numeric
 binary_exp12.go: '|' arg1 not integer
 binary_exp13.go: '&' arg2 not integer
+block.go : statement ill-typed
+field_selection1.go : expr is not of type Struct
+field_selection2.go : id is not a field in struct S
 for_loop1.go : statement doesn't type check
 for_loop2.go :  expression not type bool
 for_loop3.go : init ill-typed
@@ -30,6 +35,8 @@ if_stmt3.go : statement body has the wron type of x
 if_stmt4.go : expression in 'else' not bool
 if_stmt5.go : statement body in 'else if' has wrong type
 if_stmt6.go : statement body in 'else' doesn't type check
+indexing1.go : expr is not of type Slice or Array
+indexing2.go : index is not int
 print1.go : can't print struct field
 print2.go : one of the expression ill-typed
 println.go : expression ill-typed
@@ -44,6 +51,9 @@ switch3.go : case e1, e2 not bool
 switch4.go : case e1, e2 not well-typed
 switch5.go : case e1, e2 well-typed but not the same type then expr
 switch6.go : statement not well typed
+type_cast1.go : type is not any of the four allowed (nor their aliases)
+type_cast2.go : expr is ill-typed
+type_cast3.go : expr well-typed but if type not allowed
 type_decl1.go : need type cast
 type_decl2.go : type already declared in current scope
 unary_exp1.go : expression not numeric after unary '+' 
