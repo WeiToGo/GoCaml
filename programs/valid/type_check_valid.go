@@ -1,4 +1,5 @@
 /* Type declarations */
+package main 
 
 type point struct {
 	x,y float64
@@ -10,13 +11,14 @@ type g point
 
 var a float64 = (3.0*4/5.3)
 var b int = 3
-var c, d rune = 'str1', 'str2'
-var {
-	x1, x2 rune = `str`, 'r1'
+var c, d rune = 't', 's'
+
+var (
+	x1, x2 rune = `str`, 'r'
 	y1, y2 string = `raw`, "str" 
 	z int = (4+5)/6.0	
 	x1 string
-}
+)
 
 
 // type declarations:
@@ -64,19 +66,19 @@ func short_decl() {
 	a, b := 0, 1
 }
 
-// declaration
 
 // assignment
 func assign_stmts() {
 	var a,b int;
 	var c [2]string
-	var point struct { x float64 }
+	var point struct { 
+		x float64 
+	}
 	a, b = 0, 1
 	c[0], point.x = "hi", 3.1415; 
 }
 
 
-// op-assignment
 
 // block
 
@@ -94,7 +96,7 @@ func block() {
 // print/println
 
 func printing(){
-	a, b, c := "str1", 'rune1', 14
+	a, b, c := "str1", 'r', 14
 	print(4+(5*6)/2)
 	println(a,b,c)
 
@@ -162,17 +164,19 @@ func for_stmts() {
 // identifiers
 
 // unary expression
-+(5)
-+(46.5/8.0)
-+('r')
--(5)
--(46.5/8.0)
--('r')
-!((34<=32) && (4.6>=23.4) )
-!(34 != 5)
-!((4<5) || (5.7 > 4.6))
-^(45)
-^('r')
+func unary(){
+	var a = +(5)
+	a = +(46.5/8.0)
+	a = +('r')
+	a = -(5)
+	a = -(46.5/8.0)
+	a = -('r')
+	a = !((34<=32) && (4.6>=23.4) )
+	a = !(34 != 5)
+	a = !((4<5) || (5.7 > 4.6))
+	a = ^(45)
+	a = ^('r')
+}
 
 // binary expression
 
