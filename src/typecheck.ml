@@ -426,7 +426,9 @@ and tc_top_decl ln ctx = function
         let _ = 
           List.map 
             (fun (FunctionArg(id, ts)) -> 
-              add_id body_scope id (gotype_of_typspec ctx ts) ln )
+              if id_in_current_scope body_scope id then
+                raise (VariableRedeclaration ("Redeclaration of " ^ ((string_of_id id) ^ " in function arguments at line " ^ (string_of_int ln ))))
+              else add_id body_scope id (gotype_of_typspec ctx ts) ln )
             fargs
         in    
         let () = List.iter (tc_statement body_scope) body in
