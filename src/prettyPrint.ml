@@ -468,7 +468,7 @@ let print_ast prog pretty level =
 				insert_tab(level);
 				print_string "}";
 			end
-		| ForStatement (s1_op,e,s2_op,stmt_list)->
+		| ForStatement (s1_op,e_op,s2_op,stmt_list)->
 			begin
 				insert_tab(level);
 				print_string "for ";
@@ -477,7 +477,9 @@ let print_ast prog pretty level =
 				| Some s1_op -> 
 					print_stmt_wrap level s1_op);
 				print_string "; ";
-				print_expr level e;
+				match e_op with
+				| None -> ()
+				| Some(e) -> print_expr level e;
 				print_string "; ";
 				(match s2_op with
 				| None ->()

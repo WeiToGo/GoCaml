@@ -568,15 +568,19 @@ and tc_plain_statement ln ctx = function
       | _ -> raise (TypeCheckError "You can only print basic types") )
       in
       List.iter valid_print_type exp_list
-  | ForStatement (s1, cond, s2, stmt_list) -> 
+  | ForStatement (s1, cond_op, s2, stmt_list) -> 
       let init_scope = open_scope ctx in
       let () = match s1 with
       | None -> ()
       | Some(s) -> tc_statement init_scope s
       in
-      let () = match (get_expression_type init_scope cond) with
-      | GoBool -> ()
-      | _ -> raise (TypeCheckError "for loop condition type must be bool")
+      let () = ( match cond_op with
+      | Some(cond) ->
+        ( match (get_expression_type init_scope cond) with
+          | GoBool -> ()
+          | _ -> raise (TypeCheckError "for loop condition type must be bool")
+        )
+      | None -> () ) 
       in
       let () = match s2 with
       | None -> ()

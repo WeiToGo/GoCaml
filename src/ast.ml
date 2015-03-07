@@ -82,7 +82,7 @@ and plain_statement =
     | IfStatement of ((statement option) * expression * (statement list) * ((statement list ) option))
     | ReturnStatement of (expression option)
     | SwitchStatement of ((statement option) * expression * (switch_case list))
-    | ForStatement of ((statement option) * expression * (statement option) * (statement list)) 
+    | ForStatement of ((statement option) * expression option * (statement option) * (statement list)) 
           (* ForStamenet(init statement, condition (*true by default*), post statement, loop body *)
     | BreakStatement
     | ContinueStatement 
