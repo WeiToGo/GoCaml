@@ -633,12 +633,9 @@ and tc_plain_statement ln ctx = function
                   " does not match switch condition type " ^ (string_of_type switch_cond_type) ) ) )
             exp_list
           in
-          List.iter 
-            (fun x -> 
-              let case_scope = open_scope par_ctx in
-              let () = tc_statement case_scope x in
-              close_scope case_scope; )
-              stmt_list;
+          let case_scope = open_scope par_ctx in
+          let () = List.iter (tc_statement case_scope) stmt_list in
+          close_scope case_scope
       | DefaultCase(stmt_list) -> 
           let case_scope = open_scope par_ctx in
           let () = List.iter (tc_statement case_scope) stmt_list in
