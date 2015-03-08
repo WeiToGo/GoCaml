@@ -3,8 +3,8 @@ open Printf
 
 (* globals *)
 
-let out_channel = stdout
-let err_channel = stderr
+let out_channel  = ref stdout
+let err_channel = ref stderr
 
 let dumpsymtab = ref true
 
@@ -89,10 +89,10 @@ and string_of_args_list args = match args with
 
 let print_entry key entry = 
   let Entry(id_name, typ, _, ln) = entry in
-  fprintf out_channel "%s" id_name;
-  fprintf out_channel " -> ";
-  fprintf out_channel "%s (line %s)" (string_of_type typ) (string_of_int ln);
-  fprintf out_channel "\n";
+  fprintf (! out_channel)  "%s" id_name;
+  fprintf (! out_channel)  " -> ";
+  fprintf (! out_channel)  "%s (line %s)" (string_of_type typ) (string_of_int ln);
+  fprintf (! out_channel)  "\n";
   ()
 
 (* Prints all the entries in scope. Does not print parent scopes *)
@@ -128,9 +128,9 @@ let open_scope parent_scope =
    Returns unit *)
 let close_scope scope = 
   if ! dumpsymtab then
-    ( fprintf out_channel "---- Exiting scope (level %d) --- \n" (scope_level scope);
+    ( fprintf (! out_channel)  "---- Exiting scope (level %d) --- \n" (scope_level scope);
       print_sym_table scope;
-      fprintf out_channel "----------------------\n";
+      fprintf (! out_channel)  "----------------------\n";
       )
   else ()
 

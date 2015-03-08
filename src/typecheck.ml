@@ -4,8 +4,8 @@ open Symtable
 
 (* globals *)
 
-let out_channel = stdout
-let err_channel = stderr
+let out_channel = ref stdout
+let err_channel = ref stderr
 
 (* --~~~~~~--*** Exceptions ***--~~~~~~-- *)
 
@@ -388,15 +388,15 @@ and tc_lined_top_decl ctx = function
       try tc_top_decl ln ctx tdcl
       with 
       | TypeCheckError s ->
-        fprintf err_channel "Typing Error at line %d:\n" ln;
-        fprintf err_channel "%s\n" s;
+        fprintf (! err_channel) "Typing Error at line %d:\n" ln;
+        fprintf (! err_channel) "%s\n" s;
         raise Abort
       | StmtTypeCheckError (s, ln) ->
-        fprintf err_channel "Typing Error at line %d:\n" ln;
-        fprintf err_channel "%s\n" s;
+        fprintf (! err_channel) "Typing Error at line %d:\n" ln;
+        fprintf (! err_channel) "%s\n" s;
         raise Abort
       | Not_found -> 
-        fprintf err_channel "Undeclared indentifier at line %d\n" ln;
+        fprintf (! err_channel) "Undeclared indentifier at line %d\n" ln;
         raise Abort
 
 and tc_top_decl ln ctx = function
@@ -501,11 +501,11 @@ and tc_statement ctx = function
       ( try tc_plain_statement ln ctx s
         with 
         | TypeCheckError s ->
-          fprintf err_channel "Typing Error at line %d:\n" ln;
-          fprintf err_channel "%s\n" s;
+          fprintf (! err_channel) "Typing Error at line %d:\n" ln;
+          fprintf (! err_channel) "%s\n" s;
           raise Abort 
         | Not_found -> 
-          fprintf err_channel "Undeclared indentifier at line %d\n" ln;
+          fprintf (! err_channel) "Undeclared indentifier at line %d\n" ln;
           raise Abort )
 and tc_plain_statement ln ctx = function
   | EmptyStatement -> ()

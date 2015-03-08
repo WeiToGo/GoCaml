@@ -52,7 +52,10 @@ let in_file_name = Sys.argv.(3)
 let file_basename = String.sub in_file_name 0 ((String.length in_file_name) - 3) 
 
 let pretty_file_name = file_basename ^ ".pretty.go"
-let symtab_file_name = file_basename ^ ".symtab"
+let symtab_file_name = file_basename ^ ".symtab" ;;
+
+let sym_out = open_out symtab_file_name  ;;
+let () = Symtable.out_channel := sym_out
 
 let inp = open_in in_file_name 
 let filebuf = Lexing.from_channel inp 
@@ -69,6 +72,8 @@ let () = Typecheck.build_symbol_table ast;;
 let () = if pptype = "t" then
   print_ast ast pretty_file_name 0
 ;;
+
+let () = close_out sym_out ;; 
 
 
 (* let out_channel = open_out "lexer_stream.out" in 
