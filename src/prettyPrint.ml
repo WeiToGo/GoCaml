@@ -3,7 +3,6 @@ open Ast
 
 
 let print_ast prog pretty level = 
-	let () = print_string "Running pretty printer..." in
 	let Program(pack,ldl) = prog in
 	let outfile = open_out pretty in 
 	let print_string = fun s -> output_string outfile s in

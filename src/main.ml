@@ -56,6 +56,11 @@ let filebuf = Lexing.from_channel inp
 let ast = build_ast in_file_name
 ;;
 
+Array.iter (fun x -> if x = "-dumpsymtab" 
+              then Symtable.dumpsymtab := true 
+              else Symtable.dumpsymtab := false) Sys.argv ;;
+
+
 let _ = Typecheck.build_symbol_table ast in
 let () = print_ast ast pretty_file_name 0 in
 ()

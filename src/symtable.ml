@@ -6,9 +6,9 @@ open Printf
 let out_channel = stdout
 let err_channel = stderr
 
-let dumpsymtab = true
+let dumpsymtab = ref true
 
-let dumpsymtab_all = true
+let dumpsymtab_all = ref true
 
 module StructFields = Map.Make(String)
 
@@ -88,10 +88,10 @@ and string_of_args_list args = match args with
 
 
 let print_entry key entry = 
-  let Entry(id_name, typ, _, _) = entry in
+  let Entry(id_name, typ, _, ln) = entry in
   fprintf out_channel "%s" id_name;
   fprintf out_channel " -> ";
-  fprintf out_channel "%s" (string_of_type typ);
+  fprintf out_channel "%s (line %s)" (string_of_type typ) (string_of_int ln);
   fprintf out_channel "\n";
   ()
 
@@ -110,6 +110,15 @@ let add_sym scope symbol typ ln =
   let () = Hashtbl.replace hashmap symbol entry in
   entry
 
+(* What level are you in? (inefficient implementation) *)
+let scope_level scope = 
+  let rec aux scope depth = match scope with
+  | Scope(Some(par), _) -> aux par (depth + 1)
+  | Scope(None, _) -> depth
+  in
+  aux scope 0 
+
+
 (* Opens a new scope with given parent. *)
 let open_scope parent_scope = 
   let new_scope = Scope(Some parent_scope, Hashtbl.create 1024) in
@@ -118,12 +127,13 @@ let open_scope parent_scope =
 (* Closes scope. It only involves printing out the symbol table if proper flags are set.
    Returns unit *)
 let close_scope scope = 
-  if dumpsymtab then
-    ( fprintf out_channel "##### Exiting scope #####\n";
+  if ! dumpsymtab then
+    ( fprintf out_channel "---- Exiting scope (level %d) --- \n" (scope_level scope);
       print_sym_table scope;
-      fprintf out_channel "##### End of scope #####\n";
+      fprintf out_channel "----------------------\n";
       )
   else ()
+
 
 (* Returns the initial global scope with true and false pre-declared *)
 let initial_scope () = 

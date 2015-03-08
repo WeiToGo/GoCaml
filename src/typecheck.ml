@@ -511,16 +511,20 @@ and tc_plain_statement ln ctx = function
   | EmptyStatement -> ()
   | BreakStatement -> ()
   | ContinueStatement -> ()
+
   | ExpressionStatement expression ->
     let Expression(e, _) = expression in 
-      (* Check for a void function first *)
       (try tc_expression ctx expression with
        | VoidFunctionCall s -> if (is_void_function_call ctx e) then () else 
             raise (TypeCheckError s) )
+
   | ReturnStatement(Some(e)) -> tc_expression ctx e
   | ReturnStatement(None) -> ()
+
   | VarDeclBlockStatement mvd_list -> List.iter (tc_multiple_var_declaration ln ctx) mvd_list
+
   | TypeDeclBlockStatement std_list -> List.iter (tc_type_declaration ln ctx) std_list
+
   | ShortVarDeclStatement svd_list -> 
       let exps = List.map (fun (ShortVarDecl(_, exp)) -> exp) svd_list in
       let () = List.iter (tc_expression ctx) exps in
@@ -539,6 +543,7 @@ and tc_plain_statement ln ctx = function
           if (cur_type == rhs_type) then ()
           else raise (TypeCheckError (assign_error_msg cur_type rhs_type) )
       in List.iter check_svd svd_list
+
   | BlockStatement stmt_list -> 
       let block_scope = open_scope ctx in
       let () = List.iter (tc_statement block_scope) stmt_list in
@@ -565,6 +570,7 @@ and tc_plain_statement ln ctx = function
       | _ -> raise (TypeCheckError "You can only print basic types") )
       in
       List.iter valid_print_type exp_list
+
   | ForStatement (s1, cond_op, s2, stmt_list) -> 
       let init_scope = open_scope ctx in
       let () = match s1 with
@@ -587,6 +593,7 @@ and tc_plain_statement ln ctx = function
       let () = List.iter (tc_statement body_scope) stmt_list in
       let () = close_scope body_scope in
       close_scope init_scope
+
   | IfStatement (init, exp, then_list, else_list) -> 
       let init_scope = open_scope ctx in
       let () = match init with
@@ -607,6 +614,7 @@ and tc_plain_statement ln ctx = function
           let () = List.iter (tc_statement else_scope) stmt_list in
           close_scope else_scope
       in close_scope init_scope
+
   | SwitchStatement (init, exp, case_list) -> 
       let init_scope = open_scope ctx in
       let () = match init with
@@ -637,5 +645,7 @@ and tc_plain_statement ln ctx = function
       close_scope init_scope
 
 let build_symbol_table ast =
-  let global_scope = initial_scope ()
-  in tc_program global_scope ast
+  let global_scope = initial_scope () in
+  let () = tc_program global_scope ast in 
+  close_scope global_scope
+
