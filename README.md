@@ -10,8 +10,7 @@ cs520: Group 9
 ## How to run code 
     make clean
     make
-    ./main.native <your golite file path> 
+    ./run.sh <FLAG1> <FLAG2> <FILENAME>
 
-## Running tests
-You can run the unittests using `make test` command.
+    (where FLAG1 and FLAG2 are -pptype and/or -dumpsymtab in any order)
 
