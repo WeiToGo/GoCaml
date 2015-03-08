@@ -13,7 +13,6 @@ if [ "$arg1" = "-pptype" ]; then
 		arg2=$2
 	fi
 	if [ "$arg2" = "-dumpsymtab" ]; then
-		./main.byte 
 		if [ $# -lt 3 ]; then
 			echo "Not enough arguments, needs 3"
 		else 
