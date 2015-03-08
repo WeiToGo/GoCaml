@@ -3,65 +3,75 @@
   open Parser
 
   exception Error of string
+  exception NotSupportedInGoLite
 
   (* Hah sneaking in a reference variable here. Not so pure are we. *)
   let last_token: (token option ref) = ref None
+
+  let needs_semicolon last_token = match last_token with
+  | Some(BREAK)
+  | Some(TID _)
+  | Some(TBLANKID)
+  | Some(TINC) | Some(TDECR)
+  | Some(RETURN) | Some(CONT)
+  | Some(DEC_INT(_)) | Some(HEX_INT(_)) | Some(OCTAL_INT(_))
+  | Some(FLOAT64(_))
+  | Some(TRUNE(_)) | Some(TRWSTR(_)) | Some(TSTR(_))
+  | Some(TRBR) | Some(TRPAR) | Some(TRCUR)
+  | Some(INT_TYP) | Some(FL_TYP) | Some(BOOL_TYP) | Some(RUNE_TYP) | Some(STR_TYP)
+    -> true
+  | _ -> false 
 
 }
 
 let white = [' ' '\t']+
 let newline = '\r' | '\n' | "\r\n"
-let letter = ['A'-'Z' 'a'-'z' '_']
+let letter = ['A'-'Z' 'a'-'z']
+let uscore = '_'
 let digit = ['0'-'9']
 let decimal_digit = ['0'-'9'] 
 let nz_digit = ['1'-'9']  (* Non-zero digit *) 
 let octal_digit = ['0' - '7']
 let hex_digit = ['0'-'9' 'A'-'F' 'a'-'f']
 let character = ['A'-'Z' 'a'-'z' '_' '0'-'9' ' ' '\t']
+let a = [^ '*' '/']
 
 
 (* operators + delimeters *)
 rule scan last_token = parse
 
-  (* Whitespace and comments *)  | white         { scan last_token lexbuf }
+  (* Whitespace and comments *)  
+  | white         { scan last_token lexbuf }
 
-  | newline       { Lexing.new_line lexbuf; match last_token with
-                    | Some(BREAK)
-                    | Some(ID _)
-                    | Some(TINC) | Some(TDECR)
-                    | Some(FALLTHROUGH) | Some(RETURN) | Some(CONT)
-                    | Some(DEC_INT(_)) | Some(HEX_INT(_)) | Some(OCTAL_INT(_))
-                    | Some(TRUNE(_)) | Some(TRWSTR(_)) | Some(TSTR(_))
-                    | Some(TRBR) | Some(TRPAR) | Some(TRCUR)
-                    | Some(INT_TYP) | Some(FL_TYP) | Some(BOOL_TYP) | Some(RUNE_TYP) | Some(STR_TYP)
-                      -> TSEMCOL
-                    | _ -> scan None lexbuf 
+  | newline       { Lexing.new_line lexbuf;
+                    if (needs_semicolon last_token) then TSEMCOL
+                    else scan None lexbuf
                   } 
   | "//" [^ '\n']* { scan last_token lexbuf }
-  | "/*" _* "*/"   { scan last_token lexbuf }
+  | "/*" { read_comment last_token lexbuf }
 
   (* Keywords *)
   | "break"       { BREAK }
   | "case"        { CASE }
-  | "chan"        { CHAN }
-  | "const"       { CONST }
+  | "chan"        { raise NotSupportedInGoLite }
+  | "const"       { raise NotSupportedInGoLite }
   | "continue"    { CONT }
   | "default"     { DEFAULT }
-  | "defer"       { DEFER }
+  | "defer"       { raise NotSupportedInGoLite }
   | "else"        { ELSE }
-  | "fallthrough" { FALLTHROUGH }
+  | "fallthrough" { raise NotSupportedInGoLite }
   | "for"         { FOR }
   | "func"        { FUNC }
-  | "go"          { GO }
-  | "goto"        { GOTO }
+  | "go"          { raise NotSupportedInGoLite }
+  | "goto"        { raise NotSupportedInGoLite }
   | "if"          { IF }
-  | "import"      { IMPORT }
-  | "interface"   { INTERFACE }
-  | "map"         { MAP }
+  | "import"      { raise NotSupportedInGoLite }
+  | "interface"   { raise NotSupportedInGoLite }
+  | "map"         { raise NotSupportedInGoLite }
   | "package"     { PACKAGE }
-  | "range"       { RANGE }
+  | "range"       { raise NotSupportedInGoLite }
   | "return"      { RETURN }
-  | "select"      { SELECT }
+  | "select"      { raise NotSupportedInGoLite }
   | "struct"      { STRUCT }
   | "switch"      { SWITCH }
   | "type"        { TYPE }
@@ -74,7 +84,7 @@ rule scan last_token = parse
   | "print"       { PRINT }
   | "println"     { PRINTLN }
   | "append"      { APPEND }
-  | letter (letter|digit)* as id_string  { ID(id_string) }
+  | letter (letter|digit|uscore)* | uscore (letter|digit|uscore)+ as id_string  { TID(id_string) }
 
   (* Symbols and operators *)
   | '+'   { TPLUS }
@@ -101,7 +111,7 @@ rule scan last_token = parse
   | "&^=" { TANEQ}
   | "&&"  { TAND }
   | "||"  { TOR }
-  | "<-"  { TREC }
+  | "<-"  { raise NotSupportedInGoLite }
   | "++"  { TINC }
   | "--"  { TDECR }
   | "=="  { TEQ }
@@ -113,7 +123,7 @@ rule scan last_token = parse
   | "<="  { TLSEQ }
   | ">="  { TGREQ}  
   | ":="  { TCOLEQ }
-  | "..." { TTD }
+  | "..." { raise NotSupportedInGoLite }
   | '('   { TLPAR }
   | ')'   { TRPAR }
   | '['   { TLBR }
@@ -130,30 +140,28 @@ rule scan last_token = parse
   | '`'   { read_raw_str (Buffer.create 15) lexbuf } (* raw string token *) 
   | '"'   { read_string (Buffer.create 15) lexbuf } (* interpreted string token *) 
   | '''   { read_rune (Buffer.create 2) lexbuf } (* raw string token *) 
-  | nz_digit decimal_digit* as st { DEC_INT(st)}
-  | "0" octal_digit* as st { OCTAL_INT(st) }
-  | "0" ("x" | "X" ) hex_digit* as st { HEX_INT(st) }
-  | nz_digit decimal_digit* "." decimal_digit* as st { FLOAT64(st)}
-  | "." decimal_digit+ as st { FLOAT64(st)}
-  | eof   { TEOF}
-
-
-and read_rune buf = parse
-  | ''' { TRUNE (Buffer.contents buf)}
-  | '\\' 'a' { Buffer.add_char buf '\007'; read_rune buf lexbuf}
-  | '\\' 'b' { Buffer.add_char buf '\010'; read_rune buf lexbuf}
-  | '\\' 'f' { Buffer.add_char buf '\014'; read_rune buf lexbuf}
-  | '\\' 'n' { Buffer.add_char buf '\n'; read_rune buf lexbuf}
-  | '\\' 'r' { Buffer.add_char buf '\r'; read_rune buf lexbuf}
-  | '\\' 't' { Buffer.add_char buf '\t'; read_rune buf lexbuf}
-  | '\\' 'v' { Buffer.add_char buf '\013'; read_rune buf lexbuf}
-  | '\\' '\\' { Buffer.add_char buf '\\'; read_rune buf lexbuf}
-  | '\\' '\'' { Buffer.add_char buf '\''; read_rune buf lexbuf}
-  | '\\' '"' { Buffer.add_char buf '"'; read_rune buf lexbuf}
-  | [^''' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_rune buf lexbuf}
+  | (nz_digit decimal_digit* | "0") as st { DEC_INT(st)}
+  | "0" octal_digit+ as st { OCTAL_INT(st) }
+  | "0" ("x" | "X" ) hex_digit+ as st { HEX_INT(st) }
+  | decimal_digit+ "." decimal_digit* as st { FLOAT64(st)}
+  | "." decimal_digit+ as st { FLOAT64(st) }
+  | eof   { TEOF }
   | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
 
-  
+and read_rune buf = parse
+  | '\\' 'a' { Buffer.add_char buf '\007'; read_single_quote buf lexbuf}
+  | '\\' 'b' { Buffer.add_char buf '\010'; read_single_quote buf lexbuf}
+  | '\\' 'f' { Buffer.add_char buf '\014'; read_single_quote buf lexbuf}
+  | '\\' 'n' { Buffer.add_char buf '\012'; read_single_quote buf lexbuf}
+  | '\\' 'r' { Buffer.add_char buf '\015'; read_single_quote buf lexbuf}
+  | '\\' 't' { Buffer.add_char buf '\011'; read_single_quote buf lexbuf}
+  | '\\' 'v' { Buffer.add_char buf '\013'; read_single_quote buf lexbuf}
+  | '\\' '\\' { Buffer.add_char buf '\\'; read_single_quote buf lexbuf}
+  | '\\' ''' { Buffer.add_char buf '\''; read_single_quote buf lexbuf}
+  | [^''' '\\' '\n'] { Buffer.add_string buf (Lexing.lexeme lexbuf); read_single_quote buf lexbuf}
+
+and read_single_quote buf = parse
+  | ''' { TRUNE (Buffer.contents buf) }
 and read_raw_str buf = parse
   | '`' { TRWSTR (Buffer.contents buf)}
   | [^'`' '\r']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_raw_str buf lexbuf}
@@ -163,14 +171,18 @@ and read_string buf = parse
   | '\\' 'a' { Buffer.add_char buf '\007'; read_string buf lexbuf}
   | '\\' 'b' { Buffer.add_char buf '\010'; read_string buf lexbuf}
   | '\\' 'f' { Buffer.add_char buf '\014'; read_string buf lexbuf}
-  | '\\' 'n' { Buffer.add_char buf '\n'; read_string buf lexbuf}
-  | '\\' 'r' { Buffer.add_char buf '\r'; read_string buf lexbuf}
-  | '\\' 't' { Buffer.add_char buf '\t'; read_string buf lexbuf}
+  | '\\' 'n' { Buffer.add_char buf '\012'; read_string buf lexbuf}
+  | '\\' 'r' { Buffer.add_char buf '\015'; read_string buf lexbuf}
+  | '\\' 't' { Buffer.add_char buf '\011'; read_string buf lexbuf}
   | '\\' 'v' { Buffer.add_char buf '\013'; read_string buf lexbuf}
   | '\\' '\\' { Buffer.add_char buf '\\'; read_string buf lexbuf}
   | '\\' '"' { Buffer.add_char buf '"'; read_string buf lexbuf}
-  | [^'"' '\\']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_string buf lexbuf}
-  | _ as c { raise (Error (Printf.sprintf "Scanner: Illegal character: %c\n" c))}
+  | [^'"' '\\' '\n']+ { Buffer.add_string buf (Lexing.lexeme lexbuf); read_string buf lexbuf}
+
+and read_comment last_token = parse
+  | "*/" { scan last_token lexbuf }
+  | '\n'{ Lexing.new_line lexbuf; read_comment last_token lexbuf }
+  | _ { read_comment last_token lexbuf}
 
 {
   (* wrapped_scan keeps track of the last token returned by scan. *)

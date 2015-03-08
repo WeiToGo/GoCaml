@@ -16,13 +16,8 @@ Deepanjan Roy (#260469677)
 ## How to run code 
     make clean
     make
-    ./main.native <your golite file path> 
+    ./run.sh <FLAG1> <FLAG2> <FILENAME>
 
-## Running tests
-You can run the unittests using `make test` command.
+    (where FLAG1 and FLAG2 are -pptype and/or -dumpsymtab in any order)
 
-
-
-###Milestone 1:
-
-Scanner and Parser implemented, although lots of further testing is required. Quite a few bugs that have not been ironed out. The ast is constructed, but pretty printing code is not functional yet. 
+_files in ./dev directory are stuff used in development process. Not for grading._
