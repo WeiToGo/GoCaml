@@ -1,0 +1,4 @@
+- Fix old bugs (22 March)
+- Manually convert program to JVM (24 March)
+- Meeting on 24 March about (24 March at 1)
+- Milestone 3 (30 March)
