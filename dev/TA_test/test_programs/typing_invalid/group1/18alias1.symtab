@@ -1,9 +1,0 @@
----- Exiting scope (level 1) --- 
-a -> type: int (line 5)
-num -> type: int (line 4)
-----------------------
----- Exiting scope (level 0) --- 
-main -> func () (line 3)
-false -> bool (line 0)
-true -> bool (line 0)
-----------------------

@@ -1,8 +1,0 @@
----- Exiting scope (level 1) --- 
-float_var -> float64 (line 5)
-----------------------
----- Exiting scope (level 0) --- 
-main -> func () (line 4)
-false -> bool (line 0)
-true -> bool (line 0)
-----------------------

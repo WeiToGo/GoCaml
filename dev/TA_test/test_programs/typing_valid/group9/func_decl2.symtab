@@ -1,9 +1,0 @@
----- Exiting scope (level 1) --- 
-a -> int (line 3)
-b -> string (line 3)
-----------------------
----- Exiting scope (level 0) --- 
-false -> bool (line 0)
-true -> bool (line 0)
-f1 -> func (int, string) (line 3)
-----------------------

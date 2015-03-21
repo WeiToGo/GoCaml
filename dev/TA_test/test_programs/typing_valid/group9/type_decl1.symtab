@@ -1,6 +1,0 @@
----- Exiting scope (level 0) --- 
-num -> type: int (line 3)
-e -> num (line 4)
-false -> bool (line 0)
-true -> bool (line 0)
-----------------------

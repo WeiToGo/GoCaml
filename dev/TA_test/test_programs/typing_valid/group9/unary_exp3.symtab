@@ -1,6 +1,0 @@
----- Exiting scope (level 0) --- 
-a -> bool (line 4)
-false -> bool (line 0)
-true -> bool (line 0)
-x -> bool (line 3)
-----------------------

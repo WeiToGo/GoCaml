@@ -1,7 +1,0 @@
----- Exiting scope (level 0) --- 
-y -> int (line 4)
-false -> bool (line 0)
-z -> int (line 4)
-true -> bool (line 0)
-x -> type: string (line 3)
-----------------------

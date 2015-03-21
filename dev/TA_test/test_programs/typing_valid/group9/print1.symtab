@@ -1,9 +1,0 @@
----- Exiting scope (level 1) --- 
-t4 -> type: struct { x: float64 } (line 4)
-z -> t4 (line 7)
-----------------------
----- Exiting scope (level 0) --- 
-false -> bool (line 0)
-printing -> func () (line 3)
-true -> bool (line 0)
-----------------------

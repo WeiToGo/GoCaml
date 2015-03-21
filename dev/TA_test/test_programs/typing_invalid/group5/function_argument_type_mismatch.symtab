@@ -1,5 +1,0 @@
----- Exiting scope (level 1) --- 
-a -> int (line 3)
-b -> float64 (line 3)
-c -> int (line 4)
-----------------------

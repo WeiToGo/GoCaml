@@ -1,8 +1,0 @@
----- Exiting scope (level 1) --- 
-----------------------
----- Exiting scope (level 0) --- 
-a -> int (line 3)
-main -> func () (line 5)
-false -> bool (line 0)
-true -> bool (line 0)
-----------------------

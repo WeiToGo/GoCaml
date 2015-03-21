@@ -1,9 +1,0 @@
----- Exiting scope (level 1) --- 
-a -> type: string (line 6)
-----------------------
----- Exiting scope (level 0) --- 
-a -> type: float64 (line 3)
-false -> bool (line 0)
-f -> func () (line 5)
-true -> bool (line 0)
-----------------------

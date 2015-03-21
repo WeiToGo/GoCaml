@@ -1,6 +1,0 @@
----- Exiting scope (level 0) --- 
-false -> bool (line 0)
-c -> int (line 6)
-true -> bool (line 0)
-x -> struct { a: int, b: int } (line 3)
-----------------------
