@@ -271,7 +271,7 @@ let e_type = match e with
           get_bin_exp_type is_numeric "numeric"
       | BinBitOr | BinBitAnd | BinShiftLeft | BinShiftRight 
       | BinBitAndNot | BinBitXor -> 
-          get_bin_exp_type is_numeric "numeric"
+          get_bin_exp_type is_integer "integer"
     )     
   | FunctionCallExp (expr, args_list) -> ( 
     (* Careful - this can be a type cast expression *)
