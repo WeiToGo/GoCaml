@@ -536,7 +536,8 @@ and tc_plain_statement ln ctx = function
           else () ) in
       let check_svd (ShortVarDecl(id, exp)) =
         let rhs_type = resolve_exp_type ctx exp in
-        if (not (id_in_current_scope ctx id)) then
+        if (string_of_id id = "BlankID") then raise (TypeCheckError "BlankID cannot be used on the left side of a ShortVarDecl")
+        else if (not (id_in_current_scope ctx id)) then
           add_id ctx id rhs_type ln
         else
           let cur_type = lookup_id ctx id in
