@@ -1,0 +1,13 @@
+---- Exiting scope (level 1) --- 
+a -> int (line 8)
+b -> int (line 8)
+----------------------
+---- Exiting scope (level 1) --- 
+a -> float64 (line 13)
+----------------------
+---- Exiting scope (level 0) --- 
+main -> func () (line 12)
+test -> func (int, int) float64 (line 8)
+false -> bool (line 0)
+true -> bool (line 0)
+----------------------

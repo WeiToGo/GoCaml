@@ -1,0 +1,11 @@
+---- Exiting scope (level 1) --- 
+----------------------
+---- Exiting scope (level 1) --- 
+f -> func () (line 7)
+----------------------
+---- Exiting scope (level 0) --- 
+main -> func () (line 6)
+bar -> func () (line 3)
+false -> bool (line 0)
+true -> bool (line 0)
+----------------------

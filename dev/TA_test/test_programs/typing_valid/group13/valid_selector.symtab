@@ -1,0 +1,10 @@
+---- Exiting scope (level 1) --- 
+test -> type: struct { a: int, b: int, c: float64, d: [5]int, e: test2 } (line 11)
+t -> test (line 19)
+test2 -> type: struct { x: string } (line 7)
+----------------------
+---- Exiting scope (level 0) --- 
+main -> func () (line 6)
+false -> bool (line 0)
+true -> bool (line 0)
+----------------------

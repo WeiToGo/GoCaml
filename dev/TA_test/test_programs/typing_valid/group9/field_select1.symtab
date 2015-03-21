@@ -1,0 +1,9 @@
+---- Exiting scope (level 1) --- 
+a -> s (line 7)
+s -> type: struct { x: int } (line 4)
+----------------------
+---- Exiting scope (level 0) --- 
+false -> bool (line 0)
+f -> func () (line 3)
+true -> bool (line 0)
+----------------------

@@ -1,0 +1,21 @@
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 2) --- 
+----------------------
+---- Exiting scope (level 1) --- 
+n -> int (line 4)
+----------------------
+---- Exiting scope (level 1) --- 
+x -> int (line 12)
+----------------------
+---- Exiting scope (level 1) --- 
+----------------------
+---- Exiting scope (level 0) --- 
+fib -> func (int) int (line 4)
+main -> func () (line 16)
+false -> bool (line 0)
+id -> func (int) int (line 12)
+true -> bool (line 0)
+----------------------

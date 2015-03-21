@@ -1,0 +1,6 @@
+---- Exiting scope (level 0) --- 
+false -> bool (line 0)
+x2 -> rune (line 3)
+x1 -> rune (line 3)
+true -> bool (line 0)
+----------------------

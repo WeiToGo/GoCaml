@@ -1,0 +1,7 @@
+/* Using a binary operations with inputs of different types */
+
+package main
+
+func main() {
+     2+true
+}

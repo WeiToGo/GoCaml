@@ -1,0 +1,17 @@
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 2) --- 
+----------------------
+---- Exiting scope (level 1) --- 
+n -> int (line 3)
+----------------------
+---- Exiting scope (level 1) --- 
+----------------------
+---- Exiting scope (level 0) --- 
+fact -> func (int) int (line 3)
+main -> func () (line 10)
+false -> bool (line 0)
+true -> bool (line 0)
+----------------------

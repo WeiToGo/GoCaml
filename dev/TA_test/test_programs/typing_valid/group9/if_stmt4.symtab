@@ -1,0 +1,20 @@
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 5) --- 
+----------------------
+---- Exiting scope (level 5) --- 
+----------------------
+---- Exiting scope (level 4) --- 
+----------------------
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 2) --- 
+----------------------
+---- Exiting scope (level 1) --- 
+y -> int (line 4)
+----------------------
+---- Exiting scope (level 0) --- 
+if_stmts -> func () (line 3)
+false -> bool (line 0)
+true -> bool (line 0)
+----------------------

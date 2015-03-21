@@ -1,0 +1,16 @@
+---- Exiting scope (level 1) --- 
+r8 -> rune (line 5)
+r7 -> rune (line 5)
+r4 -> rune (line 5)
+r1 -> rune (line 5)
+r6 -> rune (line 5)
+r3 -> rune (line 5)
+r9 -> rune (line 5)
+r5 -> rune (line 5)
+r2 -> rune (line 5)
+----------------------
+---- Exiting scope (level 0) --- 
+main -> func () (line 4)
+false -> bool (line 0)
+true -> bool (line 0)
+----------------------

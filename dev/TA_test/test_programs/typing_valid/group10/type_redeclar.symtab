@@ -1,0 +1,9 @@
+---- Exiting scope (level 1) --- 
+a -> [3]int (line 7)
+y -> int (line 6)
+x -> int (line 6)
+----------------------
+---- Exiting scope (level 2) --- 
+v -> int (line 19)
+x -> float64 (line 18)
+----------------------

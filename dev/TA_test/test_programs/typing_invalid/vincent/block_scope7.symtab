@@ -1,0 +1,6 @@
+---- Exiting scope (level 3) --- 
+y -> int (line 5)
+----------------------
+---- Exiting scope (level 2) --- 
+x -> int (line 4)
+----------------------

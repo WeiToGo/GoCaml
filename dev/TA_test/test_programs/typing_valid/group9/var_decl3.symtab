@@ -1,0 +1,7 @@
+---- Exiting scope (level 0) --- 
+y -> int (line 3)
+false -> bool (line 0)
+z -> float64 (line 4)
+true -> bool (line 0)
+x -> int (line 3)
+----------------------

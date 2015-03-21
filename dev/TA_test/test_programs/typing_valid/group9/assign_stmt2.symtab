@@ -1,0 +1,9 @@
+---- Exiting scope (level 1) --- 
+a -> int (line 4)
+b -> int (line 4)
+----------------------
+---- Exiting scope (level 0) --- 
+assign_stmts -> func () (line 3)
+false -> bool (line 0)
+true -> bool (line 0)
+----------------------

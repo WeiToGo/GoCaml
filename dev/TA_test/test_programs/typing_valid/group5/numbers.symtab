@@ -1,0 +1,54 @@
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 2) --- 
+----------------------
+---- Exiting scope (level 1) --- 
+s0 -> []int (line 8)
+s2 -> []int (line 13)
+s1 -> []int (line 12)
+n -> int (line 6)
+----------------------
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 2) --- 
+----------------------
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 2) --- 
+----------------------
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 5) --- 
+----------------------
+---- Exiting scope (level 5) --- 
+----------------------
+---- Exiting scope (level 4) --- 
+----------------------
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 2) --- 
+----------------------
+---- Exiting scope (level 1) --- 
+a -> int (line 27)
+b -> int (line 43)
+c -> int (line 44)
+----------------------
+---- Exiting scope (level 1) --- 
+a -> type: int (line 67)
+point -> type: struct { x: string, y: string } (line 67)
+n -> int (line 59)
+z -> a (line 74)
+----------------------
+---- Exiting scope (level 0) --- 
+main -> func () (line 58)
+funky -> func (int) (line 6)
+false -> bool (line 0)
+number -> func (int) int (line 27)
+true -> bool (line 0)
+----------------------

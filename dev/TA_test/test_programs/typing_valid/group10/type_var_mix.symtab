@@ -1,0 +1,16 @@
+---- Exiting scope (level 4) --- 
+----------------------
+---- Exiting scope (level 3) --- 
+----------------------
+---- Exiting scope (level 2) --- 
+v -> v (line 8)
+x -> v (line 7)
+----------------------
+---- Exiting scope (level 1) --- 
+v -> type: int (line 5)
+----------------------
+---- Exiting scope (level 0) --- 
+main -> func () (line 4)
+false -> bool (line 0)
+true -> bool (line 0)
+----------------------
