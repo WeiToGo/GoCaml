@@ -62,7 +62,6 @@ let filebuf = Lexing.from_channel inp
 let ast = build_ast in_file_name
 ;;
 
-
 let () = if symtab = "t" then 
   Symtable.dumpsymtab := true 
   else Symtable.dumpsymtab := false ;;
@@ -75,13 +74,3 @@ let () = if pptype = "t" then
 
 let () = close_out sym_out ;; 
 
-
-(* let out_channel = open_out "lexer_stream.out" in 
-let _ = Printer.loop_token_printer Scan.wrapped_scan (Lexing.from_channel stdin) out_channel
-in
-close_out out_channel
-;;
- *)
-
-
-(* pretty ast *)
