@@ -106,6 +106,8 @@ args_list: (* This is ugly. The list append is not ideal *)
 var_spec:   (* Returns multivardecl *)
   | id_list typ
     { MultipleVarDecl(distribute $1 $2 [] (fun x y -> SingleVarDecl(x, Some y, None))) }
+  | id_list TLPAR typ TRPAR
+    { MultipleVarDecl(distribute $1 $3 [] (fun x y -> SingleVarDecl(x, Some y, None))) }    
   | id_list TASSIGN expr_list
     {  MultipleVarDecl(list_zip $1 $3 [] (fun x y -> SingleVarDecl(x, None, Some y)))  }
   | id_list typ TASSIGN expr_list 

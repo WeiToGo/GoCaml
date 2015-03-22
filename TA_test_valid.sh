@@ -1,5 +1,5 @@
 #!/bin/bash
-a=$(find dev/TA_test/test_programs/typing_invalid -type f)
+a=$(find dev/TA_test/test_programs/typing_valid -type f)
 while read -r line; do
    echo "Running test on $line "
    ./run.sh $line
