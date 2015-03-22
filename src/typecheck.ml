@@ -427,6 +427,24 @@ and tc_top_decl ln ctx = function
           List.filter 
             (function 
              | LinedStatement(line, ReturnStatement _) -> true 
+(*              | LinedStatement(line, IfStatement(st_op, e, stmt_list, stmt_list_op)) -> 
+                let ret_in_ifthen s = match s with 
+                    | LinedStatement(line, ReturnStatement _) -> true
+                    | _ -> false
+                in 
+                let ret_in_else s_op = match s_op with 
+                    | None -> true 
+                    | Some (st_list) -> 
+                      match List.hd (List.rev st_list) with 
+                        | LinedStatement(line, ReturnStatement _) -> true
+                        | _ -> false
+                in
+                if (ret_in_ifthen (List.hd (List.rev stmt_list)) && (ret_in_else stmt_list_op)) then true
+                else false
+             | LinedStatement(line, ForStatement(st_op, e_op, st2_op, st_list)) -> 
+                match (List.hd (List.rev st_list)) with 
+                  | LinedStatement(line, ReturnStatement _) -> true
+                  | _ -> false  *)
              | _ -> false)
             body 
         in
@@ -434,6 +452,26 @@ and tc_top_decl ln ctx = function
           List.map 
             (function 
              | LinedStatement(line, ReturnStatement e) -> (line, e) 
+(*              | LinedStatement(line, IfStatement(st_op, e, stmt_list, stmt_list_op)) ->
+                let get_ret_exp_if sl = match List.hd (List.rev sl) with
+                  | LinedStatement(l, ReturnStatement e) -> (l, e)
+                  | _ -> raise (InternalError "Non return statement. Filter properly.")  
+                in 
+                let get_ret_exp_else stmt_op = match stmt_op with
+                  | None -> ()  
+                  | Some (st_list) ->
+                    match List.hd (List.rev st_list) with
+                      | LinedStatement(l, ReturnStatement e) -> ()
+                      | _ -> raise (InternalError "Non return statement. Filter properly.")  
+                in 
+                get_ret_exp_if stmt_list;
+                get_ret_exp_else stmt_list_op
+             | LinedStatement(line, ForStatement(st_op, e_op, st2_op, st_list)) -> 
+              let get_exp_for stmt = match stmt with
+                | LinedStatement(l, ReturnStatement e) -> (l, e)
+                | _ -> raise (InternalError "Non return statement. Filter properly.")
+              in 
+              get_exp_for (List.hd (List.rev st_list)) *)
              | _ -> raise (InternalError "Non return statement. Filter properly.")  )
             ret_stmts
         in
@@ -529,15 +567,14 @@ and tc_plain_statement ln ctx = function
       let exps = List.map (fun (ShortVarDecl(_, exp)) -> exp) svd_list in
       let () = List.iter (tc_expression ctx) exps in
       let id_list = List.map (fun (ShortVarDecl(id, _)) -> id) svd_list in
-      let all_old = List.fold_left (fun x id -> x && id_in_current_scope ctx id) true id_list in
+      let all_old = List.fold_left (fun x id -> x && ((id_in_current_scope ctx id) || (string_of_id id = "BlankID"))) true id_list in
       let () = 
         ( if all_old then 
             raise (TypeCheckError "No new variables in short variable declaration statement")
           else () ) in
       let check_svd (ShortVarDecl(id, exp)) =
         let rhs_type = resolve_exp_type ctx exp in
-        if (string_of_id id = "BlankID") then raise (TypeCheckError "BlankID cannot be used on the left side of a ShortVarDecl")
-        else if (not (id_in_current_scope ctx id)) then
+        if (not (id_in_current_scope ctx id)) then
           add_id ctx id rhs_type ln
         else
           let cur_type = lookup_id ctx id in
