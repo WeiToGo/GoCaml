@@ -572,6 +572,14 @@ and tc_plain_statement ln ctx = function
         ( if all_old then 
             raise (TypeCheckError "No new variables in short variable declaration statement")
           else () ) in
+      let rec check_duplicates l = match l with 
+        | [] -> false
+        | h::t -> if (List.mem h t) then true else check_duplicates t
+      in  
+      let () = 
+        (if check_duplicates id_list then 
+          raise (TypeCheckError "Duplicate variables in short variable declaration statement")
+        else ()) in
       let check_svd (ShortVarDecl(id, exp)) =
         let rhs_type = resolve_exp_type ctx exp in
         if (not (id_in_current_scope ctx id)) then
