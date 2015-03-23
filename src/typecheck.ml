@@ -590,14 +590,28 @@ and tc_plain_statement ln ctx = function
           ( if is_function rhs_type then 
             raise (TypeCheckError "Cannot assign to function variables.")
             else () ) in
+        let is_type_alias e = match e with
+          | NewType(_) -> true
+          | _-> false
+        in
+        let () = 
+          ( if is_type_alias rhs_type then 
+            raise (TypeCheckError "Cannot assign to type alias")
+            else () ) in 
         if (not (id_in_current_scope ctx id)) then
-          add_id ctx id rhs_type ln
+          add_id ctx id rhs_type ln 
         else
           let cur_type = lookup_id ctx id in
           if (cur_type == rhs_type) then ()
           else raise (TypeCheckError (assign_error_msg cur_type rhs_type) )
-      in List.iter check_svd svd_list
-
+      in 
+(*       let add_to_symtab (ShortVarDecl(id, exp)) = 
+        let rhs_type = resolve_exp_type ctx exp in
+        if (not (id_in_current_scope ctx id)) then
+          add_id ctx id rhs_type ln else () 
+      in *)
+      List.iter check_svd svd_list;
+      (* List.iter add_to_symtab svd_list *)
   | BlockStatement stmt_list -> 
       let block_scope = open_scope ctx in
       let () = List.iter (tc_statement block_scope) stmt_list in
@@ -611,11 +625,17 @@ and tc_plain_statement ln ctx = function
       let check_assignment (e1, e2) =
         let e1_type = resolve_exp_type ctx e1 in
         let e2_type = resolve_exp_type ctx e2 in
+        let is_function e = match e with 
+          | GoFunction(_, _) -> true
+          | _ -> false
+        in 
+        let is_type_alias e = match e with
+          | NewType(_) -> true
+          | _-> false
+        in
         if e1_type = e2_type then 
-          let is_function e = match e with 
-            | GoFunction(_, _) -> true
-            | _ -> false
-          in (if is_function e1_type then raise (TypeCheckError "Cannot assign to function variables."))
+          (if is_function e1_type then raise (TypeCheckError "Cannot assign to function variables.")
+            else if is_type_alias e2_type then raise (TypeCheckError "Cannot assign to type alias"))
         else raise (TypeCheckError (assign_error_msg e1_type e2_type))
       in
       List.iter check_assignment a_list
