@@ -581,7 +581,15 @@ and tc_plain_statement ln ctx = function
           raise (TypeCheckError "Duplicate variables in short variable declaration statement")
         else ()) in
       let check_svd (ShortVarDecl(id, exp)) =
-        let rhs_type = resolve_exp_type ctx exp in
+        let rhs_type = resolve_exp_type ctx exp in  (* exp cannot contain id*)
+        let is_function e = match e with 
+          | GoFunction(_, _) -> true
+          | _ -> false
+        in 
+        let () = 
+          ( if is_function rhs_type then 
+            raise (TypeCheckError "Cannot assign to function variables.")
+            else () ) in
         if (not (id_in_current_scope ctx id)) then
           add_id ctx id rhs_type ln
         else
@@ -603,7 +611,11 @@ and tc_plain_statement ln ctx = function
       let check_assignment (e1, e2) =
         let e1_type = resolve_exp_type ctx e1 in
         let e2_type = resolve_exp_type ctx e2 in
-        if e1_type = e2_type then ()
+        if e1_type = e2_type then 
+          let is_function e = match e with 
+            | GoFunction(_, _) -> true
+            | _ -> false
+          in (if is_function e1_type then raise (TypeCheckError "Cannot assign to function variables."))
         else raise (TypeCheckError (assign_error_msg e1_type e2_type))
       in
       List.iter check_assignment a_list
