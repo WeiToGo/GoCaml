@@ -7,5 +7,7 @@ while read -r line; do
        echo "Failed at $line"
        echo "$1"
        echo "**************"
+   else 
+   	echo 'VALID'
    fi
 done <<< "$a"

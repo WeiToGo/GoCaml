@@ -42,6 +42,7 @@ let string_of_id id = match id with
 | BlankID -> "BlankID"
 | ID(name, _) -> name
 
+
 (* Adds the symbol for an identifier to scope, and also updates
  * the ref field of id to point to the symbol table entry.
  * Silently ignores attempts to add blank id *)
@@ -423,72 +424,58 @@ and tc_top_decl ln ctx = function
             fargs
         in    
         let () = List.iter (tc_statement body_scope) body in
-        let ret_stmts = 
-          List.filter 
-            (function 
-             | LinedStatement(line, ReturnStatement _) -> true 
-(*              | LinedStatement(line, IfStatement(st_op, e, stmt_list, stmt_list_op)) -> 
-                let ret_in_ifthen s = match s with 
-                    | LinedStatement(line, ReturnStatement _) -> true
-                    | _ -> false
-                in 
-                let ret_in_else s_op = match s_op with 
-                    | None -> true 
-                    | Some (st_list) -> 
-                      match List.hd (List.rev st_list) with 
-                        | LinedStatement(line, ReturnStatement _) -> true
-                        | _ -> false
-                in
-                if (ret_in_ifthen (List.hd (List.rev stmt_list)) && (ret_in_else stmt_list_op)) then true
-                else false
-             | LinedStatement(line, ForStatement(st_op, e_op, st2_op, st_list)) -> 
-                match (List.hd (List.rev st_list)) with 
-                  | LinedStatement(line, ReturnStatement _) -> true
-                  | _ -> false  *)
-             | _ -> false)
-            body 
-        in
-        let ret_exps = 
-          List.map 
-            (function 
-             | LinedStatement(line, ReturnStatement e) -> (line, e) 
-(*              | LinedStatement(line, IfStatement(st_op, e, stmt_list, stmt_list_op)) ->
-                let get_ret_exp_if sl = match List.hd (List.rev sl) with
-                  | LinedStatement(l, ReturnStatement e) -> (l, e)
-                  | _ -> raise (InternalError "Non return statement. Filter properly.")  
-                in 
-                let get_ret_exp_else stmt_op = match stmt_op with
-                  | None -> ()  
-                  | Some (st_list) ->
-                    match List.hd (List.rev st_list) with
-                      | LinedStatement(l, ReturnStatement e) -> ()
-                      | _ -> raise (InternalError "Non return statement. Filter properly.")  
-                in 
-                get_ret_exp_if stmt_list;
-                get_ret_exp_else stmt_list_op
-             | LinedStatement(line, ForStatement(st_op, e_op, st2_op, st_list)) -> 
-              let get_exp_for stmt = match stmt with
-                | LinedStatement(l, ReturnStatement e) -> (l, e)
-                | _ -> raise (InternalError "Non return statement. Filter properly.")
-              in 
-              get_exp_for (List.hd (List.rev st_list)) *)
-             | _ -> raise (InternalError "Non return statement. Filter properly.")  )
-            ret_stmts
-        in
-        let () = List.iter
-          (fun (ln, e) -> match e, ret_type with
-           | None, None -> ()
+        let check_ret_exp e = match e, ret_type with
+           | None, None -> true
            | Some(e), None -> raise (StmtTypeCheckError ("Too many arguments to return", ln))
            | None, Some(t) -> raise (StmtTypeCheckError ("Not enough arguments to return", ln))
-           | Some(e1), Some(t) when (resolve_exp_type body_scope e1 = t) -> ()
+           | Some(e1), Some(t) when (resolve_exp_type body_scope e1 = t) -> true
            | Some(e1), Some(t) -> 
               raise 
                 (StmtTypeCheckError
                   ( "The return type of the function is " ^ (string_of_type t) ^
                     " but this statement is returning an expression of type " ^
-                    (string_of_type (resolve_exp_type body_scope e1)), ln ) ) ) 
-          ret_exps
-        in close_scope body_scope
+                    (string_of_type (resolve_exp_type body_scope e1)), ln ) )  
+        in 
+        let rec check_return_statements stmt_list = 
+          let rec return_checks (LinedStatement(ln, plain_stmt)) = match plain_stmt with
+          | EmptyStatement | ExpressionStatement(_) | AssignmentStatement(_)
+          | TypeDeclBlockStatement(_) | VarDeclBlockStatement(_) | ShortVarDeclStatement(_) 
+          | PrintlnStatement(_) | PrintStatement(_) | BreakStatement | ContinueStatement
+           -> false
+          | IfStatement(_, _, then_stmts, else_option) -> 
+            ( match else_option with
+              | None -> false
+              | Some(else_stmts) -> (check_return_statements then_stmts) && (check_return_statements else_stmts)
+            )
+          | SwitchStatement(_, _, case_list) -> 
+              let check_switch_case case = 
+                ( match case with 
+                  | SwitchCase(_, slist) -> check_return_statements slist
+                  | DefaultCase(slist) -> check_return_statements slist
+                )
+              in
+              let has_defeault = 
+                List.fold_left
+                  (fun x y -> (match y with SwitchCase(_) -> x | DefaultCase(_) -> true))
+                  false
+                  case_list
+              in
+              if not has_defeault then false
+              else List.for_all check_switch_case case_list
+          | BlockStatement(slist) -> check_return_statements slist
+          | ForStatement(_, e_op, _, slist) ->
+            ( match e_op with
+            | None -> check_return_statements slist
+            | Some(_) -> false )
+          | ReturnStatement(e) -> check_ret_exp e
+          in
+          List.fold_left
+            (fun x y -> if (return_checks y) then true else x)
+            false
+            stmt_list
+        in 
+        if (check_return_statements body) then () else ();
+        close_scope body_scope
 
   | TypeDeclBlock(std_list) -> 
       List.iter (tc_type_declaration ln ctx) std_list
@@ -582,6 +569,7 @@ and tc_plain_statement ln ctx = function
         else ()) in
       let check_svd (ShortVarDecl(id, exp)) =
         let rhs_type = resolve_exp_type ctx exp in  (* exp cannot contain id*)
+        (* let () = print_endline (string_of_type rhs_type) in *)
         let is_function e = match e with 
           | GoFunction(_, _) -> true
           | _ -> false
@@ -598,9 +586,11 @@ and tc_plain_statement ln ctx = function
           ( if is_type_alias rhs_type then 
             raise (TypeCheckError "Cannot assign to type alias")
             else () ) in 
+        
         if (not (id_in_current_scope ctx id)) then
           add_id ctx id rhs_type ln 
         else
+        
           let cur_type = lookup_id ctx id in
           if (cur_type == rhs_type) then ()
           else raise (TypeCheckError (assign_error_msg cur_type rhs_type) )
