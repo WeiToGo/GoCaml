@@ -2,3 +2,11 @@
 - Manually convert program to JVM (24 March)
 - Meeting on 24 March about (24 March at 1)
 - Milestone 3 (30 March)
+
+
+Note about code gen:
+
+Expressions: most binary and unary op have corresponding instruction in jasmin, except for 
+logical || and &&. We use false == 0, true != 0 (apparently on binary level, boolean true is defined as != 0 instead of 1). For now, we are generating 2 labels at the beginning (Label 0 -> false, Label 1 -> true)
+
+
