@@ -4,6 +4,7 @@ open Ast
 open Typecheck
 open PrettyPrint
 open Weeder 
+open JasminAst
 
 let get_ast input = 
   let ic = match input with

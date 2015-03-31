@@ -12,3 +12,4 @@ lexer_stream.out
 dev/scratch/
 *.pretty.go
 *.symtab
+*.class
