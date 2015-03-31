@@ -9,4 +9,7 @@ gocaml.sublime-workspace
 lexer_stream.out
 *.stripped.mly
 *.pretty.go
-
+dev/scratch/
+*.pretty.go
+*.symtab
+*.class
