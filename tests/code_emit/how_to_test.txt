@@ -1,0 +1,6 @@
+1. run `make dev`
+2. go to _build/src
+3. run `cat ../../tests/code_emit/code_emitter_test.ml | utop jasminAst.cmo codeEmitter.cmo`
+4. take a look at the generated `CodeEmitTest.j` file. Tada!
+5. You can compare it with the model file I had with `diff CodeEmitTest.j ../../tests/code_emit/TargetCodeEmit.j`. This should give empty output, indicating the two files are identical.
+6. You can also compile CodeEmitTest.j with jasmin and run it. It should print 42.
