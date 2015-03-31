@@ -5,6 +5,7 @@ open Typecheck
 open PrettyPrint
 open Weeder 
 open JasminAst
+open CodeEmitter
 
 let get_ast input = 
   let ic = match input with
