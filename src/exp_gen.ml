@@ -226,10 +226,12 @@ let print_ast prog file class_name =
 					| GoFunction(arg_type, ret_typ)->
 						begin
 							print_string ("invokestatic " ^ class_name ^ "/");
+							print_string exp;
 							print_string "(";
 							List.iter print_expr args_list;
 							print_string ")";
 							(* print_type_spec ret_typ (*TO CHANGE*) *)
+							print_string "\n";
 						end)
 	in
 	let print_multi_var_decl mvd = match mvd with
@@ -243,12 +245,29 @@ let print_ast prog file class_name =
 	 every expr need a print instruction*)
 	let print_print_stmt_helper (Expression(e, tp)) = match !tp with
 		| None -> raise (InternalError "expression should always have a type")
-		| Some (tp) -> (match tp with
-			| GoInt -> print_string "invokevirtual java/io/PrintStream/print(I)V\n"
-			| GoFloat -> print_string "invokevirtual java/io/PrintStream/print(F)V\n"
-			| GoString -> print_string "invokevirtual java/io/PrintStream/print(Ljava/lang/String;)V\n"
+		| Some (t) -> (match t with
+			| GoInt -> 
+				begin
+					print_expr (Expression(e, tp));
+					print_string "invokevirtual java/io/PrintStream/print(I)V\n";
+				end
+				
+			| GoFloat -> 
+				begin
+					print_expr (Expression(e, tp));
+					print_string "invokevirtual java/io/PrintStream/print(F)V\n";
+				end
+			| GoString -> 
+				begin
+					print_expr (Expression(e, tp));
+					print_string "invokevirtual java/io/PrintStream/print(Ljava/lang/String;)V\n"					
+				end
 			(*need to print according to the return type of the function *)
-			| GoFunction (arg_type, ret_typ) -> print_string "invokevirtual java/io/PrintStream/print(I)V\n"
+			| GoFunction (arg_type, ret_typ) -> 
+				begin
+					print_expr (Expression(e, tp));
+					print_string "invokevirtual java/io/PrintStream/print(I)V\n";
+				end				
 		)
 	in
 	let rec print_stmt stmt = 
@@ -309,7 +328,7 @@ let print_ast prog file class_name =
 					print_func_sign fs;
 					print_string ".limit stack 100\n.limit locals 100\n\n";
 					List.iter print_stmt_wrap stmt_list;
-					print_string (".end method")
+					print_string (".end method\n\n")
 				end)
 		| TypeDeclBlock (tl) -> ()
 		| VarDeclBlock (vl) -> ()
@@ -326,3 +345,5 @@ let print_ast prog file class_name =
 	print_lined_top_decl_list ldl;
 	close_out outfile
 
+
+(* add args and 'return' in main*)
