@@ -171,7 +171,7 @@ let print_ast prog file class_name =
 		| IntLit (i) -> print_int_literal i
 		| FloatLit (f) -> print_string ("ldc " ^ f ^ "\n")
 		| RuneLit (r) -> ()
-		| StringLit (s) -> print_string ("ldc " ^ s ^ "\n")
+		| StringLit (s) -> print_string ("ldc \"" ^ s ^ "\"\n")
 		| RawStringLit (s) -> ()
 	in
 	let print_basic_type t = match t with
