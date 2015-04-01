@@ -18,37 +18,37 @@ let print_ast prog pretty =
 					"iconst_0
 					 Label_" ^ lc ^ ":
 					 iconst_1\n";
-					 lc := !lc + 1
+					 lc := !lc + 1					
 				| BinNotEq -> print_string 
 					"if_icmpne Label_" ^ lc ^ "\n" ^
 					"iconst_0
 					 Label_" ^ lc ^ ":
-					 iconst_1";
-					 lc := !lc + 1;
+					 iconst_1\n";
+					 lc := !lc + 1
 				| BinLess -> print_string 
 					"if_icmplt Label_" ^ lc ^ "\n" ^
 					 "iconst_0
 					 Label_" ^ lc ^ ":
 					 iconst_1\n";
-					 lc := !lc + 1;
+					 lc := !lc + 1
 				| BinLessEq -> print_string
 					"if_icmple Label_" ^ lc ^ "\n" ^
 					 "iconst_0
 					 Label_" ^ lc ^ ":
-					 iconst_1\n"
-					 lc := !lc + 1;
+					 iconst_1\n";
+					 lc := !lc + 1
 				| BinGreater -> print_string
 					"if_icmpgt Label_" ^ lc ^ "\n" ^
 					 "iconst_0
 					 Label_" ^ lc ^ ":
-					 iconst_1\n"
-					 lc := !lc + 1;
+					 iconst_1\n";
+					 lc := !lc + 1
 				| BinGreaterEq -> print_string 
 					"if_icmpge Label_" ^ lc ^ "\n" ^
 					 "iconst_0
 					 Label_" ^ lc ^ ":
-					 iconst_1\n"
-					 lc := !lc + 1;
+					 iconst_1\n";
+					 lc := !lc + 1
 				| BinPlus -> print_string "iadd"
 				| BinMinus -> print_string "isub"
 				| BinBitOr -> print_string  "ior"
