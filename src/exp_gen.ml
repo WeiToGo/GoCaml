@@ -148,7 +148,11 @@ let print_ast prog file class_name =
 		| GoBool -> 
 			let print_unop_bool op = match op with
 				| UNot -> print_string 
-					"ifeq Label 1\niconst_0\n"		
+					 ("ifeq Label_" ^ string_of_int !lc ^
+					 "iconst_0
+					  Label_" ^ string_of_int !lc ^ ":
+					  iconst_1\n");
+					  lc := !lc + 1	
 			in print_unop_bool unop
 	in
 	(* load from different places depending if id is from func arg or a local var*)
