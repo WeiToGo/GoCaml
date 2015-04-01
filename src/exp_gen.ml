@@ -166,23 +166,21 @@ let print_ast prog pretty =
 		| RawStringLit (s) -> ()
 	in
 	(* Leave the result of the expression on top of the stack. *)
-	let rec print_expr (Expression(exp, typ)) = match exp with
-		| IdExp (i) -> print_identifier i typ
-		| LiteralExp (l) -> print_literal l
-		| UnaryExp (op, Expression(e, t)) -> match t with
-			| None -> print_string " " (*shouldn't happen *)
-			| Some (t) ->
+	let rec print_expr (Expression(exp, typ)) = match !typ with
+		| None -> ()
+		| Some (t) -> match exp with
+			| IdExp (i) -> print_identifier i t
+			| LiteralExp (l) -> print_literal l
+			| UnaryExp (op, Expression(e, tp)) -> 
 				begin
-					print_expr (Expression(e, t));
+					print_expr (Expression(e, typ));
 					print_unary_op (op, t);
 				end
-		| BinaryExp (op, Expression(e1, t1), Expression(e2, t2)) -> match t1 with
-			| None -> print_string " "
-			| Some (t) -> 
+			| BinaryExp (op, Expression(e1, t1), Expression(e2, t2)) ->
 				begin
-					print_expr e1;
-					print_expr e2; 
-					print_binop (op, t1);
+					print_expr (Expression(e1, t1));
+					print_expr (Expression(e2, t2)); 
+					print_binop (op, t);
 				end		
 	in
 	let print_basic_type t = match t with
