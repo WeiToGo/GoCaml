@@ -231,6 +231,10 @@ let print_ast prog file class_name =
 							print_string ")";
 							(* print_type_spec ret_typ (*TO CHANGE*) *)
 						end)
+			| AppendExp(id, e) -> () (* TODO *)
+			| TypeCastExp(ts, e) -> () (* TODO *)
+			| IndexExp(e1, e2) -> () (* TODO *)
+			| SelectExp(e, id) -> () (* TODO *) 
 	in
 	let print_multi_var_decl mvd = match mvd with
 		| MultipleVarDecl (svd_list) -> ()
@@ -265,7 +269,19 @@ let print_ast prog file class_name =
 				List.iter print_print_stmt_helper e_list;
 			end
 		| PrintlnStatement (e_list)-> ()
-		| IfStatement (s, e, s1_list, s2_list) -> ()
+		| IfStatement (stmtop, e, stmts, stmtsop) ->
+			(match stmtop with
+			| None -> ()
+			| Some(stmt) -> print_stmt_wrap stmt);
+			print_expr e;
+			let label = !lc in
+			lc := !lc + 1;
+			print_string ("ifeq Label_" ^ string_of_int label ^ "\n");
+			List.iter (fun x -> print_stmt_wrap x) stmts;
+			print_string ("Label_" ^ string_of_int label ^ ": \n");
+			(match stmtsop with
+			| None -> ()
+			| Some(stmts) -> List.iter (fun x -> print_stmt_wrap x) stmts)
 		| ReturnStatement (e_op)-> 
 			(match e_op with
 			| None -> print_string "return\n"
