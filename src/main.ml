@@ -53,7 +53,10 @@ let in_file_name = Sys.argv.(3)
 let file_basename = String.sub in_file_name 0 ((String.length in_file_name) - 3) 
 
 let pretty_file_name = file_basename ^ ".pretty.go"
-let symtab_file_name = file_basename ^ ".symtab" ;;
+let symtab_file_name = file_basename ^ ".symtab" 
+let jasmin_file_name = file_basename ^ ".j"
+let jasmin_class_name = file_basename
+;;
 
 let sym_out = open_out symtab_file_name  ;;
 let () = Symtable.out_channel := sym_out
@@ -74,7 +77,7 @@ let () = Typecheck.build_symbol_table ast;;
 ;; *)
 
 let () = if pptype = "t" then
-  print_ast ast pretty_file_name
+  print_ast ast jasmin_file_name jasmin_class_name
 ;;
 
 let () = close_out sym_out ;; 
