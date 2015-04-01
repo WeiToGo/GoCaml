@@ -49,16 +49,16 @@ let print_ast prog pretty =
 					 Label_" ^ string_of_int !lc ^ ":
 					 iconst_1\n");
 					 lc := !lc + 1
-				| BinPlus -> print_string "iadd"
-				| BinMinus -> print_string "isub"
-				| BinBitOr -> print_string  "ior"
-				| BinBitXor -> print_string "ixor"
-				| BinMult -> print_string "imul"
-				| BinDiv -> print_string "idiv"
-				| BinMod -> print_string "irem"
-				| BinShiftLeft -> print_string "ishl"
-				| BinShiftRight -> print_string "ishr"
-				| BinBitAnd -> print_string "iand"
+				| BinPlus -> print_string "iadd\n"
+				| BinMinus -> print_string "isub\n"
+				| BinBitOr -> print_string  "ior\n"
+				| BinBitXor -> print_string "ixor\n"
+				| BinMult -> print_string "imul\n"
+				| BinDiv -> print_string "idiv\n"
+				| BinMod -> print_string "irem\n"
+				| BinShiftLeft -> print_string "ishl\n"
+				| BinShiftRight -> print_string "ishr\n"
+				| BinBitAnd -> print_string "iand\n"
 				| BinBitAndNot -> print_string " &^ "
 			in 
 			print_binop_int binop
@@ -236,7 +236,23 @@ let print_ast prog pretty =
 		| PrintStatement (e_list)-> ()
 		| PrintlnStatement (e_list)-> ()
 		| IfStatement (s, e, s1_list, s2_list) -> ()
-		| ReturnStatement (e_op)-> ()
+		| ReturnStatement (e_op)-> 
+			(match e_op with
+			| None -> print_string "return\n"
+			| Some (Expression(exp, typ)) ->
+				(match !typ with
+				| None -> ()
+				| Some (t) -> match t with
+					| GoInt -> 
+						begin
+							print_expr (Expression(exp, typ));
+							print_string "ireturn\n"
+						end
+					| GoFloat -> 
+						begin
+							print_expr (Expression(exp, typ));
+							print_string "freturn\n"
+						end))
 		| SwitchStatement (s_op,e,case_list)-> ()
 		| ForStatement (s1_op,e_op,s2_op,stmt_list)-> ()
 		| BreakStatement -> ()
@@ -252,6 +268,9 @@ let print_ast prog pretty =
  					end
 				| [] -> ()
 	in 
+	(* class initialization, not sure what class name would be*)
+	let print_init classname = print_string "class init \n"
+	in
 	let print_top_decl td = match td with 
 		| FunctionDecl (id,fs, stmt_list) -> 
 			(match id with 
@@ -270,8 +289,9 @@ let print_ast prog pretty =
 			(fun x -> 
 				let LinedTD(td, _) = x in 
 				let () = print_top_decl td in
-				print_string ";\n") ldl
+				print_string "\n") ldl
 	in
+(* 	print_init classname; *)
 	print_lined_top_decl_list ldl;
 	close_out outfile
 
