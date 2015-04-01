@@ -86,13 +86,7 @@ let print_ast prog pretty =
 					 "iconst_1\n";
 					 lc := !lc + 1;
 				| BinLessEq -> print_string 
-					"fsub
-					 dup
-					 if_icmpne Label_" ^ lc
-					 
-
-					 "Label_" ^ lc ^ ":"
-					 "iconst_0\n"
+					" <= "
 				| BinGreater -> print_string 
 					"fcmpg
 					 iconst_1
@@ -172,9 +166,105 @@ let print_ast prog pretty =
 			print_expr e1;
 			print_expr e2; 
 			print_binop (op, t);
-		end
+		end)
 	in 
-	print_label_true;
-	print_label_false;
+	let print_int_literal lit = match lit with
+		| Ast.DecInt (s) -> ()
+		| Ast.HexInt (s) -> ()
+		| Ast.OctalInt (s) -> ()
+	in
+	let print_literal lit = match lit with
+		| IntLit (i) -> print_string "iconst_" ^ i ^ "\n"
+		| FloatLit (f) -> print_string "ldc " ^ f ^ "\n"
+		| RuneLit (r) -> ()
+		| StringLit (s) -> print_string "ldc " ^ f ^ "\n"
+		| RawStringLit (s) -> ()
+	in
+	let rec print_multi_struct_field level msf= match msf with
+		| MultipleStructFieldDecl (ssf_list) -> ()
+	and print_type_spec level ts = match ts with
+		| BasicType (bt) -> ()
+		| SliceType (t) -> ()
+		| ArrayType (int_lit, t) -> ()
+		| StructType (st) -> ()
+		| FunctionType (tl, ts_op) ->
+			begin
+				print_string " func ( ";
+				List.iter (fun x -> print_type_spec level x) tl;
+				print_string ") ";
+				match ts_op with
+				| None -> ()
+				| Some ts_op ->  print_type_spec level ts_op
+			end
+		| CustomType (id) -> ()
+	in
+	let print_func_arg level fa = match fa with
+		| FunctionArg (id,t) ->
+			begin
+				print_identifier id;
+				print_type_spec level t;
+			end
+	in
+	let print_func_sign level fs = match fs with
+		| FunctionSig (f_list, t_op) -> ()
+	in
+	let print_multi_var_decl level mvd = match mvd with
+	| MultipleVarDecl (svd_list) -> ()
+	in
+	let print_var_decl level mvd_list = ()
+	in
+	let print_short_var_decl level svd_list  = ()
+	in
+	let rec print_stmt level stmt = 
+		match stmt with
+		| EmptyStatement -> ()
+		| ExpressionStatement (e) -> ()
+		| AssignmentStatement (l)-> ()
+		| TypeDeclBlockStatement (decl_list)-> ()
+		| VarDeclBlockStatement (decl_list)-> ()
+		| ShortVarDeclStatement(decl_list)-> ()
+		| PrintStatement (e_list)-> ()
+		| PrintlnStatement (e_list)-> ()
+		| IfStatement (s, e, s1_list, s2_list) -> ()
+		| ReturnStatement (e_op)-> ()
+		| SwitchStatement (s_op,e,case_list)-> ()
+		| ForStatement (s1_op,e_op,s2_op,stmt_list)-> ()
+
+		| BreakStatement -> ()
+		| ContinueStatement  -> ()
+		| BlockStatement (sl) -> ()
+	and print_stmt_wrap level stmt = match stmt with
+		| LinedStatement (ln,s) -> print_stmt level s
+	and print_statement_list level st_list = match st_list with
+				| h :: t -> 
+					begin
+						print_stmt_wrap (level + 1) h;
+ 						print_string ";\n";
+ 						print_statement_list level t;
+ 					end
+				| [] -> ()
+	in
+	let print_top_decl level td = match td with 
+		| FunctionDecl (id,fs, stmt_list) ->
+			begin
+				print_string "func ";
+				print_identifier id;
+				print_func_sign level fs;
+				print_string " { \n";
+				insert_tab(level);
+				print_statement_list level stmt_list;
+				insert_tab(level);
+				print_string "}";
+			end
+		| TypeDeclBlock (tl) -> print_type_decl level tl
+		| VarDeclBlock (vl) -> print_var_decl level vl
+	in
+	let print_lined_top_decl_list level ldl = 
+		List.iter 
+			(fun x -> 
+				let LinedTD(td, _) = x in 
+				let () = print_top_decl level td in
+				print_string ";\n") ldl
+	in
 	print_expr exp;
 	close_out outfile
