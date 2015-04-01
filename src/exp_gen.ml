@@ -218,6 +218,16 @@ let print_ast prog file class_name =
 				print_string "\n"		
 			end
 	in
+	(* print function args in function calls*)
+	let rec print_func_call_args args_list = match args_list with
+		| [] -> ()
+		| h::[] -> (match h with 
+			| Expression(exp, typ) -> print_go_type !typ)
+		| h::t ->  
+			(match h with 
+			| Expression(exp, typ) -> print_go_type !typ);
+			print_func_call_args t
+	in
 	(* Leave the result of the expression on top of the stack. *)
 	let rec print_expr (Expression(exp, typ)) = match !typ with
 		| None -> ()
@@ -245,7 +255,7 @@ let print_ast prog file class_name =
 							print_expr (Expression(exp, typ));
 							print_string "(";
 							(*only need to print the type of the expressions*)
-							(* List.iter print_expr args_list;  *)
+							print_func_call_args args_list; 
 							print_string ")";
 							print_go_type ret_typ;
 							print_string "\n";
