@@ -1,4 +1,5 @@
 open Ast
+open Symtable
 
 let lc = ref 0
 
@@ -14,13 +15,13 @@ let print_ast prog pretty =
 				| BinEq -> 
 					print_string 
 					"if_icmpeq Label_" ^ lc ^ "\n" ^
-					 "iconst_0
+					"iconst_0
 					 Label_" ^ lc ^ ":
 					 iconst_1\n";
 					 lc := !lc + 1
 				| BinNotEq -> print_string 
 					"if_icmpne Label_" ^ lc ^ "\n" ^
-					 "iconst_0
+					"iconst_0
 					 Label_" ^ lc ^ ":
 					 iconst_1";
 					 lc := !lc + 1;
@@ -165,22 +166,21 @@ let print_ast prog pretty =
 		| RawStringLit (s) -> ()
 	in
 	(* Leave the result of the expression on top of the stack. *)
-	let rec print_expr (Expression(exp, typ)) = 
-	let () = (match exp with
-	| IdExp (i) -> print_identifier i typ
-	| LiteralExp (l) -> print_literal l
-	| UnaryExp (op, e, t) -> 
-		begin
-			print_expr e;
-			print_unary_op (op, t);
-		end
-	| BinaryExp (op, e1, e2, t) ->
-		begin
-			print_expr e1;
-			print_expr e2; 
-			print_binop (op, t);
-		end)
-	in 
+	let rec print_expr (Expression(exp, typ)) = match exp with
+		| IdExp (i) -> print_identifier i typ
+		| LiteralExp (l) -> print_literal l
+		| UnaryExp (op, e, t) -> 
+			begin
+				print_expr e;
+				print_unary_op (op, t);
+			end
+		| BinaryExp (op, e1, e2, t) ->
+			begin
+				print_expr e1;
+				print_expr e2; 
+				print_binop (op, t);
+			end		i
+	in
 	let print_basic_type t = match t with
 		| IntType -> print_string "I"
 		| FloatType -> print_string "F"
