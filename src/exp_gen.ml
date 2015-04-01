@@ -30,7 +30,7 @@ let print_ast prog pretty =
 					 "iconst_0
 					 Label_" ^ string_of_int !lc ^ ":
 					 iconst_1\n");
-					 lc := !lc + 1;
+					 lc := !lc + 1
 				| BinLessEq -> print_string 
 					("if_icmple Label_" ^ string_of_int !lc ^ "\n" ^
 					 "iconst_0
@@ -64,7 +64,8 @@ let print_ast prog pretty =
 			print_binop_int binop
 		| GoFloat ->
 			let print_binop_fl op = match op with
-				| BinEq -> print_string 
+				| BinEq -> 
+					print_string 
 					("fcmpg
 					 ifeq Label_" ^ string_of_int !lc ^
 					 "iconst_0
@@ -205,11 +206,14 @@ let print_ast prog pretty =
 		| None -> print_string "V"
 		| Some (r) -> print_type_spec r
 	in
+	let print_func_arg fa = match fa with
+		| FunctionArg (id,t) ->	print_type_spec t;
+	in
 	let print_func_sign fs = match fs with
 		| FunctionSig (f_list, t_op) -> 
 			begin
 				print_string "(";
-				List.iter print_type_spec f_list;
+				List.iter print_func_arg f_list;
 				print_string ")";
 				print_func_return t_op;		
 				print_string "\n"		
@@ -251,12 +255,14 @@ let print_ast prog pretty =
 	in 
 	let print_top_decl td = match td with 
 		| FunctionDecl (id,fs, stmt_list) -> 
-			begin
-				print_string ".method public static " ^ id;
-				print_func_sign fs;
-				print_string ".limit stack 100\n.limit locals 100\n";
-				List.iter print_stmt stmt_list
-			end
+			(match id with 
+			| ID (s, _) ->
+				begin
+					print_string (".method public static " ^ s);
+					print_func_sign fs;
+					print_string ".limit stack 100\n.limit locals 100\n";
+					List.iter print_stmt_wrap stmt_list
+				end)
 		| TypeDeclBlock (tl) -> ()
 		| VarDeclBlock (vl) -> ()
 	in
