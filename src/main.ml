@@ -1,6 +1,7 @@
 open Scan
 open Parser
-open PrettyPrint
+(* open PrettyPrint *)
+open Exp_gen
 open Lexing
 ;;
 
@@ -68,8 +69,12 @@ let () = if symtab = "t" then
 
 let () = Typecheck.build_symbol_table ast;;
 
-let () = if pptype = "t" then
+(* let () = if pptype = "t" then
   print_ast ast pretty_file_name 0
+;; *)
+
+let () = if pptype = "t" then
+  print_ast ast pretty_file_name
 ;;
 
 let () = close_out sym_out ;; 

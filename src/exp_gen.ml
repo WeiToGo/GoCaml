@@ -87,8 +87,7 @@ let print_ast prog pretty =
 					  Label_" ^ string_of_int !lc ^ ":
 					  iconst_1\n");
 					 lc := !lc + 1
-				| BinLessEq -> print_string 
-					" <= "
+				| BinLessEq -> print_string " <= "
 				| BinGreater -> print_string
 					("fcmpg
 					 iconst_1
