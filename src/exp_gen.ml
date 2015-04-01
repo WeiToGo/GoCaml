@@ -358,15 +358,24 @@ let print_ast prog file class_name =
 	in
 	let print_top_decl td = match td with 
 		| FunctionDecl (id, fs, stmt_list) -> 
-			(match id with 
-			| ID (s, _) ->
-				begin
-					print_string (".method public static " ^ s);
-					print_func_sign fs;
-					print_string ".limit stack 100\n.limit locals 100\n\n";
-					List.iter print_stmt_wrap stmt_list;
-					print_string (".end method\n\n")
-				end)
+			begin
+				(match id with 
+				| ID (s, _) ->
+					begin
+						print_string (".method public static " ^ s);
+						print_func_sign fs;
+						print_string ".limit stack 100\n.limit locals 100\n\n";
+						List.iter print_stmt_wrap stmt_list;
+					end);
+				(*add a return instruction if the function has no return type.*)
+				(match fs with
+					| FunctionSig (f_list, t_op) -> match t_op with
+						| None -> print_string "return\n";
+						| Some (t) -> () 
+				);
+				print_string (".end method\n\n");
+			end
+
 		| TypeDeclBlock (tl) -> ()
 		| VarDeclBlock (vl) -> ()
 	in
