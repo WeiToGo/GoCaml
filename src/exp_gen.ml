@@ -152,8 +152,10 @@ let print_ast prog file class_name =
 			in print_unop_bool unop
 	in
 	(* load from different places depending if id is from func arg or a local var*)
+	(* WARNING : this function only print out the name of the id, used in function calls,
+	   for loading a identifier from a local var, we need another function*)
 	let print_identifier id typ = match id with
-		| ID (s, _) -> ()
+		| ID (s, _) -> print_string s
 		| BlankID -> ()
 	in
 	let print_int_literal lit = match lit with
@@ -174,6 +176,15 @@ let print_ast prog file class_name =
 		| BoolType -> ()
 		| RuneType -> ()
 		| StringType -> print_string "Ljava/lang/String;"
+	in
+	let print_go_type t_op = match t_op with
+		| None -> print_string "V"
+		| Some (t) -> (match t with
+			| GoInt -> print_string "I"
+			| GoFloat -> print_string "F"
+			| GoBool -> ()
+			| GoRune -> ()
+			| GoString -> print_string "Ljava/lang/String;")
 	in
 	let rec print_multi_struct_field level msf= match msf with
 		| MultipleStructFieldDecl (ssf_list) -> ()
@@ -226,11 +237,12 @@ let print_ast prog file class_name =
 					| GoFunction(arg_type, ret_typ)->
 						begin
 							print_string ("invokestatic " ^ class_name ^ "/");
-							print_string exp;
+							print_expr (Expression(exp, typ));
 							print_string "(";
-							List.iter print_expr args_list;
+							(*only need to print the type of the expressions*)
+							(* List.iter print_expr args_list;  *)
 							print_string ")";
-							(* print_type_spec ret_typ (*TO CHANGE*) *)
+							print_go_type ret_typ;
 							print_string "\n";
 						end)
 	in
@@ -243,30 +255,31 @@ let print_ast prog file class_name =
 	in
 	(*since print instruction depends on the type of each expression,
 	 every expr need a print instruction*)
-	let print_print_stmt_helper (Expression(e, tp)) = match !tp with
+	(* need slight modification to also work with print*)
+	let print_println_stmt_helper (Expression(e, tp)) = match !tp with
 		| None -> raise (InternalError "expression should always have a type")
 		| Some (t) -> (match t with
 			| GoInt -> 
 				begin
 					print_expr (Expression(e, tp));
-					print_string "invokevirtual java/io/PrintStream/print(I)V\n";
+					print_string "invokevirtual java/io/PrintStream/println(I)V\n";
 				end
 				
 			| GoFloat -> 
 				begin
 					print_expr (Expression(e, tp));
-					print_string "invokevirtual java/io/PrintStream/print(F)V\n";
+					print_string "invokevirtual java/io/PrintStream/println(F)V\n";
 				end
 			| GoString -> 
 				begin
 					print_expr (Expression(e, tp));
-					print_string "invokevirtual java/io/PrintStream/print(Ljava/lang/String;)V\n"					
+					print_string "invokevirtual java/io/PrintStream/println(Ljava/lang/String;)V\n"					
 				end
 			(*need to print according to the return type of the function *)
 			| GoFunction (arg_type, ret_typ) -> 
 				begin
 					print_expr (Expression(e, tp));
-					print_string "invokevirtual java/io/PrintStream/print(I)V\n";
+					print_string "invokevirtual java/io/PrintStream/println(I)V\n";
 				end				
 		)
 	in
@@ -278,12 +291,17 @@ let print_ast prog file class_name =
 		| TypeDeclBlockStatement (decl_list)-> ()
 		| VarDeclBlockStatement (decl_list)-> ()
 		| ShortVarDeclStatement(decl_list)-> ()
+		(*TO DO: it's the same then println for now, need to modify the helper method*)
 		| PrintStatement (e_list)-> 
 			begin
 				print_string "getstatic java.lang.System.out Ljava/io/PrintStream;\n";
-				List.iter print_print_stmt_helper e_list;
+				List.iter print_println_stmt_helper e_list;
 			end
-		| PrintlnStatement (e_list)-> ()
+		| PrintlnStatement (e_list)-> 
+			begin
+				print_string "getstatic java.lang.System.out Ljava/io/PrintStream;\n";
+				List.iter print_println_stmt_helper e_list;
+			end
 		| IfStatement (s, e, s1_list, s2_list) -> ()
 		| ReturnStatement (e_op)-> 
 			(match e_op with
