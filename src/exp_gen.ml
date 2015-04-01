@@ -13,41 +13,41 @@ let print_ast prog pretty =
 		| GoInt ->
 			let print_binop_int op = match op with
 				| BinEq -> 
-					print_string 
-					"if_icmpeq Label_" ^ lc ^ "\n" ^
+					print_string
+					("if_icmpeq Label_" ^ string_of_int !lc ^ "\n" ^
 					"iconst_0
-					 Label_" ^ lc ^ ":
-					 iconst_1\n";
+					 Label_" ^ string_of_int !lc ^ ":
+					 iconst_1\n");
 					 lc := !lc + 1					
-				| BinNotEq -> print_string 
-					"if_icmpne Label_" ^ lc ^ "\n" ^
+				| BinNotEq -> print_string 	 
+					("if_icmpne Label_" ^ string_of_int !lc ^ "\n" ^
 					"iconst_0
-					 Label_" ^ lc ^ ":
-					 iconst_1\n";
+					 Label_" ^ string_of_int !lc ^ ":
+					 iconst_1\n");
 					 lc := !lc + 1
 				| BinLess -> print_string 
-					"if_icmplt Label_" ^ lc ^ "\n" ^
+					("if_icmplt Label_" ^ string_of_int !lc ^ "\n" ^
 					 "iconst_0
-					 Label_" ^ lc ^ ":
-					 iconst_1\n";
+					 Label_" ^ string_of_int !lc ^ ":
+					 iconst_1\n");
+					 lc := !lc + 1;
+				| BinLessEq -> print_string 
+					("if_icmple Label_" ^ string_of_int !lc ^ "\n" ^
+					 "iconst_0
+					 Label_" ^ string_of_int !lc ^ ":
+					 iconst_1\n");
 					 lc := !lc + 1
-				| BinLessEq -> print_string
-					"if_icmple Label_" ^ lc ^ "\n" ^
+				| BinGreater -> print_string 
+					("if_icmpgt Label_" ^ string_of_int !lc ^ "\n" ^
 					 "iconst_0
-					 Label_" ^ lc ^ ":
-					 iconst_1\n";
+					 Label_" ^ string_of_int !lc ^ ":
+					 iconst_1\n");
 					 lc := !lc + 1
-				| BinGreater -> print_string
-					"if_icmpgt Label_" ^ lc ^ "\n" ^
+				| BinGreaterEq -> print_string
+					("if_icmpge Label_" ^ string_of_int !lc ^ "\n" ^
 					 "iconst_0
-					 Label_" ^ lc ^ ":
-					 iconst_1\n";
-					 lc := !lc + 1
-				| BinGreaterEq -> print_string 
-					"if_icmpge Label_" ^ lc ^ "\n" ^
-					 "iconst_0
-					 Label_" ^ lc ^ ":
-					 iconst_1\n";
+					 Label_" ^ string_of_int !lc ^ ":
+					 iconst_1\n");
 					 lc := !lc + 1
 				| BinPlus -> print_string "iadd"
 				| BinMinus -> print_string "isub"
@@ -65,37 +65,37 @@ let print_ast prog pretty =
 		| GoFloat ->
 			let print_binop_fl op = match op with
 				| BinEq -> print_string 
-					"fcmpg
-					 ifeq Label_" ^ lc ^
+					("fcmpg
+					 ifeq Label_" ^ string_of_int !lc ^
 					 "iconst_0
-					  Label_" ^ lc ^ ":
-					  iconst_1\n";
-					 lc := !lc + 1;
+					  Label_" ^ string_of_int !lc ^ ":
+					  iconst_1\n");
+					 lc := !lc + 1
 				| BinNotEq -> print_string 
-					"fcmpg
-					 ifne Label_" ^ lc ^
+					("fcmpg
+					 ifne Label_" ^ string_of_int !lc ^
 					 "iconst_0
-					 Label_" ^ lc ^ ":
-					 iconst_1\n";
-					 lc := !lc + 1;
+					 Label_" ^ string_of_int !lc ^ ":
+					 iconst_1\n");
+					 lc := !lc + 1
 				| BinLess -> print_string 
-					"fcmpg
+					("fcmpg
 					 iconst_m1
-					 if_icmpeq Label_" ^ lc ^
+					 if_icmpeq Label_" ^ string_of_int !lc ^
 					 "iconst_0
-					  Label_" ^ lc ^ ":
-					  iconst_1\n";
-					 lc := !lc + 1;
+					  Label_" ^ string_of_int !lc ^ ":
+					  iconst_1\n");
+					 lc := !lc + 1
 				| BinLessEq -> print_string 
 					" <= "
-				| BinGreater -> print_string 
-					"fcmpg
+				| BinGreater -> print_string
+					("fcmpg
 					 iconst_1
-					 if_icmpeq Label_" ^ lc ^
+					 if_icmpeq Label_" ^ string_of_int !lc ^
 					 "iconst_0
-					 Label_" ^ lc ^ ":
-					 iconst_1\n";
-					 lc := !lc + 1;
+					 Label_" ^ string_of_int !lc ^ ":
+					 iconst_1\n");
+					 lc := !lc + 1
 				| BinGreaterEq -> print_string " >= "
 				| BinPlus -> print_string " fadd "
 				| BinMinus -> print_string " fsub "
@@ -107,19 +107,19 @@ let print_ast prog pretty =
 		| GoBool ->
 			let print_binop_bool op = match op with
 				| BinOr -> print_string 
-					"ifne Label_" ^ lc ^
-					"ifne Label_" ^ lc ^
+					("ifne Label_" ^ string_of_int !lc ^
+					"ifne Label_" ^ string_of_int !lc ^
 					"iconst_1
-					 Label_" ^ lc ^ ":
-					 iconst_0";
-					 lc := !lc + 1;
+					 Label_" ^ string_of_int !lc ^ ":
+					 iconst_0");
+					 lc := !lc + 1
 				| BinAnd -> print_string 
-					"ifeq Label_" ^ lc ^
-					"ifeq Label_" ^ lc ^
+					("ifeq Label_" ^ string_of_int !lc ^
+					"ifeq Label_" ^ string_of_int !lc ^
 					"iconst_1
-					 Label_" ^ lc ^ ":
-					 iconst_0";
-					 lc := !lc + 1;
+					 Label_" ^ string_of_int !lc ^ ":
+					 iconst_0");
+					 lc := !lc + 1
 			in 
 			print_binop_bool binop
 	in
@@ -154,32 +154,36 @@ let print_ast prog pretty =
 		| BlankID -> ()
 	in
 	let print_int_literal lit = match lit with
-		| Ast.DecInt (s) -> print_string "iconst_" ^ i ^ "\n"
+		| Ast.DecInt (s) -> print_string ("iconst_" ^ s ^ "\n")
 		| Ast.HexInt (s) -> ()
 		| Ast.OctalInt (s) -> ()
 	in
 	let print_literal lit = match lit with
 		| IntLit (i) -> print_int_literal i
-		| FloatLit (f) -> print_string "ldc " ^ f ^ "\n"
+		| FloatLit (f) -> print_string ("ldc " ^ f ^ "\n")
 		| RuneLit (r) -> ()
-		| StringLit (s) -> print_string "ldc " ^ f ^ "\n"
+		| StringLit (s) -> print_string ("ldc " ^ s ^ "\n")
 		| RawStringLit (s) -> ()
 	in
 	(* Leave the result of the expression on top of the stack. *)
 	let rec print_expr (Expression(exp, typ)) = match exp with
 		| IdExp (i) -> print_identifier i typ
 		| LiteralExp (l) -> print_literal l
-		| UnaryExp (op, e, t) -> 
-			begin
-				print_expr e;
-				print_unary_op (op, t);
-			end
-		| BinaryExp (op, e1, e2, t) ->
-			begin
-				print_expr e1;
-				print_expr e2; 
-				print_binop (op, t);
-			end		i
+		| UnaryExp (op, Expression(e, t)) -> match t with
+			| None -> print_string " " (*shouldn't happen *)
+			| Some (t) ->
+				begin
+					print_expr (Expression(e, t));
+					print_unary_op (op, t);
+				end
+		| BinaryExp (op, Expression(e1, t1), Expression(e2, t2)) -> match t1 with
+			| None -> print_string " "
+			| Some (t) -> 
+				begin
+					print_expr e1;
+					print_expr e2; 
+					print_binop (op, t1);
+				end		
 	in
 	let print_basic_type t = match t with
 		| IntType -> print_string "I"
