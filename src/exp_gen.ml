@@ -64,33 +64,33 @@ let print_ast prog pretty =
 		| GoFloat ->
 			let print_binop_fl op = match op with
 				| BinEq -> print_string 
-					"fcmpg"
-					"ifeq Label_" ^ lc
-					 "iconst_0"
-					 "Label_" ^ lc ^ ":"
-					 "iconst_1\n";
+					"fcmpg
+					 ifeq Label_" ^ lc ^
+					 "iconst_0
+					  Label_" ^ lc ^ ":
+					  iconst_1\n";
 					 lc := !lc + 1;
 				| BinNotEq -> print_string 
-					"fcmpg"
-					"ifne Label_" ^ lc
-					 "iconst_0"
-					 "Label_" ^ lc ^ ":"
-					 "iconst_1\n";
+					"fcmpg
+					 ifne Label_" ^ lc ^
+					 "iconst_0
+					 Label_" ^ lc ^ ":
+					 iconst_1\n";
 					 lc := !lc + 1;
 				| BinLess -> print_string 
 					"fcmpg
 					 iconst_m1
-					 if_icmpeq Label_" ^ lc
-					 "iconst_0"
-					 "Label_" ^ lc ^ ":"
-					 "iconst_1\n";
+					 if_icmpeq Label_" ^ lc ^
+					 "iconst_0
+					  Label_" ^ lc ^ ":
+					  iconst_1\n";
 					 lc := !lc + 1;
 				| BinLessEq -> print_string 
 					" <= "
 				| BinGreater -> print_string 
 					"fcmpg
 					 iconst_1
-					 if_icmpeq Label_" ^ lc
+					 if_icmpeq Label_" ^ lc ^
 					 "iconst_0
 					 Label_" ^ lc ^ ":
 					 iconst_1\n";
@@ -106,18 +106,18 @@ let print_ast prog pretty =
 		| GoBool ->
 			let print_binop_bool op = match op with
 				| BinOr -> print_string 
-					"ifne Label_" ^ lc
-					"ifne Label_" ^ lc
-					"iconst_1"
-					"Label_" ^ lc ^ ":"
-					 "iconst_0";
+					"ifne Label_" ^ lc ^
+					"ifne Label_" ^ lc ^
+					"iconst_1
+					 Label_" ^ lc ^ ":
+					 iconst_0";
 					 lc := !lc + 1;
 				| BinAnd -> print_string 
-					"ifeq Label_" ^ lc
-					"ifeq Label_" ^ lc
-					"iconst_1"
-					"Label_" ^ lc ^ ":"
-					 "iconst_0";
+					"ifeq Label_" ^ lc ^
+					"ifeq Label_" ^ lc ^
+					"iconst_1
+					 Label_" ^ lc ^ ":
+					 iconst_0";
 					 lc := !lc + 1;
 			in 
 			print_binop_bool binop
@@ -147,15 +147,28 @@ let print_ast prog pretty =
 					"ifeq Label 1\niconst_0\n"		
 			in print_unop_bool unop
 	in
-	let print_identifier id = match id with
-		| ID (s, _) -> print_string s 
-		| BlankID -> print_string "_ "
+	(* load from different places depending if id is from func arg or a local var*)
+	let print_identifier id typ = match id with
+		| ID (s, _) -> ()
+		| BlankID -> ()
+	in
+	let print_int_literal lit = match lit with
+		| Ast.DecInt (s) -> print_string "iconst_" ^ i ^ "\n"
+		| Ast.HexInt (s) -> ()
+		| Ast.OctalInt (s) -> ()
+	in
+	let print_literal lit = match lit with
+		| IntLit (i) -> print_int_literal i
+		| FloatLit (f) -> print_string "ldc " ^ f ^ "\n"
+		| RuneLit (r) -> ()
+		| StringLit (s) -> print_string "ldc " ^ f ^ "\n"
+		| RawStringLit (s) -> ()
 	in
 	(* Leave the result of the expression on top of the stack. *)
 	let rec print_expr (Expression(exp, typ)) = 
 	let () = (match exp with
 	| IdExp (i) -> print_identifier i typ
-	| LiteralExp (l) -> print_literal l typ
+	| LiteralExp (l) -> print_literal l
 	| UnaryExp (op, e, t) -> 
 		begin
 			print_expr e;
@@ -168,37 +181,37 @@ let print_ast prog pretty =
 			print_binop (op, t);
 		end)
 	in 
-	let print_int_literal lit = match lit with
-		| Ast.DecInt (s) -> ()
-		| Ast.HexInt (s) -> ()
-		| Ast.OctalInt (s) -> ()
-	in
-	let print_literal lit = match lit with
-		| IntLit (i) -> print_string "iconst_" ^ i ^ "\n"
-		| FloatLit (f) -> print_string "ldc " ^ f ^ "\n"
-		| RuneLit (r) -> ()
-		| StringLit (s) -> print_string "ldc " ^ f ^ "\n"
-		| RawStringLit (s) -> ()
+	let print_basic_type t = match t with
+		| IntType -> print_string "I"
+		| FloatType -> print_string "F"
+		| BoolType -> ()
+		| RuneType -> ()
+		| StringType -> print_string "Ljava/lang/String;"
 	in
 	let rec print_multi_struct_field level msf= match msf with
 		| MultipleStructFieldDecl (ssf_list) -> ()
+	(* type_spec only used in func declarations *)
 	and print_type_spec ts = match ts with
-		| BasicType (bt) -> ()
+		| BasicType (bt) -> print_basic_type bt
 		| SliceType (t) -> ()
 		| ArrayType (int_lit, t) -> ()
 		| StructType (st) -> ()
 		| FunctionType (tl, ts_op) -> ()
 		| CustomType (id) -> ()
 	in
-	let print_func_arg fa = match fa with
-		| FunctionArg (id,t) ->
-			begin
-				print_identifier id;
-				print_type_spec level t;
-			end
+	let print_func_return ret_op = match ret_op with
+		| None -> print_string "V"
+		| Some (r) -> print_type_spec r
 	in
 	let print_func_sign fs = match fs with
-		| FunctionSig (f_list, t_op) -> ()
+		| FunctionSig (f_list, t_op) -> 
+			begin
+				print_string "(";
+				List.iter print_type_spec f_list;
+				print_string ")";
+				print_func_return t_op;		
+				print_string "\n"		
+			end
 	in
 	let print_multi_var_decl mvd = match mvd with
 	| MultipleVarDecl (svd_list) -> ()
@@ -210,7 +223,7 @@ let print_ast prog pretty =
 	let rec print_stmt stmt = 
 		match stmt with
 		| EmptyStatement -> ()
-		| ExpressionStatement (e) -> ()
+		| ExpressionStatement (e) -> print_expr e
 		| AssignmentStatement (l)-> ()
 		| TypeDeclBlockStatement (decl_list)-> ()
 		| VarDeclBlockStatement (decl_list)-> ()
@@ -221,7 +234,6 @@ let print_ast prog pretty =
 		| ReturnStatement (e_op)-> ()
 		| SwitchStatement (s_op,e,case_list)-> ()
 		| ForStatement (s1_op,e_op,s2_op,stmt_list)-> ()
-
 		| BreakStatement -> ()
 		| ContinueStatement  -> ()
 		| BlockStatement (sl) -> ()
@@ -234,17 +246,23 @@ let print_ast prog pretty =
  						print_statement_list t;
  					end
 				| [] -> ()
-	in
+	in 
 	let print_top_decl td = match td with 
-		| FunctionDecl (id,fs, stmt_list) -> ()
+		| FunctionDecl (id,fs, stmt_list) -> 
+			begin
+				print_string ".method public static " ^ id;
+				print_func_sign fs;
+				print_string ".limit stack 100\n.limit locals 100\n";
+				List.iter print_stmt stmt_list
+			end
 		| TypeDeclBlock (tl) -> ()
 		| VarDeclBlock (vl) -> ()
 	in
-	let print_lined_top_decl_list level ldl = 
+	let print_lined_top_decl_list ldl = 
 		List.iter 
 			(fun x -> 
 				let LinedTD(td, _) = x in 
-				let () = print_top_decl level td in
+				let () = print_top_decl td in
 				print_string ";\n") ldl
 	in
 	print_lined_top_decl_list ldl;
