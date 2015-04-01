@@ -220,7 +220,8 @@ let print_ast prog file class_name =
 					print_expr (Expression(e2, t2)); 
 					print_binop (op, t);
 				end	
-			| FunctionCallExp (Expression(exp, typ), args_list) -> match !typ with
+			| FunctionCallExp (Expression(exp, typ), args_list) ->
+				(match !typ with
 				| None -> raise (InternalError "expression should have a type")
 				| Some (t) -> (match t with
 					| GoFunction(arg_type, ret_typ)->
@@ -232,7 +233,7 @@ let print_ast prog file class_name =
 							print_string ")";
 							(* print_type_spec ret_typ (*TO CHANGE*) *)
 							print_string "\n";
-						end)
+						end))
 			| AppendExp(id, e) -> () (* TODO *)
 			| TypeCastExp(ts, e) -> () (* TODO *)
 			| IndexExp(e1, e2) -> () (* TODO *)
