@@ -181,7 +181,14 @@ let print_ast prog file class_name =
 					print_expr (Expression(e1, t1));
 					print_expr (Expression(e2, t2)); 
 					print_binop (op, t);
-				end		
+				end	
+			| FunctionCallExp (exp,e_list) -> 
+				begin
+					print_string ("invokestatic " ^ class_name ^ "/");
+					print_expr exp;
+					print_string "("
+					
+				end
 	in
 	let print_basic_type t = match t with
 		| IntType -> print_string "I"
@@ -258,16 +265,9 @@ let print_ast prog file class_name =
 		| BreakStatement -> ()
 		| ContinueStatement  -> ()
 		| BlockStatement (sl) -> ()
-	and print_stmt_wrap stmt = match stmt with
+	and print_stmt_wrap stmt  = match stmt with
 		| LinedStatement (ln,s) -> print_stmt s
-	and print_statement_list st_list = match st_list with
-				| h :: t -> 
-					begin
-						print_stmt_wrap h;
- 						print_statement_list t;
- 					end
-				| [] -> ()
-	in 
+	in
 	(* class initialization, not sure what class name would be*)
 	let print_init_class classname = print_string 
 		(".source " ^ class_name ^ 
@@ -278,7 +278,7 @@ let print_ast prog file class_name =
 (* 	let print_init_method = print_string
 		".method public <init>() V" *)
 	let print_top_decl td = match td with 
-		| FunctionDecl (id,fs, stmt_list) -> 
+		| FunctionDecl (id, fs, stmt_list) -> 
 			(match id with 
 			| ID (s, _) ->
 				begin
