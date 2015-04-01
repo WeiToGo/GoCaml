@@ -3,12 +3,15 @@ open Symtable
 
 let lc = ref 0
 
+exception InternalError of string
+
 let print_ast prog file class_name = 
 	let Program(pack,ldl) = prog in
 	(* let Program(exp) = prog in *)
 	let outfile = open_out file in 
 	let print_string = fun s -> output_string outfile s in
 	let print_char = fun c -> output_char outfile c in
+	(* for boolean results, true = 1, false = 0 *)
 	let print_binop (binop, typ) = match typ with
 		| GoInt ->
 			let print_binop_int op = match op with
@@ -165,31 +168,6 @@ let print_ast prog file class_name =
 		| StringLit (s) -> print_string ("ldc " ^ s ^ "\n")
 		| RawStringLit (s) -> ()
 	in
-	(* Leave the result of the expression on top of the stack. *)
-	let rec print_expr (Expression(exp, typ)) = match !typ with
-		| None -> ()
-		| Some (t) -> match exp with
-			| IdExp (i) -> print_identifier i t
-			| LiteralExp (l) -> print_literal l
-			| UnaryExp (op, Expression(e, tp)) -> 
-				begin
-					print_expr (Expression(e, typ));
-					print_unary_op (op, t);
-				end
-			| BinaryExp (op, Expression(e1, t1), Expression(e2, t2)) ->
-				begin
-					print_expr (Expression(e1, t1));
-					print_expr (Expression(e2, t2)); 
-					print_binop (op, t);
-				end	
-			| FunctionCallExp (exp,e_list) -> 
-				begin
-					print_string ("invokestatic " ^ class_name ^ "/");
-					print_expr exp;
-					print_string "("
-					
-				end
-	in
 	let print_basic_type t = match t with
 		| IntType -> print_string "I"
 		| FloatType -> print_string "F"
@@ -225,12 +203,53 @@ let print_ast prog file class_name =
 				print_string "\n"		
 			end
 	in
+	(* Leave the result of the expression on top of the stack. *)
+	let rec print_expr (Expression(exp, typ)) = match !typ with
+		| None -> ()
+		| Some (t) -> match exp with
+			| IdExp (i) -> print_identifier i t
+			| LiteralExp (l) -> print_literal l
+			| UnaryExp (op, Expression(e, tp)) -> 
+				begin
+					print_expr (Expression(e, typ));
+					print_unary_op (op, t);
+				end
+			| BinaryExp (op, Expression(e1, t1), Expression(e2, t2)) ->
+				begin
+					print_expr (Expression(e1, t1));
+					print_expr (Expression(e2, t2)); 
+					print_binop (op, t);
+				end	
+			| FunctionCallExp (Expression(exp, typ), args_list) -> match !typ with
+				| None -> raise (InternalError "expression should have a type")
+				| Some (t) -> (match t with
+					| GoFunction(arg_type, ret_typ)->
+						begin
+							print_string ("invokestatic " ^ class_name ^ "/");
+							print_string "(";
+							List.iter print_expr args_list;
+							print_string ")";
+							(* print_type_spec ret_typ (*TO CHANGE*) *)
+						end)
+	in
 	let print_multi_var_decl mvd = match mvd with
-	| MultipleVarDecl (svd_list) -> ()
+		| MultipleVarDecl (svd_list) -> ()
 	in
 	let print_var_decl mvd_list = ()
 	in
 	let print_short_var_decl svd_list  = ()
+	in
+	(*since print instruction depends on the type of each expression,
+	 every expr need a print instruction*)
+	let print_print_stmt_helper (Expression(e, tp)) = match !tp with
+		| None -> raise (InternalError "expression should always have a type")
+		| Some (tp) -> (match tp with
+			| GoInt -> print_string "invokevirtual java/io/PrintStream/print(I)V\n"
+			| GoFloat -> print_string "invokevirtual java/io/PrintStream/print(F)V\n"
+			| GoString -> print_string "invokevirtual java/io/PrintStream/print(Ljava/lang/String;)V\n"
+			(*need to print according to the return type of the function *)
+			| GoFunction (arg_type, ret_typ) -> print_string "invokevirtual java/io/PrintStream/print(I)V\n"
+		)
 	in
 	let rec print_stmt stmt = 
 		match stmt with
@@ -240,7 +259,11 @@ let print_ast prog file class_name =
 		| TypeDeclBlockStatement (decl_list)-> ()
 		| VarDeclBlockStatement (decl_list)-> ()
 		| ShortVarDeclStatement(decl_list)-> ()
-		| PrintStatement (e_list)-> ()
+		| PrintStatement (e_list)-> 
+			begin
+				print_string "getstatic java.lang.System.out Ljava/io/PrintStream;\n";
+				List.iter print_print_stmt_helper e_list;
+			end
 		| PrintlnStatement (e_list)-> ()
 		| IfStatement (s, e, s1_list, s2_list) -> ()
 		| ReturnStatement (e_op)-> 
@@ -248,7 +271,7 @@ let print_ast prog file class_name =
 			| None -> print_string "return\n"
 			| Some (Expression(exp, typ)) ->
 				(match !typ with
-				| None -> ()
+				| None -> raise (InternalError "should have a function return type")
 				| Some (t) -> match t with
 					| GoInt -> 
 						begin
