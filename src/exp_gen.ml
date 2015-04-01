@@ -285,7 +285,8 @@ let print_ast prog file class_name =
 					print_string (".method public static " ^ s);
 					print_func_sign fs;
 					print_string ".limit stack 100\n.limit locals 100\n\n";
-					List.iter print_stmt_wrap stmt_list
+					List.iter print_stmt_wrap stmt_list;
+					print_string (".end method")
 				end)
 		| TypeDeclBlock (tl) -> ()
 		| VarDeclBlock (vl) -> ()
