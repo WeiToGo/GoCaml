@@ -13,7 +13,7 @@ let print_ast prog file class_name =
 	let print_char = fun c -> output_char outfile c in
 	(* for boolean results, true = 1, false = 0 *)
 	let print_binop (binop, typ) = match typ with
-		| GoInt ->
+		| GoInt -> (* TO DO need to fix label jumping*)
 			let print_binop_int op = match op with
 				| BinEq -> 
 					print_string
@@ -65,7 +65,7 @@ let print_ast prog file class_name =
 				| BinBitAndNot -> print_string " &^ "
 			in 
 			print_binop_int binop
-		| GoFloat ->
+		| GoFloat -> (* TO DO need to fix label jumping*)
 			let print_binop_fl op = match op with
 				| BinEq -> 
 					print_string 
@@ -109,20 +109,30 @@ let print_ast prog file class_name =
 			print_binop_fl binop
 		| GoBool ->
 			let print_binop_bool op = match op with
-				| BinOr -> print_string 
-					("ifne Label_" ^ string_of_int !lc ^
-					"ifne Label_" ^ string_of_int !lc ^
-					"iconst_1
-					 Label_" ^ string_of_int !lc ^ ":
-					 iconst_0");
-					 lc := !lc + 1
-				| BinAnd -> print_string 
-					("ifeq Label_" ^ string_of_int !lc ^
-					"ifeq Label_" ^ string_of_int !lc ^
-					"iconst_1
-					 Label_" ^ string_of_int !lc ^ ":
-					 iconst_0");
-					 lc := !lc + 1
+				| BinOr -> 
+					begin
+						print_string ("ifne Label_" ^ string_of_int !lc ^ "
+						ifne Label_" ^ string_of_int !lc ^ "\niconst_1\n");
+						lc := !lc + 1;
+						print_string ("goto Label_" ^ string_of_int !lc ^ "\n");
+						lc := !lc - 1;
+						print_string ("Label_ " ^ string_of_int !lc ^ "
+						iconst_0");
+						lc := !lc + 1;
+						print_string ("Label_ " ^ string_of_int !lc ^ ":\n");	
+					end
+				| BinAnd -> 
+					begin
+						print_string ("ifeq Label_" ^ string_of_int !lc ^ "
+						ifeq Label_" ^ string_of_int !lc ^ "\niconst_1\n");
+						lc := !lc + 1;
+						print_string ("goto Label_" ^ string_of_int !lc ^ "\n");
+						lc := !lc - 1;
+						print_string ("Label_ " ^ string_of_int !lc ^ "
+						iconst_0");
+						lc := !lc + 1;
+						print_string ("Label_ " ^ string_of_int !lc ^ ":\n");	
+					end	
 			in 
 			print_binop_bool binop
 	in
@@ -147,12 +157,16 @@ let print_ast prog file class_name =
 			in print_unop_rune unop
 		| GoBool -> 
 			let print_unop_bool op = match op with
-				| UNot -> print_string 
-					 ("ifeq Label_" ^ string_of_int !lc ^
-					 "iconst_0
-					  Label_" ^ string_of_int !lc ^ ":
-					  iconst_1\n");
-					  lc := !lc + 1	
+				| UNot -> 
+					begin
+						print_string ("ifeq Label_" ^ string_of_int !lc ^ "iconst_0\n");
+						lc := !lc + 1;
+						print_string ("goto Label_" ^ string_of_int !lc ^ "\n");
+						lc := !lc - 1;
+						print_string ("iconst_1\nLabel_ " ^ string_of_int !lc ^ "\n");
+						lc := !lc + 1;
+						print_string ("Label_ " ^ string_of_int !lc ^ ":\n");	
+					end
 			in print_unop_bool unop
 	in
 	(* load from different places depending if id is from func arg or a local var*)
