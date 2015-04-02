@@ -18,38 +18,32 @@ let print_ast prog file class_name =
 				| BinEq -> 
 					print_string
 					("if_icmpeq Label_" ^ string_of_int !lc ^ "\n" ^
-					"iconst_0
-					 Label_" ^ string_of_int !lc ^ ":
+					"iconst_0\nLabel_" ^ string_of_int !lc ^ ":
 					 iconst_1\n");
 					 lc := !lc + 1					
 				| BinNotEq -> print_string 	 
 					("if_icmpne Label_" ^ string_of_int !lc ^ "\n" ^
-					"iconst_0
-					 Label_" ^ string_of_int !lc ^ ":
+					"iconst_0\nLabel_" ^ string_of_int !lc ^ ":
 					 iconst_1\n");
 					 lc := !lc + 1
 				| BinLess -> print_string 
 					("if_icmplt Label_" ^ string_of_int !lc ^ "\n" ^
-					 "iconst_0
-					 Label_" ^ string_of_int !lc ^ ":
+					 "iconst_0\nLabel_" ^ string_of_int !lc ^ ":
 					 iconst_1\n");
 					 lc := !lc + 1
 				| BinLessEq -> print_string 
 					("if_icmple Label_" ^ string_of_int !lc ^ "\n" ^
-					 "iconst_0
-					 Label_" ^ string_of_int !lc ^ ":
+					 "iconst_0\nLabel_" ^ string_of_int !lc ^ ":
 					 iconst_1\n");
 					 lc := !lc + 1
 				| BinGreater -> print_string 
 					("if_icmpgt Label_" ^ string_of_int !lc ^ "\n" ^
-					 "iconst_0
-					 Label_" ^ string_of_int !lc ^ ":
+					 "iconst_0\nLabel_" ^ string_of_int !lc ^ ":
 					 iconst_1\n");
 					 lc := !lc + 1
 				| BinGreaterEq -> print_string
 					("if_icmpge Label_" ^ string_of_int !lc ^ "\n" ^
-					 "iconst_0
-					 Label_" ^ string_of_int !lc ^ ":
+					 "iconst_0\nLabel_" ^ string_of_int !lc ^ ":
 					 iconst_1\n");
 					 lc := !lc + 1
 				| BinPlus -> print_string "iadd\n"
@@ -71,35 +65,33 @@ let print_ast prog file class_name =
 					print_string 
 					("fcmpg
 					 ifeq Label_" ^ string_of_int !lc ^
-					 "iconst_0
-					  Label_" ^ string_of_int !lc ^ ":
-					  iconst_1\n");
+					 "iconst_0\nLabel_" ^ string_of_int !lc ^
+					 ":\niconst_1\n");
 					 lc := !lc + 1
 				| BinNotEq -> print_string 
 					("fcmpg
 					 ifne Label_" ^ string_of_int !lc ^
-					 "iconst_0
-					 Label_" ^ string_of_int !lc ^ ":
-					 iconst_1\n");
+					 "iconst_0\nLabel_" ^ string_of_int !lc ^ 
+					 ":\niconst_1\n");
 					 lc := !lc + 1
 				| BinLess -> print_string 
 					("fcmpg
 					 iconst_m1
 					 if_icmpeq Label_" ^ string_of_int !lc ^
 					 "iconst_0
-					  Label_" ^ string_of_int !lc ^ ":
-					  iconst_1\n");
+					  Label_" ^ string_of_int !lc ^
+					  ":\niconst_1\n");
 					 lc := !lc + 1
-				| BinLessEq -> print_string " <= "
+				| BinLessEq ->  () (* TO DO *)
 				| BinGreater -> print_string
 					("fcmpg
 					 iconst_1
 					 if_icmpeq Label_" ^ string_of_int !lc ^
 					 "iconst_0
-					 Label_" ^ string_of_int !lc ^ ":
-					 iconst_1\n");
+					 Label_" ^ string_of_int !lc ^
+					 ":\niconst_1\n");
 					 lc := !lc + 1
-				| BinGreaterEq -> print_string " >= "
+				| BinGreaterEq -> () (* TO DO *)
 				| BinPlus -> print_string " fadd "
 				| BinMinus -> print_string " fsub "
 				| BinMult -> print_string " fmul "
@@ -111,25 +103,25 @@ let print_ast prog file class_name =
 			let print_binop_bool op = match op with
 				| BinOr -> 
 					begin
-						print_string ("ifne Label_" ^ string_of_int !lc ^ "
-						ifne Label_" ^ string_of_int !lc ^ "\niconst_1\n");
+						print_string ("ifne Label_" ^ string_of_int !lc ^ 
+						"\nifne Label_" ^ string_of_int !lc ^ "\niconst_1\n");
 						lc := !lc + 1;
 						print_string ("goto Label_" ^ string_of_int !lc ^ "\n");
 						lc := !lc - 1;
-						print_string ("Label_ " ^ string_of_int !lc ^ "
-						iconst_0");
+						print_string ("Label_ " ^ string_of_int !lc ^
+						":\niconst_0\n");
 						lc := !lc + 1;
 						print_string ("Label_ " ^ string_of_int !lc ^ ":\n");	
 					end
 				| BinAnd -> 
 					begin
-						print_string ("ifeq Label_" ^ string_of_int !lc ^ "
-						ifeq Label_" ^ string_of_int !lc ^ "\niconst_1\n");
+						print_string ("ifeq Label_" ^ string_of_int !lc ^
+						"\nifeq Label_" ^ string_of_int !lc ^ "\niconst_1\n");
 						lc := !lc + 1;
 						print_string ("goto Label_" ^ string_of_int !lc ^ "\n");
 						lc := !lc - 1;
-						print_string ("Label_ " ^ string_of_int !lc ^ "
-						iconst_0");
+						print_string ("Label_ " ^ string_of_int !lc ^
+						":\niconst_0\n");
 						lc := !lc + 1;
 						print_string ("Label_ " ^ string_of_int !lc ^ ":\n");	
 					end	
@@ -170,8 +162,9 @@ let print_ast prog file class_name =
 			in print_unop_bool unop
 	in
 	(* load from different places depending if id is from func arg or a local var*)
-	(* WARNING : this function only print out the name of the id, used in function calls,
-	   for loading a identifier from a local var, we need another function*)
+
+	(* WARNING : this function only print out the name of the id, only to be used in function calls,
+	   for loading a identifier from a local var, we need another function *)
 	let print_identifier id typ = match id with
 		| ID (s, _) -> print_string s
 		| BlankID -> ()
@@ -204,10 +197,8 @@ let print_ast prog file class_name =
 			| GoRune -> ()
 			| GoString -> print_string "Ljava/lang/String;")
 	in
-	let rec print_multi_struct_field level msf= match msf with
-		| MultipleStructFieldDecl (ssf_list) -> ()
 	(* type_spec only used in func declarations *)
-	and print_type_spec ts = match ts with
+	let print_type_spec ts = match ts with
 		| BasicType (bt) -> print_basic_type bt
 		| SliceType (t) -> ()
 		| ArrayType (int_lit, t) -> ()
@@ -242,10 +233,11 @@ let print_ast prog file class_name =
 			| Expression(exp, typ) -> print_go_type !typ);
 			print_func_call_args t
 	in
-	(* Leave the result of the expression on top of the stack. *)
+	(* Leave the result of the expression on top of the stack, increasing the stack height by 1. *)
 	let rec print_expr (Expression(exp, typ)) = match !typ with
 		| None -> ()
 		| Some (t) -> match exp with
+			(* IdExp only works to print the function name in function calls. Will need to be changed.*)
 			| IdExp (i) -> print_identifier i t
 			| LiteralExp (l) -> print_literal l
 			| UnaryExp (op, Expression(e, tp)) -> 
@@ -280,15 +272,14 @@ let print_ast prog file class_name =
 			| SelectExp(e, id) -> () (* TODO *) 
 	in
 	let print_multi_var_decl mvd = match mvd with
-		| MultipleVarDecl (svd_list) -> ()
+		| MultipleVarDecl (svd_list) -> ()  (* TODO *)
 	in
-	let print_var_decl mvd_list = ()
+	let print_var_decl mvd_list = ()  (* TODO *)
 	in
-	let print_short_var_decl svd_list  = ()
+	let print_short_var_decl svd_list  = ()  (* TODO *)
 	in
 	(*since print instruction depends on the type of each expression,
 	 every expr need a print instruction*)
-	(* need slight modification to also work with print*)
 	let print_println_stmt_helper (Expression(e, tp)) = match !tp with
 		| None -> raise (InternalError "expression should always have a type")
 		| Some (t) -> (match t with
@@ -316,6 +307,34 @@ let print_ast prog file class_name =
 				end				
 		)
 	in
+	(* very repetitive, these two helper methods need to be merged. *)
+	let print_print_stmt_helper (Expression(e, tp)) = match !tp with
+		| None -> raise (InternalError "expression should always have a type")
+		| Some (t) -> (match t with
+			| GoInt -> 
+				begin
+					print_expr (Expression(e, tp));
+					print_string "invokevirtual java/io/PrintStream/print(I)V\n";
+				end
+				
+			| GoFloat -> 
+				begin
+					print_expr (Expression(e, tp));
+					print_string "invokevirtual java/io/PrintStream/print(F)V\n";
+				end
+			| GoString -> 
+				begin
+					print_expr (Expression(e, tp));
+					print_string "invokevirtual java/io/PrintStream/print(Ljava/lang/String;)V\n"					
+				end
+			(*need to print according to the return type of the function *)
+			| GoFunction (arg_type, ret_typ) -> 
+				begin
+					print_expr (Expression(e, tp));
+					print_string "invokevirtual java/io/PrintStream/print(I)V\n";
+				end				
+		)
+	in
 	let rec print_stmt stmt = 
 		match stmt with
 		| EmptyStatement -> ()
@@ -324,11 +343,10 @@ let print_ast prog file class_name =
 		| TypeDeclBlockStatement (decl_list)-> ()
 		| VarDeclBlockStatement (decl_list)-> ()
 		| ShortVarDeclStatement(decl_list)-> ()
-		(*TO DO: it's the same then println for now, need to modify the helper method*)
 		| PrintStatement (e_list)-> 
 			begin
 				print_string "getstatic java.lang.System.out Ljava/io/PrintStream;\n";
-				List.iter print_println_stmt_helper e_list;
+				List.iter print_print_stmt_helper e_list;
 			end
 		| PrintlnStatement (e_list)-> 
 			begin
