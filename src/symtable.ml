@@ -11,6 +11,7 @@ let dumpsymtab = ref true
 let dumpsymtab_all = ref true
 
 module StructFields = Map.Make(String)
+let next_count = Utils.new_counter 0
 
 
 (* types *)
@@ -32,9 +33,9 @@ type gotype =
 
 type scope = Scope of (scope option * (string, sym_table_entry) Hashtbl.t)
              (* Scope of parent * symbol hashtable *)
-and sym_table_entry = Entry of (string * gotype * scope * int)
+and sym_table_entry = Entry of (string * gotype * scope * int * int)
                        (* Entry of true_name, its gotype,
-                           the scope it was declared in, and the declaration line *)
+                           the scope it was declared in, the declaration line, and a global serial *)
 
 
 (* --- Printing functions --- *)
@@ -88,10 +89,10 @@ and string_of_args_list args = match args with
 
 
 let print_entry key entry = 
-  let Entry(id_name, typ, _, ln) = entry in
+  let Entry(id_name, typ, _, ln, serial) = entry in
   fprintf (! out_channel)  "%s" id_name;
   fprintf (! out_channel)  " -> ";
-  fprintf (! out_channel)  "%s (line %s)" (string_of_type typ) (string_of_int ln);
+  fprintf (! out_channel)  "%s (line %s) $%d" (string_of_type typ) (string_of_int ln) serial;
   fprintf (! out_channel)  "\n";
   ()
 
@@ -103,10 +104,10 @@ let rec print_sym_table scope =
 
 (* --- Symbol Table utils --- *)
 
-(* Adds a symbol with type typ to scope. Returns the sym table *)
+(* Adds a symbol with type typ to scope. Returns the sym table entry *)
 let add_sym scope symbol typ ln = 
   let Scope(_, hashmap) = scope in
-  let entry = Entry(symbol, typ, scope, ln) in
+  let entry = Entry(symbol, typ, scope, ln, next_count ()) in
   let () = Hashtbl.replace hashmap symbol entry in
   entry
 
@@ -163,5 +164,5 @@ let rec lookup scope sym =
 
 (* Recursive lookup for sym. Returns only the type *)
 let lookup_type scope sym = 
-  let Entry(_, typ, _, _) = lookup scope sym in 
+  let Entry(_, typ, _, _, _) = lookup scope sym in 
   typ

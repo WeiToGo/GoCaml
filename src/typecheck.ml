@@ -24,7 +24,7 @@ let prev_decl_msg scope id = match id with
 | BlankID -> raise (InternalError "BlankID is never defined before")
 | ID(name, _) -> 
   let entry = lookup_current scope name in
-  let Entry(_, _, _, ln) = entry in
+  let Entry(_, _, _, ln, _) = entry in
   "Previous declaration of " ^ name ^ " at line " ^
   (string_of_int ln) ^ "."
 
@@ -35,7 +35,7 @@ let assign_error_msg left_type right_type =
 (* --~~~~~~--*** Helper Functions ***--~~~~~~-- *)
 
 let type_of_entry entry =
-  let Entry(_, typ, _, _) = entry in 
+  let Entry(_, typ, _, _, _) = entry in 
   typ 
 
 let string_of_id id = match id with

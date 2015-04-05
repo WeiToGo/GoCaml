@@ -1,4 +1,5 @@
 (* use this file in utop. #use "path/to/code_emitter_test.ml" *)
+(* This is outdated *)
 
 open CodeEmitter;;
 open JasminAst;;

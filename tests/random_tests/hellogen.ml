@@ -1,13 +1,4 @@
 open Lexing
-open Parser
-open Ast
-open Typecheck
-open PrettyPrint
-open Weeder 
-open JasminAst
-open CodeEmitter
-open CodeGen
-
 let get_ast input = 
   let ic = match input with
   | "stdin" -> stdin
@@ -31,17 +22,15 @@ let get_ast input =
   in
   match input with
   | "stdin" -> ast
-  | filename -> close_in ic; ast
+  | filename -> close_in ic; ast;;
 
-let print_lexer_stream input = 
-  let ic = match input with
-  | "stdin" -> stdin
-  | filename -> open_in filename
-  in
-  (* let out_channel = open_out "lexer_stream.out" in  *)
-  let _ = Printer.loop_token_printer Scan.wrapped_scan (Lexing.from_channel ic ) stdout
-  in
-  (* let () = close_out out_channel in *)
-  match input with
-  | "stdin" -> ()
-  | filename -> close_in ic
+let testfile = "../../tests/random_tests/helloworld.go";;
+
+let goast = get_ast testfile;;
+
+Typecheck.build_symbol_table goast;;
+
+let bytecode_ast = CodeGen.create_byte_code_ast goast (Filename.basename testfile);;
+
+CodeEmitter.print_main_class bytecode_ast (Filename.dirname testfile);;
+
