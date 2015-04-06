@@ -10,7 +10,7 @@ else
   run_all_tests="false"
 fi
 
-a=$(find code_gen_suite -type f)
+a=$(find code_gen_suite -type f -regex ".*\.go")
 
 let total_ran=0
 let passed=0
@@ -21,15 +21,23 @@ while read -r line; do
   if grep --quiet "^$line\$" $PASS_REGISTRY; then
     continue
   fi
-  echo "Running test on $line"
+  echo -n "Running test on $line"
   let total_ran=total_ran+1
   filename=$(basename $line)
   pushd . &>/dev/null
   gen_dir="_build/gen_$filename" 
   mkdir -p $gen_dir 
   cp $line $gen_dir
-  cd $gen_dir
-  go run $filename &> gooutput.txt  # Go run prints to stderr on my mac 
+  expected_output_file="${line}camlout"
+  if [[ -e "$expected_output_file" ]]; then
+    echo " (expected output provided in $expected_output_file)"
+    cp $expected_output_file ${gen_dir}/gooutput.txt
+    cd $gen_dir
+  else 
+    echo ""
+    cd $gen_dir
+    go run $filename &> gooutput.txt  # Go run prints to stderr on my mac 
+  fi
   ../../../main.byte f f $filename
   java -jar $JASMIN_JAR GeneratedBytecode.j  >/dev/null
   java GeneratedBytecode > gocaml.txt
