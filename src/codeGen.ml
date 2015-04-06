@@ -55,6 +55,7 @@ let process_literal = function
 | IntLit(HexInt(s)) -> 
     let int_repr = int_of_string s in
     [JInst(Ldc(string_of_int int_repr))]
+| FloatLit(s) -> [JInst(Ldc(s))]
 | _ -> raise NotImplemented
 
 let rec process_expression (Expression(e, t)) = match e with 
