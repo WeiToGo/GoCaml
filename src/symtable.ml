@@ -6,9 +6,9 @@ open Printf
 let out_channel  = ref stdout
 let err_channel = ref stderr
 
-let dumpsymtab = ref true
+let dumpsymtab = ref false
 
-let dumpsymtab_all = ref true
+let dumpsymtab_all = ref false
 
 module StructFields = Map.Make(String)
 let next_count = Utils.new_counter 0

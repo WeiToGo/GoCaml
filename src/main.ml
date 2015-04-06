@@ -1,7 +1,7 @@
 open Scan
 open Parser
 (* open PrettyPrint *)
-open Exp_gen
+(* open Exp_gen *)
 open Lexing
 ;;
 
@@ -47,8 +47,9 @@ let _ = if (Array.length Sys.argv) < 2 then
 
 let pptype = Sys.argv.(1)
 let symtab = Sys.argv.(2)
-let in_file_name = Sys.argv.(3)
+let in_file_name = Sys.argv.(3);;
 
+let out_directory = if (Array.length Sys.argv) > 4 then Sys.argv.(4) else (Sys.getcwd ()) ;;
 
 let file_basename = String.sub in_file_name 0 ((String.length in_file_name) - 3) 
 
@@ -76,9 +77,14 @@ let () = Typecheck.build_symbol_table ast;;
   print_ast ast pretty_file_name 0
 ;; *)
 
-let () = if pptype = "t" then
+(* let () = if pptype = "t" then
   print_ast ast jasmin_file_name jasmin_class_name
-;;
+;; *)
 
 let () = close_out sym_out ;; 
+
+let bytecode_ast = CodeGen.create_byte_code_ast ast in_file_name in
+CodeEmitter.print_main_class bytecode_ast (Filename.dirname in_file_name);;
+
+
 

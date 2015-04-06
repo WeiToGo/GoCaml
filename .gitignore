@@ -1,6 +1,7 @@
 gocaml
 _build/
 src/_build
+tests/_build
 gocaml.sublime-project
 gocaml.sublime-workspace
 *.thoughts

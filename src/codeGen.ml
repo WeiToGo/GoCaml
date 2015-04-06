@@ -113,11 +113,10 @@ let process_func_decl id funsig stmt_list =
       maps_from_stmts in
   let stmt_code = List.flatten (List.map process_statement stmt_list) in
   let code = if signature.return_type = JVoid then stmt_code @ [JInst(Return)] else stmt_code in (* PerfPenalty *)
-  let m = { signature; code; local_mapping; } in
-  ([], [m])
+  { signature; code; local_mapping; }
 
 let process_top_level_decl (LinedTD(top_decl, _)) = match top_decl with
-| FunctionDecl(id, funsig, stmt_list) -> process_func_decl id funsig stmt_list
+| FunctionDecl(id, funsig, stmt_list) -> ([], [process_func_decl id funsig stmt_list])
 | TypeDeclBlock(_) -> ([], [])  (* Ignore type declarations. *)
 | VarDeclBlock(mvd_list) -> process_var_decl mvd_list
 
