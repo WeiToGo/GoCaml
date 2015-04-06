@@ -1,9 +1,10 @@
 exception NotImplemented
-
+exception InternalError of string
 
 module GlobalVarMap = Map.Make(Utils.Int)
 module LocalVarMap = Map.Make(Utils.Int)
 
+let main_class_name = "GeneratedBytecode"
 
 type bytecode_ast = 
   { 
@@ -44,6 +45,10 @@ and jinstruction =
   | PutStatic of string * jtype
   | InvokeVirtual of jmethod_sig
   | Return
+  | Iload of int
+  | Dload of int
+  | IStore of int
+  | DStore of int
   (* Keep adding more and more instructions here.
    * Then also change the string_of_jinst function below *)
 and pseudo_instruction = 
@@ -95,9 +100,12 @@ let string_of_jinst = function
 | Dup -> "dup"
 | BiPush(s) -> "bipush " ^ s 
 | GetStatic(s, t) -> "getstatic " ^ s ^ " " ^ (string_of_jtype t)
-| PutStatic(s, t) ->  "putstatic " ^ s ^ " " ^ (string_of_jtype t)
-| InvokeVirtual(jsig) -> "invokevirtual " ^ (string_of_jsig jsig)
+| PutStatic(s, t) -> "putstatic " ^ s ^ " " ^ (string_of_jtype t)| InvokeVirtual(jsig) -> "invokevirtual " ^ (string_of_jsig jsig)
 | Return -> "return"
+| Iload(i) -> "iload " ^ (string_of_int i)
+| Dload(i) -> "dload " ^ (string_of_int i)
+| IStore(i) -> "istore " ^ (string_of_int i)
+| DStore(i) -> "dstore " ^ (string_of_int i) 
 
 let calculate_local_limit jstmts = 25  (* Not implemented yet *)
 let calculate_ostack_limit jstmts = 25 (* Not implemented yet *) 
@@ -108,6 +116,7 @@ let jc_string = "java/lang/String"
 let jc_printstream = "java/io/PrintStream"
 let jc_sysout = "java/lang/System/out"
 let jc_println = flstring jc_printstream "println"
+let jc_print = flstring jc_printstream "print"
 
 let get_global_var_map gvar_entry_list = 
   List.fold_left
@@ -117,4 +126,37 @@ let get_global_var_map gvar_entry_list =
     GlobalVarMap.empty
     gvar_entry_list
 
-let real_instructions (global_map, local_map) pinst = raise NotImplemented
+let local_load_instructions lindex jvm_type = match jvm_type with
+| JInt -> [JInst(Iload(lindex))]
+| JFloat -> [JInst(Dload(lindex))]
+| _ -> raise NotImplemented
+
+let global_load_instructions name jvm_type = 
+  [JInst(GetStatic(main_class_name ^ "/" ^ name, jvm_type))] 
+
+let local_store_instructions lindex jvm_type = match jvm_type with
+| JInt -> [JInst(IStore(lindex))]
+| JFloat -> [JInst(DStore(lindex))]
+| _ -> raise NotImplemented
+
+let global_store_instructions name jvm_type = 
+  [JInst(PutStatic(main_class_name ^ "/" ^ name, jvm_type))]
+
+let real_statements (global_map, local_map) pinst = 
+  let lookup_in_local var_num = 
+    try let lindex, jtype = LocalVarMap.find var_num local_map in Some(lindex, jtype)
+    with Not_found -> None
+  in
+  let lookup_in_global var_num =
+    try let {name; jtype; _} = GlobalVarMap.find var_num global_map in Some(name,jtype)
+    with Not_found -> None
+  in 
+  match pinst with
+  | LoadVar(var_num) -> ( match lookup_in_global var_num, lookup_in_local var_num with
+    | None, Some(i, jt) -> local_load_instructions i jt
+    | Some(name, jt), None -> global_load_instructions name jt
+    | _ -> raise (InternalError("Impossible case while loading variable.")) )
+  | StoreVar(var_num) -> ( match lookup_in_global var_num, lookup_in_local var_num with
+    | None, Some(i, jt) -> local_store_instructions i jt
+    | Some(name, jt), None -> global_store_instructions name jt
+    | _ -> raise (InternalError("Impossible case while storing variable.")) )

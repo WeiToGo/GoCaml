@@ -4,7 +4,7 @@ open JasminAst
 exception NotImplemented
 
 let print_main_class { source; top_level_vars; methods; } out_directory = 
-  let class_name = "GeneratedBytecode" in 
+  let class_name = main_class_name in 
   let global_field_map = get_global_var_map top_level_vars in 
   let out_channel = open_out ((Filename.concat out_directory (class_name) ^ ".j")) in
   let print s = fprintf out_channel "%s" s  in 
@@ -24,7 +24,7 @@ let print_main_class { source; top_level_vars; methods; } out_directory =
   let rec print_method_statement locals = function
   | JLabel(label) -> println (label ^ ":")
   | JInst(inst) -> println ("  " ^ (string_of_jinst inst))
-  | PS(pinst) -> List.iter (print_method_statement locals) (real_instructions (global_field_map, locals) pinst )
+  | PS(pinst) -> List.iter (print_method_statement locals) (real_statements (global_field_map, locals) pinst )
   in
   let print_method_body locals stmts = 
     let local_limit = calculate_local_limit stmts in

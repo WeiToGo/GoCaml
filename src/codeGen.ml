@@ -16,6 +16,17 @@ let string_of_id id = match id with
 let exp_type (Expression(_, type_ref)) = match !type_ref with
 | None -> raise (InternalError("Empty expression type in AST. Did you typecheck the AST?"))
 | Some t -> t
+
+(* Returns name, gotype, and serial number of id *)
+let id_info id = 
+  let sym_table_entry = match id with
+  | ID(_, entry_ref) -> !entry_ref
+  | BlankID -> raise (InternalError("Go home blank id.")) in
+  match sym_table_entry with
+  | None -> raise (InternalError("Empty id type in AST. Did you typecheck the AST?"))
+  | Some(entry) -> 
+    let Symtable.Entry(name, gotype, _, _, var_num) = entry in
+    name, gotype, var_num
 (*~~ read deal ~~*)
 
 let get_gotype_from_typespec t = raise NotImplemented
@@ -35,15 +46,9 @@ let rec get_jvm_type gotype = match gotype with
 
 let get_mapping_from_stmt stmt = LocalVarMap.empty
 
-let get_mapping_from_go_arg (FunctionArg (id, _)) = 
-  let sym_table_entry = match id with
-  | ID(_, entry_ref) -> !entry_ref
-  | BlankID -> raise (InternalError("Go home blank id.")) in
-  match sym_table_entry with
-  | None -> raise (InternalError("Empty id type in AST. Did you typecheck the AST?"))
-  | Some(entry) -> 
-    let Symtable.Entry(_, gotype, _, _, var_num) = entry in
-    (var_num, get_jvm_type gotype)
+let get_local_mapping_from_go_arg (FunctionArg (id, _)) = 
+  let name, gotype, var_num = id_info id in 
+  (var_num, get_jvm_type gotype)
 
 
 let process_literal = function
@@ -60,9 +65,28 @@ let process_literal = function
 
 let rec process_expression (Expression(e, t)) = match e with 
   | LiteralExp(lit) -> process_literal lit
+  | IdExp(id) -> 
+      let _, _, var_num = id_info id in
+      [PS(LoadVar(var_num))]
   | _ -> raise NotImplemented
 
-let process_var_decl mvd_list = raise NotImplemented
+let process_var_decl mvd_list = (* raise NotImplemented *)
+  let mapping_from_svd svd = 
+    let SingleVarDecl(id, tp_op, exp_op) = svd in
+    let name, gotype, var_num = id_info id in
+    let init_code = match exp_op with
+    | None -> []
+    | Some(e) -> (process_expression e) @ [PS(StoreVar(var_num))] in 
+    { name = name ^ "_" ^ (string_of_int var_num);
+      var_number = var_num;
+      jtype = get_jvm_type gotype;
+      init_code = init_code; } 
+  in
+  let mapping_from_mvd mvd = 
+    let MultipleVarDecl(svd_list) = mvd in
+    List.map mapping_from_svd svd_list
+  in
+  List.flatten (List.map mapping_from_mvd mvd_list)
 
 let rec process_statement (LinedStatement(_, s)) = match s with
 | PrintlnStatement(exp_list) -> 
@@ -111,7 +135,7 @@ let process_func_decl id funsig stmt_list =
           (fun old_map (var_num, local_entry) -> 
             LocalVarMap.add var_num (var_num, local_entry) old_map)
           LocalVarMap.empty
-          (List.map get_mapping_from_go_arg go_function_args)
+          (List.map get_local_mapping_from_go_arg go_function_args)
   in
   let maps_from_stmts = List.map get_mapping_from_stmt stmt_list in
   let local_mapping = 
@@ -126,7 +150,7 @@ let process_func_decl id funsig stmt_list =
 let process_top_level_decl (LinedTD(top_decl, _)) = match top_decl with
 | FunctionDecl(id, funsig, stmt_list) -> ([], [process_func_decl id funsig stmt_list])
 | TypeDeclBlock(_) -> ([], [])  (* Ignore type declarations. *)
-| VarDeclBlock(mvd_list) -> process_var_decl mvd_list
+| VarDeclBlock(mvd_list) -> (process_var_decl mvd_list, [])
 
 let create_byte_code_ast (Program(_, lined_top_decls)) go_filename = 
   let field_method_nest = List.map process_top_level_decl lined_top_decls in 
