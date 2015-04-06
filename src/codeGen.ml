@@ -48,6 +48,13 @@ let get_mapping_from_go_arg (FunctionArg (id, _)) =
 
 let process_literal = function
 | StringLit(s) -> [JInst(Ldc(quote_string s))] 
+| IntLit(DecInt(s)) -> [JInst(BiPush(s))]
+| IntLit(OctalInt(s)) -> 
+    let int_repr = int_of_string ("0o" ^ s) in 
+    [JInst(BiPush(string_of_int int_repr))]
+| IntLit(HexInt(s)) -> 
+    let int_repr = int_of_string s in
+    [JInst(BiPush(string_of_int int_repr))]
 | _ -> raise NotImplemented
 
 let rec process_expression (Expression(e, t)) = match e with 
