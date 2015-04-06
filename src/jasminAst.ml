@@ -44,7 +44,9 @@ and jinstruction =
   | GetStatic of string * jtype
   | PutStatic of string * jtype
   | InvokeVirtual of jmethod_sig
+  | InvokeStatic of jmethod_sig
   | Return
+  | Pop
   | Iload of int
   | Dload of int
   | IStore of int
@@ -61,6 +63,7 @@ and jinstruction =
   | Iadd | Isub | Imul | Idiv | Irem | Ior | Ixor
   | Ishl | Ishr | Iand | Ineg 
   | Dadd | Dsub | Dmul | Ddiv | Drem | Dneg
+  | AConstNull
 
   (* Keep adding more and more instructions here.
    * Then also change the string_of_jinst function below *)
@@ -113,7 +116,9 @@ let string_of_jinst = function
 | Dup -> "dup"
 | BiPush(s) -> "bipush " ^ s 
 | GetStatic(s, t) -> "getstatic " ^ s ^ " " ^ (string_of_jtype t)
-| PutStatic(s, t) -> "putstatic " ^ s ^ " " ^ (string_of_jtype t)| InvokeVirtual(jsig) -> "invokevirtual " ^ (string_of_jsig jsig)
+| PutStatic(s, t) -> "putstatic " ^ s ^ " " ^ (string_of_jtype t)
+| InvokeVirtual(jsig) -> "invokevirtual " ^ (string_of_jsig jsig)
+| InvokeStatic(jsig) -> "invokestatic " ^ (string_of_jsig jsig)
 | Return -> "return"
 | Iload(i) -> "iload " ^ (string_of_int i)
 | Dload(i) -> "dload " ^ (string_of_int i)
@@ -145,6 +150,8 @@ let string_of_jinst = function
 | Ddiv -> "ddiv"
 | Drem -> "drem"
 | Dneg -> "dneg"
+| Pop -> "pop" 
+| AConstNull -> "aconst_null"
 
 
 let calculate_local_limit jstmts = 25  (* Not implemented yet *)
