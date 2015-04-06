@@ -1,6 +1,8 @@
 let new_counter init = 
   let count = ref init in
-  let next_count () = count := !count + 1; !count
+  let next_count () = 
+    let cur_count = !count in 
+    count := !count + 1; cur_count
   in
   next_count
 

@@ -29,8 +29,6 @@ let id_info id =
     name, gotype, var_num
 (*~~ read deal ~~*)
 
-let get_gotype_from_typespec t = raise NotImplemented
-
 let rec get_jvm_type gotype = match gotype with
 | GoInt -> JInt
 | GoFloat -> JFloat
@@ -44,7 +42,7 @@ let rec get_jvm_type gotype = match gotype with
 | GoSlice(_) -> raise NotImplemented
 | NewType(t) -> raise (InternalError("Custom types suffer from existential crisis in jvm bytecode."))
 
-let get_mapping_from_stmt stmt = LocalVarMap.empty
+let get_mapping_from_stmt next_index stmt = LocalVarMap.empty
 
 let get_local_mapping_from_go_arg (FunctionArg (id, _)) = 
   let name, gotype, var_num = id_info id in 
@@ -64,11 +62,36 @@ let process_literal = function
 | _ -> raise NotImplemented
 
 let rec process_expression (Expression(e, t)) = match e with 
-  | LiteralExp(lit) -> process_literal lit
-  | IdExp(id) -> 
-      let _, _, var_num = id_info id in
-      [PS(LoadVar(var_num))]
-  | _ -> raise NotImplemented
+| LiteralExp(lit) -> process_literal lit
+| IdExp(id) -> 
+    let _, _, var_num = id_info id in
+    [PS(LoadVar(var_num))]
+| FunctionCallExp(fun_expression, arg_expressions) -> 
+    let Expression(fun_exp, _) = fun_expression in
+    let fun_name, fun_type, _ = (match fun_exp with
+    | IdExp(id) -> id_info id
+    | _ -> raise (InternalError("Only identifiers can be called."))  )
+    in 
+    let arg_gotypes, ret_gotypeop = match fun_type with
+    | GoFunction(at, rto) -> at, rto 
+    | _ -> raise (InternalError("Only function types can be called. Do we have a typechecker bug?"))
+    in 
+    let jfunction_sig = 
+      { method_name = main_class_name ^ "/" ^ fun_name;
+        arg_types = List.map get_jvm_type arg_gotypes;
+        return_type = match ret_gotypeop with
+        | None -> JVoid 
+        | Some t -> get_jvm_type t ;
+      } in 
+    let arg_load_instructions = List.map process_expression arg_expressions in
+    let stack_null_instrtuctions = match ret_gotypeop with
+    | None -> [JInst(AConstNull)]
+    | Some _ -> [] in  
+      (List.flatten arg_load_instructions) @ 
+      [JInst(InvokeStatic(jfunction_sig))] @
+      stack_null_instrtuctions
+| _ -> print_string "expression not implemented"; raise NotImplemented
+
 
 let process_var_decl mvd_list = (* raise NotImplemented *)
   let mapping_from_svd svd = 
@@ -102,11 +125,17 @@ let rec process_statement (LinedStatement(_, s)) = match s with
               return_type = JVoid; } )); ] )
       exp_list in 
     List.flatten print_instructions
-| _ -> raise NotImplemented
+| ExpressionStatement(e) -> process_expression(e) @ [JInst(Pop)]
+
+| _ -> print_string "statement not implemented"; raise NotImplemented
 
 let process_func_decl id funsig stmt_list = 
-  let method_name = string_of_id id in 
-  let FunctionSig(go_function_args, go_retrun_type) = funsig in 
+  let next_index = Utils.new_counter 0 in 
+  let method_name, gotype, _ = id_info id in 
+  let go_arg_types, go_ret_type_op = match gotype with
+  | GoFunction(atlist, reto) -> atlist, reto
+  | _ -> raise (InternalError("This should definitely have been a function."))
+  in 
   let signature = if method_name = "main" then 
     {
       method_name = "main";
@@ -114,30 +143,29 @@ let process_func_decl id funsig stmt_list =
       return_type = JVoid;
     } else
     { 
-      method_name =  string_of_id id;
-      arg_types =
-         List.map 
-          (fun (FunctionArg(_, t)) ->
-            get_jvm_type (get_gotype_from_typespec t))
-          go_function_args ;
-      return_type = 
-        match go_retrun_type with
-        | None -> JVoid
-        | Some(t) -> get_jvm_type (get_gotype_from_typespec t); 
+      method_name = method_name;
+      arg_types = List.map get_jvm_type go_arg_types;
+      return_type = match go_ret_type_op with
+      | None -> JVoid
+      | Some(t) -> get_jvm_type (t); 
     } in 
+
   let merge_maps k xo yo = match xo,yo with
   | Some x, Some y -> raise (InternalError("Same variable present in two maps. This should be impossible."))
   | Some x, None -> xo
   | None, Some y -> yo
   | None, None -> None in
+  let FunctionSig(fun_args, _) = funsig in
+  let arg_ids = List.map (fun (FunctionArg(id, _)) -> id) fun_args in
   let map_with_args = 
         List.fold_left
-          (fun old_map (var_num, local_entry) -> 
-            LocalVarMap.add var_num (var_num, local_entry) old_map)
+          (fun old_map id -> 
+            let _, gt, varnum = id_info id in 
+            LocalVarMap.add varnum (next_index (), get_jvm_type gt) old_map)
           LocalVarMap.empty
-          (List.map get_local_mapping_from_go_arg go_function_args)
+          arg_ids
   in
-  let maps_from_stmts = List.map get_mapping_from_stmt stmt_list in
+  let maps_from_stmts = List.map (get_mapping_from_stmt next_index) stmt_list in
   let local_mapping = 
     List.fold_left
       (fun old_map new_map -> LocalVarMap.merge merge_maps old_map new_map)
