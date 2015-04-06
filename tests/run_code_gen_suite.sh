@@ -1,11 +1,13 @@
 #!/bin/bash
 set -o nounset
 JASMIN_JAR=$1
+PASS_REGISTRY="_build/previous_passes"
 
-if [[ "$2" == "-f" ]]; then
-  keep_going="true"
+if [[ $# > 1 && "$2" == "-all" ]]; then
+  run_all_tests="true"
+  rm -f $PASS_REGISTRY
 else
-  keep_going="false"
+  run_all_tests="false"
 fi
 
 a=$(find code_gen_suite -type f)
@@ -13,8 +15,12 @@ a=$(find code_gen_suite -type f)
 let total_ran=0
 let passed=0
 let failed=0
+touch $PASS_REGISTRY
 
 while read -r line; do
+  if grep --quiet "^$line\$" $PASS_REGISTRY; then
+    continue
+  fi
   echo "Running test on $line"
   let total_ran=total_ran+1
   filename=$(basename $line)
@@ -34,20 +40,27 @@ while read -r line; do
     echo "Look at $gen_dir"
     echo -ne "\033[1;0m"  # reset
     popd &>/dev/null
-    if [[ "$keep_going" == "false" ]]; then 
+    if [[ "$run_all_tests" == "false" ]]; then 
       exit 1
     else 
       let failed=failed+1
+      popd &>/dev/null
     fi
+  else
+    let passed=passed+1
+    popd &>/dev/null
+    echo "$line" >> $PASS_REGISTRY
   fi
-  popd &>/dev/null
-  let passed=passed+1
 done <<< "$a"
 
 function print_report { 
 echo "| Total tests executed : $total_ran"
 echo "| Total passed         : $passed"
 echo "| Total failed         : $failed"
+if [[ $run_all_tests == "false" ]]; then
+  echo "| Note: Only new tests executed. "
+  echo "| Use the \"./run_code_gen_suite.sh \$JASMIN_PATH -all\" to run all test cases"
+fi
 }
 
 if [[ "$failed" == "0" ]]; then 
