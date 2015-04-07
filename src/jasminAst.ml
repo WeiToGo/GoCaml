@@ -78,10 +78,11 @@ and jtype = JVoid
           (* | JByte  *)
           | JChar 
           (* | JShort  *)
-          | JInt 
+          | JInt
           (* | JLong  *)
           (* | JFloat  *)
           | JDouble 
+          | JBool
           | JRef of string 
           | JArray of jtype
           | JStruct of ((string * jtype) list)
@@ -99,6 +100,7 @@ let rec string_of_jtype = function
 (* | JLong -> "J" *)
 (* | JFloat -> "F" *)
 | JDouble -> "D"
+| JBool -> "Z"
 | JRef(s) -> "L" ^ s ^ ";"
 | JArray(atype) -> "[" ^ (string_of_jtype atype)
 | JStruct(s) -> raise NotImplemented
@@ -169,11 +171,13 @@ let calculate_ostack_limit jstmts = 25 (* Not implemented yet *)
 (*  A List of string constants so that you don't have to keep typing raw strings *)
 (* jc = jvm constant *)
 let jc_string = "java/lang/String"
+let jc_object = "java/lang/Object"
 let jc_printstream = "java/io/PrintStream"
 let jc_sysout = "java/lang/System/out"
 let jc_println = flstring jc_printstream "println"
 let jc_print = flstring jc_printstream "print"
 let jcr_booltostring = "RuntimeSupport/booltostring"
+let jc_equals = flstring jc_string "equals"
 
 (* Runtime method sigs *)
 let jcr_booltostring = {

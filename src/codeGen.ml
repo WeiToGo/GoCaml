@@ -299,8 +299,17 @@ and process_binary_expression op e1 e2 =
     )
   | GoString ->
     (match op with 
-      | BinEq -> raise NotImplemented (* TO DO*)
-      | BinNotEq -> raise NotImplemented (* TO DO*)
+      | BinEq -> 
+      [ JInst(InvokeVirtual({
+        method_name = jc_equals;
+        arg_types = [JRef(jc_object)];
+        return_type = JBool; } ) ) ]
+      | BinNotEq ->
+      [ JInst(InvokeVirtual({
+        method_name = jc_equals;
+        arg_types = [JRef(jc_object)];
+        return_type = JBool; } ) ) ]
+      @ [JInst(Ifeq(true_label));] @ true_false_boilerplate
       | BinLess -> raise NotImplemented (* TO DO*)
       | BinLessEq -> raise NotImplemented (* TO DO*)
       | BinGreater -> raise NotImplemented (* TO DO*)
