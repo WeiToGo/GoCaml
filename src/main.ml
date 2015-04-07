@@ -83,7 +83,7 @@ let () = Typecheck.build_symbol_table ast;;
 
 let () = close_out sym_out ;; 
 
-(* let bytecode_ast = CodeGen.create_byte_code_ast ast in_file_name in
+let bytecode_ast = CodeGen.create_byte_code_ast ast in_file_name in
 CodeEmitter.print_main_class bytecode_ast (Filename.dirname in_file_name);;
 
 let copy_file infilename outfilename = 
@@ -106,4 +106,3 @@ copy_file runtime_support_file_source runtime_support_file_dest;;
 
 
 
- *)
