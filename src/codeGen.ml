@@ -155,7 +155,7 @@ let rec process_expression (Expression(e, t)) = match e with
       [JInst(InvokeStatic(jfunction_sig))] @
       stack_null_instrtuctions
 | BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
-| UnaryExp(op, e) -> process_unary_expression op e
+(* | UnaryExp(op, e) -> process_unary_expression op e *)
 | _ -> print_string "expression not implemented"; raise NotImplemented
 
 and process_binary_expression op e1 e2 = 
