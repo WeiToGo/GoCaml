@@ -39,7 +39,7 @@ while read -r line; do
     go run $filename &> gooutput.txt  # Go run prints to stderr on my mac 
   fi
   ../../../main.byte f f $filename
-  java -jar $JASMIN_JAR GeneratedBytecode.j  >/dev/null
+  java -jar $JASMIN_JAR *.j  >/dev/null
   java GeneratedBytecode > gocaml.txt
   diff gooutput.txt gocaml.txt >/dev/null
   if [[ $? != 0 ]]; then

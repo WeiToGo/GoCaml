@@ -213,8 +213,12 @@ let real_statements (global_map, local_map) pinst =
   | LoadVar(var_num) -> ( match lookup_in_global var_num, lookup_in_local var_num with
     | None, Some(i, jt) -> local_load_instructions i jt
     | Some(name, jt), None -> global_load_instructions name jt
-    | _ -> raise (InternalError("Impossible case while loading variable.")) )
+    | Some _, Some _ -> raise (InternalError("Same variable defined with both local and global map."))
+    | None, None -> match var_num with
+      | 0 -> [ JInst(Iconst_1) ]  (* literal true *)
+      | 1 -> [ JInst(Iconst_0) ]  (* literal false *)
+      | _ -> raise (InternalError("Varibale could not be located in any map")) )
   | StoreVar(var_num) -> ( match lookup_in_global var_num, lookup_in_local var_num with
     | None, Some(i, jt) -> local_store_instructions i jt
     | Some(name, jt), None -> global_store_instructions name jt
-    | _ -> raise (InternalError("Impossible case while storing variable.")) )
+    | _ -> raise (InternalError("Same variable defined with both local and global map.")) )
