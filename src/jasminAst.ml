@@ -61,6 +61,7 @@ and jinstruction =
   | ICmple of string
   | ICmpge of string
   | DCmpg
+  | FCmpg (* test with float*)
   | Ifeq of string
   | Ifne of string
   | Iadd | Isub | Imul | Idiv | Irem | Ior | Ixor

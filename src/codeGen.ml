@@ -133,21 +133,21 @@ let rec process_expression (Expression(e, t)) = match e with
 and process_binary_expression op e1 e2 = 
   let e1_insts = process_expression e1 in 
   let e2_insts = process_expression e2 in
+  let label_serial = next_bool_exp_count () in 
+  let true_label = "True_" ^ (string_of_int label_serial) in
+  let false_label = "False_" ^ (string_of_int label_serial) in 
+  let end_label = "EndBoolExp_" ^ (string_of_int label_serial) in
+  let true_false_boilerplate = 
+    [ JLabel(false_label);
+      JInst(Iconst_0);
+      JInst(Goto(end_label));
+      JLabel(true_label);
+      JInst(Iconst_1);
+      JLabel(end_label);
+    ] in 
+  e1_insts @ e2_insts @
   match exp_type e1 with
   | GoInt ->
-      let label_serial = next_bool_exp_count () in 
-      let true_label = "True_" ^ (string_of_int label_serial) in
-      let false_label = "False_" ^ (string_of_int label_serial) in 
-      let end_label = "EndBoolExp_" ^ (string_of_int label_serial) in
-      let true_false_boilerplate = 
-        [ JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ] in 
-      e1_insts @ e2_insts @
       (match op with
       | BinEq -> 
         [ JInst(ICmpeq(true_label)) ] @ true_false_boilerplate
@@ -174,19 +174,6 @@ and process_binary_expression op e1 e2 =
       | BinOr|BinAnd| BinBitAndNot -> raise NotImplemented
       )
   | GoFloat -> 
-      let label_serial = next_bool_exp_count () in 
-      let true_label = "True_" ^ (string_of_int label_serial) in
-      let false_label = "False_" ^ (string_of_int label_serial) in 
-      let end_label = "EndBoolExp_" ^ (string_of_int label_serial) in
-      let true_false_boilerplate = 
-        [ JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ] in 
-      e1_insts @ e2_insts @
       (match op with
       | BinEq -> 
         [ JInst(DCmpg);
@@ -228,6 +215,20 @@ and process_binary_expression op e1 e2 =
       | BinBitAnd
       | BinOr|BinAnd| BinBitAndNot -> raise NotImplemented
       )
+  | GoBool ->
+      (match op with
+      | BinOr -> 
+        [ JInst(Ifne(false_label));
+          JInst(Ifne(false_label));
+          JLabel(true_label);
+          JInst(Iconst_1);
+          JInst(Goto(end_label));
+          JLabel(false_label);
+          JInst(Iconst_0);
+          JLabel(end_label);
+        ]
+      | _ -> raise NotImplemented
+    )
   | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
 
 
