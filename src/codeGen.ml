@@ -178,7 +178,7 @@ and process_binary_expression op e1 e2 =
   e1_insts @ e2_insts @
   match exp_type e1 with
   | GoInt ->
-      (match op with
+    (match op with
       | BinEq -> 
         [ JInst(ICmpeq(true_label)) ] @ true_false_boilerplate
       | BinNotEq -> 
@@ -207,9 +207,9 @@ and process_binary_expression op e1 e2 =
          JInst(Iand);
         ]
       | BinOr|BinAnd-> raise NotImplemented
-      )
+    )
   | GoFloat -> 
-      (match op with
+    (match op with
       | BinEq -> 
         [ JInst(DCmpg);
           JInst(Ifeq(true_label)); ]
@@ -249,9 +249,9 @@ and process_binary_expression op e1 e2 =
       | BinShiftRight
       | BinBitAnd
       | BinOr|BinAnd| BinBitAndNot -> raise NotImplemented (*not needed*)
-      )
+    )
   | GoBool ->
-      (match op with
+    (match op with
       | BinOr -> (* only [0 0] is false*)
         [ JInst(Ifne(true_label));
           JInst(Ifne(true2_label));
@@ -280,9 +280,45 @@ and process_binary_expression op e1 e2 =
           JInst(Iconst_0);
           JLabel(end_label);
         ]
-(*     | GoRune ->
-    | GoString -> *)
-      | _ -> raise NotImplemented
+      | _ -> raise NotImplemented (*not needed*)
+    )
+  | GoRune ->
+    (match op with
+      | BinEq -> raise NotImplemented (* TO DO*)
+      | BinNotEq -> raise NotImplemented (* TO DO*)
+      | BinLess -> raise NotImplemented (* TO DO*)
+      | BinLessEq -> raise NotImplemented (* TO DO*)
+      | BinGreater -> raise NotImplemented (* TO DO*)
+      | BinGreaterEq -> raise NotImplemented (* TO DO*)
+      | BinPlus -> raise NotImplemented (* TO DO*)
+      | BinMinus -> raise NotImplemented (* TO DO*)
+      | BinMult -> raise NotImplemented (* TO DO*)
+      | BinDiv -> raise NotImplemented (* TO DO*)
+      | BinMod -> raise NotImplemented (* TO DO*)
+      | _ -> raise NotImplemented (*not needed*)
+    )
+  | GoString ->
+    (match op with 
+      | BinEq -> raise NotImplemented (* TO DO*)
+      | BinNotEq -> raise NotImplemented (* TO DO*)
+      | BinLess -> raise NotImplemented (* TO DO*)
+      | BinLessEq -> raise NotImplemented (* TO DO*)
+      | BinGreater -> raise NotImplemented (* TO DO*)
+      | BinGreaterEq -> raise NotImplemented (* TO DO*)
+      | BinPlus -> raise NotImplemented (* TO DO*)
+      | _ -> raise NotImplemented (*not needed*)
+    )
+  | GoArray(i, t) ->
+    (match op with
+      | BinEq -> raise NotImplemented (* TO DO*)
+      | BinNotEq -> raise NotImplemented (* TO DO*)
+      | _ -> raise NotImplemented (*not needed*)
+    )
+  | GoStruct(fl) ->
+    (match op with
+      | BinEq -> raise NotImplemented (* TO DO*)
+      | BinNotEq -> raise NotImplemented (* TO DO*)
+      | _ -> raise NotImplemented (*not needed*)
     )
   | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
 
