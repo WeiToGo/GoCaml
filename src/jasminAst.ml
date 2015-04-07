@@ -37,7 +37,7 @@ and jmstatement = (* Jasmin method statement *)
   | JInst of jinstruction
   | PS of pseudo_instruction
 and jinstruction =
-  | Iconst_0 | Iconst_1 | Iconst_2 | Iconts_3
+  | Iconst_0 | Iconst_1 | Iconst_2 | Iconst_3 | Iconst_m1
   | Ldc of string
   | Dup
   | BiPush of string  (* -128 to 127*)
@@ -63,6 +63,7 @@ and jinstruction =
   | Iadd | Isub | Imul | Idiv | Irem | Ior | Ixor
   | Ishl | Ishr | Iand | Ineg 
   | Dadd | Dsub | Dmul | Ddiv | Drem | Dneg
+  | Fadd (* test for float*)
   | AConstNull
   | Goto of string
 
@@ -112,7 +113,8 @@ let string_of_jinst = function
 | Iconst_0 -> "iconst_0"
 | Iconst_1 -> "iconst_1"
 | Iconst_2 -> "iconst_2"
-| Iconts_3 -> "iconst_3"
+| Iconst_3 -> "iconst_3"
+| Iconst_m1 -> "iconst_m1"
 | Ldc(s) -> "ldc " ^ s
 | Dup -> "dup"
 | BiPush(s) -> "bipush " ^ s 
@@ -151,6 +153,7 @@ let string_of_jinst = function
 | Ddiv -> "ddiv"
 | Drem -> "drem"
 | Dneg -> "dneg"
+| Fadd -> "fadd" (* test for float*)
 | Pop -> "pop" 
 | AConstNull -> "aconst_null"
 | Goto(l) -> "goto " ^ l

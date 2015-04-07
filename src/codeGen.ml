@@ -175,6 +175,83 @@ and process_binary_expression op e1 e2 =
       | BinBitAnd -> [JInst(Iand);]
       (* | BinBitAndNot -> raise NotImplemented *)
       )
+  | GoFloat -> 
+      let label_serial = next_bool_exp_count () in 
+      let true_label = "True_" ^ (string_of_int label_serial) in
+      let false_label = "False_" ^ (string_of_int label_serial) in 
+      let end_label = "EndBoolExp_" ^ (string_of_int label_serial) in
+      e1_insts @ e2_insts @
+      (match op with
+      | BinEq -> 
+        [ JInst(DCmpg);
+          JInst(Ifeq(true_label));
+          JLabel(false_label);
+          JInst(Iconst_0);
+          JInst(Goto(end_label));
+          JLabel(true_label);
+          JInst(Iconst_1);
+          JLabel(end_label);
+        ]
+      | BinNotEq ->
+        [ JInst(DCmpg);
+          JInst(Ifne(true_label));
+          JLabel(false_label);
+          JInst(Iconst_0);
+          JInst(Goto(end_label));
+          JLabel(true_label);
+          JInst(Iconst_1);
+          JLabel(end_label);
+        ]
+      | BinLess ->
+        [ JInst(DCmpg);
+          JInst(Iconst_m1);
+          JInst(ICmpeq(true_label));
+          JLabel(false_label);
+          JInst(Iconst_0);
+          JInst(Goto(end_label));
+          JLabel(true_label);
+          JInst(Iconst_1);
+          JLabel(end_label);
+        ]
+      | BinLessEq -> 
+        [ JInst(DCmpg);
+          JInst(Iconst_1);
+          JInst(ICmpne(true_label));
+          JLabel(false_label);
+          JInst(Iconst_0);
+          JInst(Goto(end_label));
+          JLabel(true_label);
+          JInst(Iconst_1);
+          JLabel(end_label);
+        ]
+      | BinGreater ->
+        [ JInst(DCmpg);
+          JInst(Iconst_1);
+          JInst(ICmpeq(true_label));
+          JLabel(false_label);
+          JInst(Iconst_0);
+          JInst(Goto(end_label));
+          JLabel(true_label);
+          JInst(Iconst_1);
+          JLabel(end_label);
+        ]
+      | BinGreaterEq ->
+        [ JInst(DCmpg);
+          JInst(Iconst_m1);
+          JInst(ICmpne(true_label));
+          JLabel(false_label);
+          JInst(Iconst_0);
+          JInst(Goto(end_label));
+          JLabel(true_label);
+          JInst(Iconst_1);
+          JLabel(end_label);
+        ]
+      | BinPlus -> [JInst(Dadd);]
+      | BinMinus -> [JInst(Dsub);]
+      | BinMult -> [JInst(Dmul);]
+      | BinDiv -> [JInst(Ddiv);]
+      | BinMod -> [JInst(Drem);]
+      )
   | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
 
 
