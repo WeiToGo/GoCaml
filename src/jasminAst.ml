@@ -49,8 +49,10 @@ and jinstruction =
   | Pop
   | Iload of int
   | Dload of int
+  | Aload of int
   | IStore of int
   | DStore of int
+  | AStore of int
   | ICmpeq of string
   | ICmpne of string
   | ICmplt of string
@@ -123,8 +125,10 @@ let string_of_jinst = function
 | Return -> "return"
 | Iload(i) -> "iload " ^ (string_of_int i)
 | Dload(i) -> "dload " ^ (string_of_int i)
+| Aload(i) -> "aload " ^ (string_of_int i) 
 | IStore(i) -> "istore " ^ (string_of_int i)
 | DStore(i) -> "dstore " ^ (string_of_int i) 
+| AStore(i) -> "astore " ^ (string_of_int i) 
 | ICmpeq(l) -> "if_icmpeq " ^ l
 | ICmpne(l) -> "if_icmpne " ^ l
 | ICmplt(l) -> "if_icmplt " ^ l
@@ -187,6 +191,7 @@ let get_global_var_map gvar_entry_list =
 let local_load_instructions lindex jvm_type = match jvm_type with
 | JInt -> [JInst(Iload(lindex))]
 | JFloat -> [JInst(Dload(lindex))]
+| JRef _ -> [JInst(Aload(lindex))]
 | _ -> raise NotImplemented
 
 let global_load_instructions name jvm_type = 
@@ -195,6 +200,7 @@ let global_load_instructions name jvm_type =
 let local_store_instructions lindex jvm_type = match jvm_type with
 | JInt -> [JInst(IStore(lindex))]
 | JFloat -> [JInst(DStore(lindex))]
+| JRef _ -> [JInst(AStore(lindex))]
 | _ -> raise NotImplemented
 
 let global_store_instructions name jvm_type = 
@@ -213,7 +219,7 @@ let real_statements (global_map, local_map) pinst =
   | LoadVar(var_num) -> ( match lookup_in_global var_num, lookup_in_local var_num with
     | None, Some(i, jt) -> local_load_instructions i jt
     | Some(name, jt), None -> global_load_instructions name jt
-    | Some _, Some _ -> raise (InternalError("Same variable defined with both local and global map."))
+    | Some(_, ja), Some(_, jb) -> raise (InternalError("Same variable defined with both local and global map."))
     | None, None -> match var_num with
       | 0 -> [ JInst(Iconst_1) ]  (* literal true *)
       | 1 -> [ JInst(Iconst_0) ]  (* literal false *)

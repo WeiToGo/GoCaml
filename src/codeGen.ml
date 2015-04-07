@@ -45,7 +45,39 @@ let rec get_jvm_type gotype = match gotype with
 | GoSlice(_) -> raise NotImplemented
 | NewType(t) -> raise (InternalError("Custom types suffer from existential crisis in jvm bytecode."))
 
-let get_mapping_from_stmt next_index stmt = LocalVarMap.empty
+let get_local_var_decl_mappings next_index mvd_list = 
+  let mapping_from_svd svd = 
+    let SingleVarDecl(id, _, _) = svd in 
+    let _, gotype, var_num = id_info id in 
+    (var_num, (next_index (), get_jvm_type gotype))
+  in 
+  let mapping_from_mvd mvd = 
+    let MultipleVarDecl(svd_list) = mvd in 
+    List.map mapping_from_svd svd_list
+  in
+  let map_list = List.flatten (List.map mapping_from_mvd mvd_list) in 
+  List.fold_left
+    (fun old_map (var_num, local_entry) -> LocalVarMap.add var_num local_entry old_map)
+    LocalVarMap.empty
+    map_list
+
+
+let rec get_mapping_from_stmt next_index (LinedStatement(_, stmt)) = match stmt with
+| VarDeclBlockStatement(mvd_list) -> get_local_var_decl_mappings next_index mvd_list
+| ShortVarDeclStatement(shortvd_list) -> raise NotImplemented
+| IfStatement(tiny_stmt, _, then_stmts, else_stmts_op) -> raise NotImplemented
+| SwitchStatement(tiny_stmt, _, switch_case_list) -> raise NotImplemented
+| ForStatement(init_stmt, _, third_stmt, stmt_list) -> raise NotImplemented
+| BlockStatement(stmt_list) -> raise NotImplemented
+| EmptyStatement
+| ExpressionStatement _
+| AssignmentStatement _ 
+| TypeDeclBlockStatement _ 
+| PrintStatement _ 
+| PrintlnStatement _ 
+| ReturnStatement _ 
+| BreakStatement
+| ContinueStatement -> LocalVarMap.empty
 
 let get_local_mapping_from_go_arg (FunctionArg (id, _)) = 
   let name, gotype, var_num = id_info id in 
@@ -116,10 +148,11 @@ and process_binary_expression op e1 e2 =
         JInst(Iconst_1);
         JLabel(end_label);
       ]
+
   | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
 
 
-let process_var_decl mvd_list = (* raise NotImplemented *)
+let process_global_var_decl mvd_list =
   let mapping_from_svd svd = 
     let SingleVarDecl(id, tp_op, exp_op) = svd in
     let name, gotype, var_num = id_info id in
@@ -136,6 +169,21 @@ let process_var_decl mvd_list = (* raise NotImplemented *)
     List.map mapping_from_svd svd_list
   in
   List.flatten (List.map mapping_from_mvd mvd_list)
+
+(* Returns the initialization code for all the variable declarations *)
+let get_local_var_decl_instructions mvd_list = 
+  let insts_from_svd svd = 
+    let SingleVarDecl(id, tp_op, exp_op) = svd in 
+    let _, _, var_num = id_info id in 
+    match exp_op with
+    | None -> []
+    | Some e -> (process_expression e) @ [PS(StoreVar(var_num))]
+  in 
+  let insts_from_mvd mvd = 
+    let MultipleVarDecl(svd_list) = mvd in 
+    List.flatten (List.map insts_from_svd svd_list)
+  in
+  List.flatten (List.map insts_from_mvd mvd_list)
 
 let print_single_expression print_method_name e = 
   JInst(GetStatic(jc_sysout, JRef(jc_printstream))) :: 
@@ -168,6 +216,7 @@ let rec process_statement (LinedStatement(_, s)) = match s with
       (print_single_expression jc_print)
       exp_list in 
     List.flatten print_instructions
+| VarDeclBlockStatement(mvd_list) -> get_local_var_decl_instructions mvd_list
 | ExpressionStatement(e) -> process_expression(e) @ [JInst(Pop)]
 
 | _ -> print_string "statement not implemented"; raise NotImplemented
@@ -203,8 +252,8 @@ let process_func_decl id funsig stmt_list =
   let map_with_args = 
         List.fold_left
           (fun old_map id -> 
-            let _, gt, varnum = id_info id in 
-            LocalVarMap.add varnum (next_index (), get_jvm_type gt) old_map)
+            let _, gt, var_num = id_info id in 
+            LocalVarMap.add var_num (next_index (), get_jvm_type gt) old_map)
           LocalVarMap.empty
           arg_ids
   in
@@ -221,7 +270,7 @@ let process_func_decl id funsig stmt_list =
 let process_top_level_decl (LinedTD(top_decl, _)) = match top_decl with
 | FunctionDecl(id, funsig, stmt_list) -> ([], [process_func_decl id funsig stmt_list])
 | TypeDeclBlock(_) -> ([], [])  (* Ignore type declarations. *)
-| VarDeclBlock(mvd_list) -> (process_var_decl mvd_list, [])
+| VarDeclBlock(mvd_list) -> (process_global_var_decl mvd_list, [])
 
 let create_byte_code_ast (Program(_, lined_top_decls)) go_filename = 
   let field_method_nest = List.map process_top_level_decl lined_top_decls in 
