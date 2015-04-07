@@ -9,6 +9,7 @@ exception InternalError of string
 
 (* global counters *)
 let next_bool_exp_count = Utils.new_counter 0
+let next_loop_count = Utils.new_counter 0
 
 (* helper functions *)
 
@@ -20,6 +21,11 @@ let exp_type (Expression(_, type_ref)) = match !type_ref with
 | None -> raise (InternalError("Empty expression type in AST. Did you typecheck the AST?"))
 | Some t -> t
 
+let merge_maps k xo yo = match xo,yo with
+| Some x, Some y -> raise (InternalError("Same variable present in two maps. This should be impossible."))
+| Some x, None -> xo
+| None, Some y -> yo
+| None, None -> None
 (* Returns name, gotype, and serial number of id *)
 let id_info id = 
   let sym_table_entry = match id with
@@ -67,7 +73,18 @@ let rec get_mapping_from_stmt next_index (LinedStatement(_, stmt)) = match stmt 
 | ShortVarDeclStatement(shortvd_list) -> raise NotImplemented
 | IfStatement(tiny_stmt, _, then_stmts, else_stmts_op) -> raise NotImplemented
 | SwitchStatement(tiny_stmt, _, switch_case_list) -> raise NotImplemented
-| ForStatement(init_stmt, _, third_stmt, stmt_list) -> raise NotImplemented
+| ForStatement(init_stmtop, _, third_stmtop, stmt_list) -> 
+    let init_mapping = match init_stmtop with
+    | None -> LocalVarMap.empty
+    | Some s -> get_mapping_from_stmt next_index s 
+    in 
+    let body_mapping = 
+      List.fold_left 
+        (LocalVarMap.merge merge_maps)
+        LocalVarMap.empty
+        (List.map (get_mapping_from_stmt next_index) stmt_list)
+    in 
+    LocalVarMap.merge merge_maps init_mapping body_mapping 
 | BlockStatement(stmt_list) -> raise NotImplemented
 | EmptyStatement
 | ExpressionStatement _
@@ -302,7 +319,21 @@ let rec process_statement (LinedStatement(_, s)) = match s with
 | EmptyStatement -> []
 | BlockStatement(stmt_list) -> List.flatten (List.map process_statement stmt_list)
 | ReturnStatement(e_op) -> raise NotImplemented
-
+| ForStatement(init_stmt, loop_cond_op, third_stmt, stmt_list) -> 
+    let count = string_of_int (next_loop_count ()) in 
+    let loop_check_label = "LoopCheck_" ^ count in 
+    let loop_begin_label = "LoopBegin_" ^ count in
+    let loop_end_label = "LoopEnd_" ^ count in   
+    let cond_statements = match loop_cond_op with
+    | None -> [ JInst(Iconst_1) ]  (* This while true block *)
+    | Some(e) -> process_expression e
+    in 
+    [ JLabel(loop_check_label) ] @
+    cond_statements @
+    [ JInst(Ifeq(loop_end_label));
+      JLabel(loop_begin_label) ] @
+    (List.flatten (List.map process_statement stmt_list)) @
+    [ JLabel(loop_end_label)]
 | _ -> print_string "statement not implemented"; raise NotImplemented
 
 let process_func_decl id funsig stmt_list = 
@@ -326,11 +357,6 @@ let process_func_decl id funsig stmt_list =
       | Some(t) -> get_jvm_type (t); 
     } in 
 
-  let merge_maps k xo yo = match xo,yo with
-  | Some x, Some y -> raise (InternalError("Same variable present in two maps. This should be impossible."))
-  | Some x, None -> xo
-  | None, Some y -> yo
-  | None, None -> None in
   let FunctionSig(fun_args, _) = funsig in
   let arg_ids = List.map (fun (FunctionArg(id, _)) -> id) fun_args in
   let map_with_args = 
