@@ -84,7 +84,10 @@ let () = Typecheck.build_symbol_table ast;;
 let () = close_out sym_out ;; 
 
 let bytecode_ast = CodeGen.create_byte_code_ast ast in_file_name in
-CodeEmitter.print_main_class bytecode_ast (Filename.dirname in_file_name);;
+let struct_map, struct_list = CodeEmitter.crawl_structs bytecode_ast in 
+let () = CodeEmitter.print_main_class bytecode_ast struct_map (Filename.dirname in_file_name) in
+CodeEmitter.print_struct_classes struct_list struct_map (Filename.dirname in_file_name)
+;;
 
 let copy_file infilename outfilename = 
   let ic = open_in infilename in 

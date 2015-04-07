@@ -45,7 +45,9 @@ let rec get_jvm_type gotype = match gotype with
 | GoRune -> JChar  (* TODO: Make sure this is okay *)
 | GoString -> JRef(jc_string)
 | GoArray(_, t) -> JArray(get_jvm_type t)
-| GoStruct(_) -> raise NotImplemented
+| GoStruct(sflist) -> 
+    let jsflist = List.map (fun (name, gt) -> (name, get_jvm_type gt)) sflist in 
+    JStruct(jsflist)
 | GoFunction(_) -> raise (InternalError("Trick question - functions don't have types in jvm.")) 
 | GoCustom(_, t) -> get_jvm_type t
 | GoSlice(_) -> raise NotImplemented
