@@ -201,7 +201,12 @@ and process_binary_expression op e1 e2 =
       | BinShiftLeft -> [JInst(Ishl)]
       | BinShiftRight -> [JInst(Ishr);]
       | BinBitAnd -> [JInst(Iand);]
-      | BinOr|BinAnd| BinBitAndNot -> raise NotImplemented
+      | BinBitAndNot -> 
+        [JInst(Iconst_m1);
+         JInst(Ixor);
+         JInst(Iand);
+        ]
+      | BinOr|BinAnd-> raise NotImplemented
       )
   | GoFloat -> 
       (match op with
