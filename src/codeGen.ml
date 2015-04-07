@@ -155,6 +155,7 @@ let rec process_expression (Expression(e, t)) = match e with
       [JInst(InvokeStatic(jfunction_sig))] @
       stack_null_instrtuctions
 | BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
+| UnaryExp(op, e) -> process_unary_expression op e
 | _ -> print_string "expression not implemented"; raise NotImplemented
 
 and process_binary_expression op e1 e2 = 
@@ -162,7 +163,9 @@ and process_binary_expression op e1 e2 =
   let e2_insts = process_expression e2 in
   let label_serial = next_bool_exp_count () in 
   let true_label = "True_" ^ (string_of_int label_serial) in
+  let true2_label = "True2_" ^ (string_of_int label_serial) in
   let false_label = "False_" ^ (string_of_int label_serial) in 
+  let false2_label = "False2_" ^ (string_of_int label_serial) in 
   let end_label = "EndBoolExp_" ^ (string_of_int label_serial) in
   let true_false_boilerplate = 
     [ JLabel(false_label);
@@ -234,7 +237,7 @@ and process_binary_expression op e1 e2 =
       | BinMinus -> [JInst(Dsub);]
       | BinMult -> [JInst(Dmul);]
       | BinDiv -> [JInst(Ddiv);]
-      | BinMod -> [JInst(Drem);]
+      | BinMod -> [JInst(Drem);] (* not supported in Go*)
       | BinBitOr
       | BinBitXor
       | BinShiftLeft
@@ -245,22 +248,30 @@ and process_binary_expression op e1 e2 =
   | GoBool ->
       (match op with
       | BinOr -> (* only [0 0] is false*)
-        [ JInst(Ifne(false_label));
-          JInst(Ifne(false_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JInst(Goto(end_label));
+        [ JInst(Ifne(true_label));
+          JInst(Ifne(true2_label));
           JLabel(false_label);
           JInst(Iconst_0);
+          JInst(Goto(end_label));
+          JLabel(true_label);
+          JInst(Pop);
+          JInst(Iconst_1);
+          JInst(Goto(end_label));
+          JLabel(true2_label);
+          JInst(Iconst_1);
           JLabel(end_label);
         ]
       | BinAnd -> (* only [1 1] is true*)
         [ JInst(Ifeq(false_label));
-          JInst(Ifeq(false_label));
+          JInst(Ifeq(false2_label));
           JLabel(true_label);
           JInst(Iconst_1);
           JInst(Goto(end_label));
           JLabel(false_label);
+          JInst(Pop);
+          JInst(Iconst_0);
+          JInst(Goto(end_label));
+          JLabel(false2_label);
           JInst(Iconst_0);
           JLabel(end_label);
         ]
