@@ -10,7 +10,6 @@ let dumpsymtab = ref false
 
 let dumpsymtab_all = ref false
 
-module StructFields = Map.Make(String)
 let next_count = Utils.new_counter 0
 
 
@@ -24,7 +23,7 @@ type gotype =
       | GoString
       | GoSlice of gotype
       | GoArray of (int * gotype)
-      | GoStruct of (gotype StructFields.t)
+      | GoStruct of ( (string * gotype) list)
       | GoFunction of (gotype list * gotype option)  (* GoFunction of (argument list, return type) *)
       | GoCustom of (string * gotype)  (* CustomType of name of custom type * the return type *)
       | NewType of gotype  (* This is the type for newly defined types. 
@@ -64,8 +63,7 @@ let rec string_of_type typ = match typ with
   | GoCustom(name, typ) -> name (* ^ " (" ^ (string_of_type typ) ^ ")" *)
   | NewType(typ) -> "type: " ^ (string_of_type typ)
 
-and string_of_struct_fields fields = 
-  let fields_list = StructFields.bindings fields in
+and string_of_struct_fields fields_list = 
   let rec string_of_sf_list = function
   | a :: (b :: _ as t) -> 
       (string_of_field a) ^ ", " ^ (string_of_sf_list t)

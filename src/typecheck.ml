@@ -107,35 +107,29 @@ let rec gotype_of_typspec ctx tspec = match tspec with
     )
   )
 
-(* Converts a multi struct field declaration list into a StructField map *)
+(* Converts a multi struct field declaration list into a (string, gotype) association list *)
 and map_of_struct_fields ctx msfd_list = 
-  let struct_map_merge key a b = 
-    (* Function to merge to two struct field maps *)
-    match a,b with
-    | None, None -> None
-    | Some p, None -> Some p
-    | None, Some q -> Some q
-    | Some p, Some q -> raise (TypeCheckError "Duplicate field declaration in struct")
-  in
-  let map_of_msfd = function
-  | MultipleStructFieldDecl(ssfd_list) -> 
-      let singleton_svd_map svd = 
-        let SingleStructFieldDecl(identifier, type_spec) = svd in
-        ( match identifier with 
+  (* TODO: Check for duplicated *)
+  let get_fields_from_msfd (MultipleStructFieldDecl(ssfd_list)) =
+      List.map 
+        (fun (SingleStructFieldDecl(id, type_spec)) -> 
+          match id with 
           | BlankID -> raise (TypeCheckError "Blank ID not allowed as struct field")
-          | ID(name, _) -> StructFields.singleton name (gotype_of_typspec ctx type_spec) 
-        )
-      in
-      let single_maps_list = List.map singleton_svd_map ssfd_list in
-      List.fold_left 
-        (fun x y -> StructFields.merge struct_map_merge x y)
-        StructFields.empty single_maps_list
+          | ID(name, _) -> (name, (gotype_of_typspec ctx type_spec)))
+        ssfd_list
   in
-  let multi_maps_list = List.map map_of_msfd msfd_list in
-  List.fold_left 
-    (fun x y -> StructFields.merge struct_map_merge x y) 
-    StructFields.empty multi_maps_list
-
+  let fields = List.flatten( List.map get_fields_from_msfd msfd_list )  in
+  let checkdupsf fields = 
+    let h = Hashtbl.create 16 in
+    let rec aux name =
+      if Hashtbl.mem h name then raise (TypeCheckError("Multiple struct members of the same name.")) 
+      else Hashtbl.add h name 1
+    in
+    let names = List.map (fun (x, y) -> x) fields in 
+    List.iter aux names
+  in 
+  let () = checkdupsf fields in  
+  fields
 
 (* resolve_to_base (GoCustom("foo", GoInt)) -> GoInt 
  * resolve_to_base (GoArray (42, GoCustom("foo", GoInt))) -> GoArray (42, GoInt)
@@ -144,7 +138,7 @@ let rec resolve_to_base typ = match typ with
 | GoInt | GoFloat | GoBool | GoRune | GoString -> typ
 | GoSlice t -> GoSlice (resolve_to_base t)
 | GoArray(size, t) -> GoArray(size, resolve_to_base t)
-| GoStruct(flds) -> GoStruct (StructFields.map resolve_to_base flds)
+| GoStruct(flds) -> GoStruct (List.map (fun (f, t) -> (f, resolve_to_base t)) flds)
 | GoFunction(args, ret) -> 
   ( match ret with
   | None -> GoFunction (List.map resolve_to_base args, None)
@@ -157,7 +151,7 @@ let rec is_comparable gtype = match gtype with
 | GoBool | GoFloat | GoInt | GoString | GoRune -> true
 | GoSlice(_) | GoFunction(_) | NewType(_) -> false
 | GoArray(_, t) -> is_comparable t
-| GoStruct(fields) -> StructFields.for_all (fun name typ -> is_comparable typ) fields
+| GoStruct(fields) -> List.for_all (fun (name, typ) -> is_comparable typ) fields
 | GoCustom(_, t) -> is_comparable (resolve_to_base t)
 
 let rec is_ordered gtype = match gtype with
@@ -303,7 +297,7 @@ let e_type = match e with
 
   | SelectExp(exp, id) -> ( match resolve_to_base (resolve_exp_type ctx exp) with 
       | GoStruct(fields) -> (
-          try StructFields.find (string_of_id id) fields
+          try List.assoc (string_of_id id) fields
           with Not_found -> 
             raise (TypeCheckError ("This struct has no field named " ^
                 (string_of_id id) ) ) )
