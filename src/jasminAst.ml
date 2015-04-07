@@ -60,12 +60,13 @@ and jinstruction =
   | ICmple of string
   | ICmpge of string
   | DCmpg
+  | FCmpg (* test with float*)
   | Ifeq of string
   | Ifne of string
   | Iadd | Isub | Imul | Idiv | Irem | Ior | Ixor
   | Ishl | Ishr | Iand | Ineg 
   | Dadd | Dsub | Dmul | Ddiv | Drem | Dneg
-  | Fadd (* test for float*)
+  | Fadd (* test with float*)
   | AConstNull
   | Goto of string
 
@@ -138,8 +139,8 @@ let string_of_jinst = function
 | ICmple(l) -> "if_icmple " ^ l
 | ICmpge(l) -> "if_icmpge " ^ l
 | DCmpg -> "dcmpg"
-| Ifeq(l) -> "ifeq" ^ l  
-| Ifne(l) -> "ifne" ^ l
+| Ifeq(l) -> "ifeq " ^ l  
+| Ifne(l) -> "ifne " ^ l
 | Iadd -> "iadd"
 | Isub -> "isub"
 | Imul -> "imul"
@@ -157,7 +158,8 @@ let string_of_jinst = function
 | Ddiv -> "ddiv"
 | Drem -> "drem"
 | Dneg -> "dneg"
-| Fadd -> "fadd" (* test for float*)
+| Fadd -> "fadd" (* test with float*)
+| FCmpg -> "fcmpg"
 | Pop -> "pop" 
 | AConstNull -> "aconst_null"
 | Goto(l) -> "goto " ^ l
