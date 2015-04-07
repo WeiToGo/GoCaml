@@ -162,6 +162,12 @@ let rec process_statement (LinedStatement(_, s)) = match s with
       (print_single_expression jc_println)
       exp_list in 
     List.flatten print_instructions
+| PrintStatement(exp_list) -> 
+    let print_instructions = 
+      List.map 
+      (print_single_expression jc_print)
+      exp_list in 
+    List.flatten print_instructions
 | ExpressionStatement(e) -> process_expression(e) @ [JInst(Pop)]
 
 | _ -> print_string "statement not implemented"; raise NotImplemented
