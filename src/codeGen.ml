@@ -346,10 +346,10 @@ let rec process_statement (LinedStatement(_, s)) = match s with
     let loop_end_label = "LoopEnd_" ^ count in   
     let init_instructions = match init_stmt_op with
     | None -> []
-    | Some s -> raise NotImplemented in 
+    | Some s -> process_statement s in 
     let third_instructions = match third_stmt_op with
     | None -> []
-    | Some s -> raise NotImplemented in 
+    | Some s -> process_statement s in 
     let cond_statements = match loop_cond_op with
     | None -> [ JInst(Iconst_1) ]  (* This while true block *)
     | Some(e) -> process_expression e
@@ -361,7 +361,8 @@ let rec process_statement (LinedStatement(_, s)) = match s with
       JLabel(loop_begin_label) ] @
     (List.flatten (List.map process_statement stmt_list)) @
     third_instructions @ 
-    [ JLabel(loop_end_label)]
+    [ JInst(Goto(loop_check_label));
+      JLabel(loop_end_label) ]
 | ShortVarDeclStatement(shortvd_list) -> 
     (* first evaluate all the arguments, then store them *)
     let exps = List.map (fun (ShortVarDecl(id, e)) -> e) shortvd_list in 
