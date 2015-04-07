@@ -21,7 +21,7 @@ let exp_type (Expression(_, type_ref)) = match !type_ref with
 | None -> raise (InternalError("Empty expression type in AST. Did you typecheck the AST?"))
 | Some t -> t
 
-let merge_maps k xo yo = match xo,yo with
+let merge_maps k xo yo  = match xo,yo with
 | Some x, Some y -> raise (InternalError("Same variable present in two maps. This should be impossible."))
 | Some x, None -> xo
 | None, Some y -> yo
@@ -68,21 +68,31 @@ let get_local_var_decl_mappings next_index mvd_list =
     map_list
 
 
-let rec get_mapping_from_stmt next_index (LinedStatement(_, stmt)) = match stmt with
+let rec get_mapping_from_stmt prev_map next_index (LinedStatement(_, stmt)) = match stmt with
 | VarDeclBlockStatement(mvd_list) -> get_local_var_decl_mappings next_index mvd_list
-| ShortVarDeclStatement(shortvd_list) -> raise NotImplemented
+| ShortVarDeclStatement(shortvd_list) -> 
+    let mapping_from_single_shvd (ShortVarDecl(id, _)) = 
+      let _, gotype, var_num = id_info id in
+      if LocalVarMap.mem var_num prev_map then LocalVarMap.empty 
+      else LocalVarMap.add var_num (next_index (), get_jvm_type gotype) LocalVarMap.empty
+    in 
+    List.fold_left 
+      (fun old_map new_map -> 
+        LocalVarMap.merge merge_maps old_map new_map)
+      LocalVarMap.empty
+      (List.map mapping_from_single_shvd shortvd_list)
 | IfStatement(tiny_stmt, _, then_stmts, else_stmts_op) -> raise NotImplemented
 | SwitchStatement(tiny_stmt, _, switch_case_list) -> raise NotImplemented
-| ForStatement(init_stmtop, _, third_stmtop, stmt_list) -> 
-    let init_mapping = match init_stmtop with
+| ForStatement(init_stmt_op, _, third_stmt_op, stmt_list) -> 
+    let init_mapping = match init_stmt_op with
     | None -> LocalVarMap.empty
-    | Some s -> get_mapping_from_stmt next_index s 
+    | Some s -> get_mapping_from_stmt prev_map next_index s 
     in 
     let body_mapping = 
       List.fold_left 
         (LocalVarMap.merge merge_maps)
         LocalVarMap.empty
-        (List.map (get_mapping_from_stmt next_index) stmt_list)
+        (List.map (get_mapping_from_stmt prev_map next_index) stmt_list)
     in 
     LocalVarMap.merge merge_maps init_mapping body_mapping 
 | BlockStatement(stmt_list) -> raise NotImplemented
@@ -329,21 +339,45 @@ let rec process_statement (LinedStatement(_, s)) = match s with
 | EmptyStatement -> []
 | BlockStatement(stmt_list) -> List.flatten (List.map process_statement stmt_list)
 | ReturnStatement(e_op) -> raise NotImplemented
-| ForStatement(init_stmt, loop_cond_op, third_stmt, stmt_list) -> 
+| ForStatement(init_stmt_op, loop_cond_op, third_stmt_op, stmt_list) -> 
     let count = string_of_int (next_loop_count ()) in 
     let loop_check_label = "LoopCheck_" ^ count in 
     let loop_begin_label = "LoopBegin_" ^ count in
     let loop_end_label = "LoopEnd_" ^ count in   
+    let init_instructions = match init_stmt_op with
+    | None -> []
+    | Some s -> raise NotImplemented in 
+    let third_instructions = match third_stmt_op with
+    | None -> []
+    | Some s -> raise NotImplemented in 
     let cond_statements = match loop_cond_op with
     | None -> [ JInst(Iconst_1) ]  (* This while true block *)
     | Some(e) -> process_expression e
     in 
+    init_instructions @ 
     [ JLabel(loop_check_label) ] @
     cond_statements @
     [ JInst(Ifeq(loop_end_label));
       JLabel(loop_begin_label) ] @
     (List.flatten (List.map process_statement stmt_list)) @
+    third_instructions @ 
     [ JLabel(loop_end_label)]
+| ShortVarDeclStatement(shortvd_list) -> 
+    (* first evaluate all the arguments, then store them *)
+    let exps = List.map (fun (ShortVarDecl(id, e)) -> e) shortvd_list in 
+    let vars = List.map 
+      (fun (ShortVarDecl(id, e)) -> 
+        let _, _, var_num = id_info id in var_num)
+      shortvd_list
+    in
+    let exp_instructions = List.flatten (List.map process_expression exps) in 
+    let store_instructions = 
+      List.map
+        (fun var_num -> PS(StoreVar(var_num)))
+        (List.rev vars)
+    in
+    exp_instructions @ store_instructions
+
 | _ -> print_string "statement not implemented"; raise NotImplemented
 
 let process_func_decl id funsig stmt_list = 
@@ -377,12 +411,15 @@ let process_func_decl id funsig stmt_list =
           LocalVarMap.empty
           arg_ids
   in
-  let maps_from_stmts = List.map (get_mapping_from_stmt next_index) stmt_list in
   let local_mapping = 
-    List.fold_left
-      (fun old_map new_map -> LocalVarMap.merge merge_maps old_map new_map)
+    List.fold_left 
+      (fun prev_map stmt -> 
+        LocalVarMap.merge 
+          merge_maps 
+          prev_map
+          (get_mapping_from_stmt prev_map next_index stmt) ) 
       map_with_args
-      maps_from_stmts in
+      stmt_list in
   let stmt_code = List.flatten (List.map process_statement stmt_list) in
   let code = if signature.return_type = JVoid then stmt_code @ [JInst(Return)] else stmt_code in (* PerfPenalty *)
   { signature; code; local_mapping; }

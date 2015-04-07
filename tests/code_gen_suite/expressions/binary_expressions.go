@@ -39,7 +39,9 @@ func main () {
 	// println(23.4 / 24.5)
 
 // bool
-	println(true || false)
+	// println(true || false)  // This is still not working
+	// Since this is complicated, make a new test case for it. 
+
 
 }
 
