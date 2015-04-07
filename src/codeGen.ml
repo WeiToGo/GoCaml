@@ -377,7 +377,25 @@ let rec process_statement (LinedStatement(_, s)) = match s with
         (List.rev vars)
     in
     exp_instructions @ store_instructions
-
+| AssignmentStatement(ass_list) -> 
+    let lvals = List.map (fun (e1, e2) -> e1) ass_list in 
+    let exps = List.map (fun (e1, e2) -> e2) ass_list in 
+    let exp_instructions = List.flatten (List.map process_expression exps) in
+    let single_store_instruction (Expression(e, _)) = match e with
+    | IdExp(id) -> 
+        let _, _, var_num = id_info id in 
+        [PS(StoreVar(var_num))]
+    | IndexExp(id) -> raise NotImplemented
+    | SelectExp(id) -> raise NotImplemented
+    | FunctionCallExp(id) -> raise NotImplemented
+    | AppendExp _ | TypeCastExp _ | LiteralExp _ 
+    | UnaryExp _ | BinaryExp _  -> raise (InternalError("This is not a valid lvalue"))
+    in
+    let store_instructions = 
+      List.flatten 
+        (List.map single_store_instruction (List.rev lvals))
+    in
+    exp_instructions @ store_instructions
 | _ -> print_string "statement not implemented"; raise NotImplemented
 
 let process_func_decl id funsig stmt_list = 
