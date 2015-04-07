@@ -155,7 +155,7 @@ let rec process_expression (Expression(e, t)) = match e with
       [JInst(InvokeStatic(jfunction_sig))] @
       stack_null_instrtuctions
 | BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
-(* | UnaryExp(op, e) -> process_unary_expression op e *)
+| UnaryExp(op, e) -> process_unary_expression op e
 | _ -> print_string "expression not implemented"; raise NotImplemented
 
 and process_binary_expression op e1 e2 = 
@@ -248,7 +248,7 @@ and process_binary_expression op e1 e2 =
       | BinShiftLeft
       | BinShiftRight
       | BinBitAnd
-      | BinOr|BinAnd| BinBitAndNot -> raise NotImplemented
+      | BinOr|BinAnd| BinBitAndNot -> raise NotImplemented (*not needed*)
       )
   | GoBool ->
       (match op with
@@ -280,11 +280,54 @@ and process_binary_expression op e1 e2 =
           JInst(Iconst_0);
           JLabel(end_label);
         ]
+(*     | GoRune ->
+    | GoString -> *)
       | _ -> raise NotImplemented
     )
   | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
 
-
+and process_unary_expression op e = 
+  let e_insts = process_expression e in 
+  let label_serial = next_bool_exp_count () in 
+  let true_label = "True_" ^ (string_of_int label_serial) in
+  let false_label = "False_" ^ (string_of_int label_serial) in 
+  let end_label = "EndBoolExp_" ^ (string_of_int label_serial) in
+  let true_false_boilerplate = 
+    [ JLabel(false_label);
+      JInst(Iconst_0);
+      JInst(Goto(end_label));
+      JLabel(true_label);
+      JInst(Iconst_1);
+      JLabel(end_label);
+    ] in 
+  e_insts @
+  match exp_type e with 
+  | GoInt ->
+    (match op with 
+    | UPlus -> []
+    | UMinus -> [JInst(Ineg);]
+    | UNot -> raise NotImplemented (*not needed*)
+    | UCaret -> [JInst(Iconst_m1);JInst(Ixor);]
+    )
+  | GoFloat ->
+    (match op with 
+    | UPlus -> []
+    | UMinus -> [JInst(Dneg);]
+    | UNot | UCaret -> raise NotImplemented (*not needed*)
+    )
+  | GoRune ->
+    (match op with 
+    | UPlus -> []
+    | UMinus -> print_string "Unimplemented"; raise NotImplemented
+    | UNot -> raise NotImplemented (*not needed*)
+    | UCaret -> print_string "Unimplemented"; raise NotImplemented
+    )
+  | GoBool ->
+    (match op with  
+    | UNot -> [JInst(Ifeq(true_label));] @ true_false_boilerplate
+    | UPlus | UMinus | UCaret -> raise NotImplemented (*not needed*)
+    )
+  | _ -> print_string "Unimplemented unary operation"; raise NotImplemented
 let process_global_var_decl mvd_list =
   let mapping_from_svd svd = 
     let SingleVarDecl(id, tp_op, exp_op) = svd in

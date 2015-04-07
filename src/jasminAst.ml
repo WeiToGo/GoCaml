@@ -162,7 +162,7 @@ let string_of_jinst = function
 | Pop -> "pop" 
 | AConstNull -> "aconst_null"
 | Goto(l) -> "goto " ^ l
-
+| _ -> raise NotImplemented 
 
 let calculate_local_limit jstmts = 25  (* Not implemented yet *)
 let calculate_ostack_limit jstmts = 25 (* Not implemented yet *) 
