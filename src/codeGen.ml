@@ -83,7 +83,7 @@ let rec get_mapping_from_stmt prev_map next_index (LinedStatement(_, stmt)) = ma
       (List.map mapping_from_single_shvd shortvd_list)
 | IfStatement(tiny_stmt, _, then_stmts, else_stmts_op) -> raise NotImplemented
 | SwitchStatement(tiny_stmt, _, switch_case_list) -> raise NotImplemented
-| ForStatement(init_stmt_op, _, third_stmt_op, stmt_list) -> 
+| ForStatement(init_stmt_op, _, post_stmt_op, stmt_list) -> 
     let init_mapping = match init_stmt_op with
     | None -> LocalVarMap.empty
     | Some s -> get_mapping_from_stmt prev_map next_index s 
@@ -319,7 +319,7 @@ let print_single_expression print_method_name e =
               return_type = JVoid; } )); ] )
 
 
-let rec process_statement (LinedStatement(_, s)) = match s with
+let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = match s with
 | PrintlnStatement(exp_list) -> 
     (* get instructions for each expression *)
     let print_instructions = 
@@ -339,28 +339,35 @@ let rec process_statement (LinedStatement(_, s)) = match s with
 | EmptyStatement -> []
 | BlockStatement(stmt_list) -> List.flatten (List.map process_statement stmt_list)
 | ReturnStatement(e_op) -> raise NotImplemented
-| ForStatement(init_stmt_op, loop_cond_op, third_stmt_op, stmt_list) -> 
+| ForStatement(init_stmt_op, loop_cond_op, post_stmt_op, stmt_list) -> 
     let count = string_of_int (next_loop_count ()) in 
     let loop_check_label = "LoopCheck_" ^ count in 
     let loop_begin_label = "LoopBegin_" ^ count in
+    let loop_post_label = "LoopPost_" ^ count in 
     let loop_end_label = "LoopEnd_" ^ count in   
     let init_instructions = match init_stmt_op with
     | None -> []
     | Some s -> process_statement s in 
-    let third_instructions = match third_stmt_op with
+    let post_instructions = match post_stmt_op with
     | None -> []
     | Some s -> process_statement s in 
     let cond_statements = match loop_cond_op with
     | None -> [ JInst(Iconst_1) ]  (* This while true block *)
-    | Some(e) -> process_expression e
+    | Some(e) -> process_expression e in 
+    let body_instructions = 
+      List.flatten 
+        (List.map 
+          (process_statement ~break_label:loop_end_label ~continue_label:loop_post_label)
+          stmt_list)
     in 
     init_instructions @ 
     [ JLabel(loop_check_label) ] @
     cond_statements @
     [ JInst(Ifeq(loop_end_label));
       JLabel(loop_begin_label) ] @
-    (List.flatten (List.map process_statement stmt_list)) @
-    third_instructions @ 
+    body_instructions @
+    [ JLabel(loop_post_label) ] @
+    post_instructions @ 
     [ JInst(Goto(loop_check_label));
       JLabel(loop_end_label) ]
 | ShortVarDeclStatement(shortvd_list) -> 
@@ -397,6 +404,12 @@ let rec process_statement (LinedStatement(_, s)) = match s with
         (List.map single_store_instruction (List.rev lvals))
     in
     exp_instructions @ store_instructions
+| BreakStatement -> ( match break_label with
+  | None -> raise (InternalError("I know not whence to break"))
+  | Some l -> [ JInst(Goto(l)) ] )
+| ContinueStatement -> ( match continue_label with
+  | None -> raise (InternalError("I know not whence to continue"))
+  | Some l -> [ JInst(Goto(l)) ] )
 | _ -> print_string "statement not implemented"; raise NotImplemented
 
 let process_func_decl id funsig stmt_list = 
