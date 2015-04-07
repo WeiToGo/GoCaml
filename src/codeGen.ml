@@ -108,7 +108,7 @@ and process_binary_expression op e1 e2 =
       let false_label = "False_" ^ (string_of_int label_serial) in 
       let end_label = "EndBoolExp_" ^ (string_of_int label_serial) in
       e1_insts @ e2_insts @
-      [ JInst(IfICmpEq(true_label));
+      [ JInst(ICmpeq(true_label));
         JLabel(false_label);
         JInst(Iconst_0);
         JInst(Goto(end_label));
