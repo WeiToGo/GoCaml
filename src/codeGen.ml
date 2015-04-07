@@ -34,7 +34,7 @@ let id_info id =
 
 let rec get_jvm_type gotype = match gotype with
 | GoInt -> JInt
-| GoFloat -> JFloat
+| GoFloat -> JDouble
 | GoBool -> JInt
 | GoRune -> JChar  (* TODO: Make sure this is okay *)
 | GoString -> JRef(jc_string)
@@ -93,7 +93,7 @@ let process_literal = function
 | IntLit(HexInt(s)) -> 
     let int_repr = int_of_string s in
     [JInst(Ldc(string_of_int int_repr))]
-| FloatLit(s) -> [JInst(Ldc(s))]
+| FloatLit(s) -> [JInst(Ldc2w(s))]
 | _ -> raise NotImplemented
 
 

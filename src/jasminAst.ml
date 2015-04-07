@@ -39,6 +39,7 @@ and jmstatement = (* Jasmin method statement *)
 and jinstruction =
   | Iconst_0 | Iconst_1 | Iconst_2 | Iconst_3 | Iconst_m1
   | Ldc of string
+  | Ldc2w of string
   | Dup
   | BiPush of string  (* -128 to 127*)
   | GetStatic of string * jtype
@@ -65,7 +66,6 @@ and jinstruction =
   | Iadd | Isub | Imul | Idiv | Irem | Ior | Ixor
   | Ishl | Ishr | Iand | Ineg 
   | Dadd | Dsub | Dmul | Ddiv | Drem | Dneg
-  | Fadd (* test for float*)
   | AConstNull
   | Goto of string
 
@@ -80,7 +80,7 @@ and jtype = JVoid
           | JShort 
           | JInt 
           | JLong 
-          | JFloat 
+          (* | JFloat  *)
           | JDouble 
           | JRef of string 
           | JArray of jtype
@@ -97,7 +97,7 @@ let rec string_of_jtype = function
 | JShort -> raise NotImplemented
 | JInt -> "I"
 | JLong -> "J"
-| JFloat -> "F"
+(* | JFloat -> "F" *)
 | JDouble -> "D"
 | JRef(s) -> "L" ^ s ^ ";"
 | JArray(atype) -> "[" ^ (string_of_jtype atype)
@@ -118,6 +118,7 @@ let string_of_jinst = function
 | Iconst_3 -> "iconst_3"
 | Iconst_m1 -> "iconst_m1"
 | Ldc(s) -> "ldc " ^ s
+| Ldc2w(s) -> "ldc2_w " ^ s 
 | Dup -> "dup"
 | BiPush(s) -> "bipush " ^ s 
 | GetStatic(s, t) -> "getstatic " ^ s ^ " " ^ (string_of_jtype t)
@@ -138,8 +139,8 @@ let string_of_jinst = function
 | ICmple(l) -> "if_icmple " ^ l
 | ICmpge(l) -> "if_icmpge " ^ l
 | DCmpg -> "dcmpg"
-| Ifeq(l) -> "ifeq" ^ l  
-| Ifne(l) -> "ifne" ^ l
+| Ifeq(l) -> "ifeq " ^ l  
+| Ifne(l) -> "ifne " ^ l
 | Iadd -> "iadd"
 | Isub -> "isub"
 | Imul -> "imul"
@@ -157,7 +158,6 @@ let string_of_jinst = function
 | Ddiv -> "ddiv"
 | Drem -> "drem"
 | Dneg -> "dneg"
-| Fadd -> "fadd" (* test for float*)
 | Pop -> "pop" 
 | AConstNull -> "aconst_null"
 | Goto(l) -> "goto " ^ l
@@ -193,7 +193,7 @@ let get_global_var_map gvar_entry_list =
 
 let local_load_instructions lindex jvm_type = match jvm_type with
 | JInt -> [JInst(Iload(lindex))]
-| JFloat -> [JInst(Dload(lindex))]
+| JDouble -> [JInst(Dload(lindex))]
 | JRef _ -> [JInst(Aload(lindex))]
 | _ -> raise NotImplemented
 
@@ -202,7 +202,7 @@ let global_load_instructions name jvm_type =
 
 let local_store_instructions lindex jvm_type = match jvm_type with
 | JInt -> [JInst(IStore(lindex))]
-| JFloat -> [JInst(DStore(lindex))]
+| JDouble -> [JInst(DStore(lindex))]
 | JRef _ -> [JInst(AStore(lindex))]
 | _ -> raise NotImplemented
 
