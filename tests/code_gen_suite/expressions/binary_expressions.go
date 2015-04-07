@@ -38,8 +38,6 @@ func main () {
 	// println(23.4 * 24.5)
 	// println(23.4 / 24.5)
 
-	// println(23.4 % 24.5)
-
 // bool
 	// println(true || false)
 
