@@ -7,6 +7,9 @@ exception ImproperType
 exception NotImplemented
 exception InternalError of string
 
+(* global counters *)
+let next_bool_exp_count = Utils.new_counter 0
+
 (* helper functions *)
 
 let string_of_id id = match id with
@@ -61,6 +64,8 @@ let process_literal = function
 | FloatLit(s) -> [JInst(Ldc(s))]
 | _ -> raise NotImplemented
 
+
+
 let rec process_expression (Expression(e, t)) = match e with 
 | LiteralExp(lit) -> process_literal lit
 | IdExp(id) -> 
@@ -90,7 +95,28 @@ let rec process_expression (Expression(e, t)) = match e with
       (List.flatten arg_load_instructions) @ 
       [JInst(InvokeStatic(jfunction_sig))] @
       stack_null_instrtuctions
+| BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
 | _ -> print_string "expression not implemented"; raise NotImplemented
+
+and process_binary_expression op e1 e2 = 
+  let e1_insts = process_expression e1 in 
+  let e2_insts = process_expression e2 in
+  match op with
+  | BinEq -> 
+      let label_serial = next_bool_exp_count () in 
+      let true_label = "True_" ^ (string_of_int label_serial) in
+      let false_label = "False_" ^ (string_of_int label_serial) in 
+      let end_label = "EndBoolExp_" ^ (string_of_int label_serial) in
+      e1_insts @ e2_insts @
+      [ JInst(IfICmpEq(true_label));
+        JLabel(false_label);
+        JInst(Iconst_0);
+        JInst(Goto(end_label));
+        JLabel(true_label);
+        JInst(Iconst_1);
+        JLabel(end_label);
+      ]
+  | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
 
 
 let process_var_decl mvd_list = (* raise NotImplemented *)
@@ -111,18 +137,29 @@ let process_var_decl mvd_list = (* raise NotImplemented *)
   in
   List.flatten (List.map mapping_from_mvd mvd_list)
 
+let print_single_expression print_method_name e = 
+  JInst(GetStatic(jc_sysout, JRef(jc_printstream))) :: 
+  (match exp_type e with
+  | GoBool -> process_expression e @ 
+      [ JInst(InvokeStatic(jcr_booltostring));
+        JInst(InvokeVirtual({
+          method_name = print_method_name;
+          arg_types = [JRef(jc_string)];
+          return_type = JVoid; } ) ) ]
+
+  | _ -> process_expression e @ 
+      [ JInst(InvokeVirtual(
+            { method_name = print_method_name;
+              arg_types = [get_jvm_type (exp_type e)]; 
+              return_type = JVoid; } )); ] )
+
+
 let rec process_statement (LinedStatement(_, s)) = match s with
 | PrintlnStatement(exp_list) -> 
     (* get instructions for each expression *)
     let print_instructions = 
       List.map 
-      (fun e -> 
-        [ JInst(GetStatic(jc_sysout, JRef(jc_printstream))); ] @
-        process_expression e @
-        [ JInst(InvokeVirtual(
-            { method_name = jc_println;
-              arg_types = [get_jvm_type (exp_type e)]; 
-              return_type = JVoid; } )); ] )
+      (print_single_expression jc_println)
       exp_list in 
     List.flatten print_instructions
 | ExpressionStatement(e) -> process_expression(e) @ [JInst(Pop)]

@@ -52,6 +52,8 @@ and jinstruction =
   | IStore of int
   | DStore of int
   | AConstNull
+  | IfICmpEq of string
+  | Goto of string
   (* Keep adding more and more instructions here.
    * Then also change the string_of_jinst function below *)
 and pseudo_instruction = 
@@ -113,6 +115,8 @@ let string_of_jinst = function
 | DStore(i) -> "dstore " ^ (string_of_int i) 
 | Pop -> "pop" 
 | AConstNull -> "aconst_null"
+| IfICmpEq(l) -> "if_icmpeq " ^ l
+| Goto(l) -> "goto " ^ l
 
 let calculate_local_limit jstmts = 25  (* Not implemented yet *)
 let calculate_ostack_limit jstmts = 25 (* Not implemented yet *) 
@@ -124,6 +128,14 @@ let jc_printstream = "java/io/PrintStream"
 let jc_sysout = "java/lang/System/out"
 let jc_println = flstring jc_printstream "println"
 let jc_print = flstring jc_printstream "print"
+let jcr_booltostring = "RuntimeSupport/booltostring"
+
+(* Runtime method sigs *)
+let jcr_booltostring = {
+  method_name = "RuntimeSupport/booltostring";
+  arg_types = [JInt];
+  return_type = JRef(jc_string);
+}
 
 let get_global_var_map gvar_entry_list = 
   List.fold_left

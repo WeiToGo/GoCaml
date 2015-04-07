@@ -86,5 +86,23 @@ let () = close_out sym_out ;;
 let bytecode_ast = CodeGen.create_byte_code_ast ast in_file_name in
 CodeEmitter.print_main_class bytecode_ast (Filename.dirname in_file_name);;
 
+let copy_file infilename outfilename = 
+  let ic = open_in infilename in 
+  let oc = open_out outfilename in  
+  try (
+    let rec rec_write () = 
+      let line = input_line ic in 
+      let () = output oc line 0 (String.length line) in 
+      let () = output oc "\n" 0 1 in 
+      rec_write () 
+    in rec_write ())
+  with End_of_file -> close_in ic; close_out oc;
+;;
+
+let runtime_support_file_source = Filename.concat (Filename.dirname Sys.argv.(0)) "staticlib/runtimesupport.j" in 
+let runtime_support_file_dest = Filename.concat (Filename.dirname in_file_name) "runtimesupport.j" in 
+copy_file runtime_support_file_source runtime_support_file_dest;;
+
+
 
 
