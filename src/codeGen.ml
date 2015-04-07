@@ -34,7 +34,7 @@ let id_info id =
 
 let rec get_jvm_type gotype = match gotype with
 | GoInt -> JInt
-| GoFloat -> JFloat
+| GoFloat -> JDouble
 | GoBool -> JInt
 | GoRune -> JChar  (* TODO: Make sure this is okay *)
 | GoString -> JRef(jc_string)
@@ -93,7 +93,7 @@ let process_literal = function
 | IntLit(HexInt(s)) -> 
     let int_repr = int_of_string s in
     [JInst(Ldc(string_of_int int_repr))]
-| FloatLit(s) -> [JInst(Ldc(s))]
+| FloatLit(s) -> [JInst(Ldc2w(s))]
 | _ -> raise NotImplemented
 
 
@@ -277,7 +277,6 @@ and process_binary_expression op e1 e2 =
       | BinMinus -> [JInst(Dsub);]
       | BinMult -> [JInst(Dmul);]
       | BinDiv -> [JInst(Ddiv);]
-      | BinMod -> [JInst(Drem);]
       )
   | GoBool ->
       (match op with
@@ -361,7 +360,11 @@ let rec process_statement (LinedStatement(_, s)) = match s with
       exp_list in 
     List.flatten print_instructions
 | VarDeclBlockStatement(mvd_list) -> get_local_var_decl_instructions mvd_list
+| TypeDeclBlockStatement _ -> [] (* Ignore type declarations *)
 | ExpressionStatement(e) -> process_expression(e) @ [JInst(Pop)]
+| EmptyStatement -> []
+| BlockStatement(stmt_list) -> List.flatten (List.map process_statement stmt_list)
+| ReturnStatement(e_op) -> raise NotImplemented
 
 | _ -> print_string "statement not implemented"; raise NotImplemented
 
