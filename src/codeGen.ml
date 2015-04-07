@@ -40,7 +40,7 @@ let rec get_jvm_type gotype = match gotype with
 | GoString -> JRef(jc_string)
 | GoArray(_, t) -> JArray(get_jvm_type t)
 | GoStruct(_) -> raise NotImplemented
-| GoFunction(_) -> raise (InternalError("You tried to get the jvm_type of a go function. Sadly, the legion of anti-functional programmers explicitly forbids this act.")) 
+| GoFunction(_) -> raise (InternalError("Trick question - functions don't have types in jvm.")) 
 | GoCustom(_, t) -> get_jvm_type t
 | GoSlice(_) -> raise NotImplemented
 | NewType(t) -> raise (InternalError("Custom types suffer from existential crisis in jvm bytecode."))
