@@ -61,7 +61,6 @@ and jinstruction =
   | ICmple of string
   | ICmpge of string
   | DCmpg
-  | FCmpg (* test with float*)
   | Ifeq of string
   | Ifne of string
   | Iadd | Isub | Imul | Idiv | Irem | Ior | Ixor
@@ -76,11 +75,11 @@ and pseudo_instruction =
   | LoadVar of int
   | StoreVar of int 
 and jtype = JVoid 
-          | JByte 
+          (* | JByte  *)
           | JChar 
-          | JShort 
+          (* | JShort  *)
           | JInt 
-          | JLong 
+          (* | JLong  *)
           (* | JFloat  *)
           | JDouble 
           | JRef of string 
@@ -93,11 +92,11 @@ let quote_string s = "\"" ^ s ^ "\""
 
 let rec string_of_jtype = function
 | JVoid -> "V"
-| JByte -> raise NotImplemented
+(* | JByte -> raise NotImplemented *)
 | JChar -> "C"
-| JShort -> raise NotImplemented
+(* | JShort -> raise NotImplemented *)
 | JInt -> "I"
-| JLong -> "J"
+(* | JLong -> "J" *)
 (* | JFloat -> "F" *)
 | JDouble -> "D"
 | JRef(s) -> "L" ^ s ^ ";"
