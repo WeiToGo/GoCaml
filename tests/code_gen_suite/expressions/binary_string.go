@@ -6,10 +6,10 @@ func main () {
 	println("str" != "rf")
 	println("strrr" == "strrr")
 	println("str" != "str")
-	// println("str" < "rf")
-	// println("str" <= "rf")
-	// println("str" > "rf")
-	// println("str" => "rf")
+	println("str" < "rf")
+	println("str" <= "rf")
+	println("str" > "rf")
+	println("str" >= "rf")
 	// println("str" + "rf")
 
 }

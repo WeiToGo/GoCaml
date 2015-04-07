@@ -178,6 +178,7 @@ let jc_println = flstring jc_printstream "println"
 let jc_print = flstring jc_printstream "print"
 let jcr_booltostring = "RuntimeSupport/booltostring"
 let jc_equals = flstring jc_string "equals"
+let jc_compare = flstring jc_string "compareTo"
 
 (* Runtime method sigs *)
 let jcr_booltostring = {

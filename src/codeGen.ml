@@ -298,22 +298,38 @@ and process_binary_expression op e1 e2 =
       | _ -> raise NotImplemented (*not needed*)
     )
   | GoString ->
+    let invoke_comp = 
+        [ JInst(InvokeVirtual({
+          method_name = jc_compare;
+          arg_types = [JRef(jc_string)];
+          return_type = JInt; } ) );
+          JInst(Iconst_0); ] 
+    in
     (match op with 
       | BinEq -> 
-      [ JInst(InvokeVirtual({
-        method_name = jc_equals;
-        arg_types = [JRef(jc_object)];
-        return_type = JBool; } ) ) ]
+        [ JInst(InvokeVirtual({
+          method_name = jc_equals;
+          arg_types = [JRef(jc_object)];
+          return_type = JBool; } ) ) ]
       | BinNotEq ->
-      [ JInst(InvokeVirtual({
-        method_name = jc_equals;
-        arg_types = [JRef(jc_object)];
-        return_type = JBool; } ) ) ]
-      @ [JInst(Ifeq(true_label));] @ true_false_boilerplate
-      | BinLess -> raise NotImplemented (* TO DO*)
-      | BinLessEq -> raise NotImplemented (* TO DO*)
-      | BinGreater -> raise NotImplemented (* TO DO*)
-      | BinGreaterEq -> raise NotImplemented (* TO DO*)
+        [ JInst(InvokeVirtual({
+          method_name = jc_equals;
+          arg_types = [JRef(jc_object)];
+          return_type = JBool; } ) ) ]
+        @ [JInst(Ifeq(true_label));]
+        @ true_false_boilerplate
+      | BinLess -> invoke_comp
+        @ [ JInst(ICmplt(true_label));]
+        @ true_false_boilerplate
+      | BinLessEq -> invoke_comp
+        @ [ JInst(ICmple(true_label));]
+        @ true_false_boilerplate
+      | BinGreater -> invoke_comp
+        @ [JInst(ICmpgt(true_label));]
+        @ true_false_boilerplate
+      | BinGreaterEq -> invoke_comp
+        @ [ JInst(ICmpge(true_label));]
+        @ true_false_boilerplate
       | BinPlus -> raise NotImplemented (* TO DO*)
       | _ -> raise NotImplemented (*not needed*)
     )
