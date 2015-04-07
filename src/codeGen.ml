@@ -234,9 +234,19 @@ and process_binary_expression op e1 e2 =
       )
   | GoBool ->
       (match op with
-      | BinOr -> 
+      | BinOr -> (* only [0 0] is false*)
         [ JInst(Ifne(false_label));
           JInst(Ifne(false_label));
+          JLabel(true_label);
+          JInst(Iconst_1);
+          JInst(Goto(end_label));
+          JLabel(false_label);
+          JInst(Iconst_0);
+          JLabel(end_label);
+        ]
+      | BinAnd -> (* only [1 1] is true*)
+        [ JInst(Ifeq(false_label));
+          JInst(Ifeq(false_label));
           JLabel(true_label);
           JInst(Iconst_1);
           JInst(Goto(end_label));
