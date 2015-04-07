@@ -139,62 +139,28 @@ and process_binary_expression op e1 e2 =
       let true_label = "True_" ^ (string_of_int label_serial) in
       let false_label = "False_" ^ (string_of_int label_serial) in 
       let end_label = "EndBoolExp_" ^ (string_of_int label_serial) in
+      let true_false_boilerplate = 
+        [ JLabel(false_label);
+          JInst(Iconst_0);
+          JInst(Goto(end_label));
+          JLabel(true_label);
+          JInst(Iconst_1);
+          JLabel(end_label);
+        ] in 
       e1_insts @ e2_insts @
       (match op with
       | BinEq -> 
-        [ JInst(ICmpeq(true_label));
-          JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ]
+        [ JInst(ICmpeq(true_label)) ] @ true_false_boilerplate
       | BinNotEq -> 
-        [ JInst(ICmpne(true_label));
-          JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ]
+        [ JInst(ICmpne(true_label)) ] @ true_false_boilerplate
       | BinLess ->
-       [ JInst(ICmplt(true_label));
-          JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ]
+       [ JInst(ICmplt(true_label)) ] @ true_false_boilerplate
       | BinLessEq ->
-       [ JInst(ICmple(true_label));
-          JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ]
+       [ JInst(ICmple(true_label)) ] @ true_false_boilerplate
       | BinGreater ->
-       [ JInst(ICmpgt(true_label));
-          JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ]
+       [ JInst(ICmpgt(true_label)) ] @ true_false_boilerplate
       | BinGreaterEq ->
-       [ JInst(ICmpge(true_label));
-          JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ]
+       [ JInst(ICmpge(true_label)) ] @ true_false_boilerplate
       | BinPlus -> [JInst(Iadd);]
       | BinMinus -> [JInst(Isub);]
       | BinMult -> [JInst(Imul);]
@@ -205,84 +171,62 @@ and process_binary_expression op e1 e2 =
       | BinShiftLeft -> [JInst(Ishl)]
       | BinShiftRight -> [JInst(Ishr);]
       | BinBitAnd -> [JInst(Iand);]
-      (* | BinBitAndNot -> raise NotImplemented *)
+      | BinOr|BinAnd| BinBitAndNot -> raise NotImplemented
       )
   | GoFloat -> 
       let label_serial = next_bool_exp_count () in 
       let true_label = "True_" ^ (string_of_int label_serial) in
       let false_label = "False_" ^ (string_of_int label_serial) in 
       let end_label = "EndBoolExp_" ^ (string_of_int label_serial) in
+      let true_false_boilerplate = 
+        [ JLabel(false_label);
+          JInst(Iconst_0);
+          JInst(Goto(end_label));
+          JLabel(true_label);
+          JInst(Iconst_1);
+          JLabel(end_label);
+        ] in 
       e1_insts @ e2_insts @
       (match op with
       | BinEq -> 
         [ JInst(DCmpg);
-          JInst(Ifeq(true_label));
-          JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ]
+          JInst(Ifeq(true_label)); ]
+        @ true_false_boilerplate
       | BinNotEq ->
         [ JInst(DCmpg);
-          JInst(Ifne(true_label));
-          JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ]
+          JInst(Ifne(true_label)); ]
+        @ true_false_boilerplate
       | BinLess ->
         [ JInst(DCmpg);
           JInst(Iconst_m1);
-          JInst(ICmpeq(true_label));
-          JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ]
+          JInst(ICmpeq(true_label)); ]
+        @ true_false_boilerplate
       | BinLessEq -> 
         [ JInst(DCmpg);
           JInst(Iconst_1);
-          JInst(ICmpne(true_label));
-          JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ]
+          JInst(ICmpne(true_label)); ]
+        @ true_false_boilerplate
       | BinGreater ->
         [ JInst(DCmpg);
           JInst(Iconst_1);
-          JInst(ICmpeq(true_label));
-          JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ]
+          JInst(ICmpeq(true_label)); ]
+        @ true_false_boilerplate
       | BinGreaterEq ->
         [ JInst(DCmpg);
           JInst(Iconst_m1);
-          JInst(ICmpne(true_label));
-          JLabel(false_label);
-          JInst(Iconst_0);
-          JInst(Goto(end_label));
-          JLabel(true_label);
-          JInst(Iconst_1);
-          JLabel(end_label);
-        ]
+          JInst(ICmpne(true_label)); ]
+        @ true_false_boilerplate
       | BinPlus -> [JInst(Dadd);]
       | BinMinus -> [JInst(Dsub);]
       | BinMult -> [JInst(Dmul);]
       | BinDiv -> [JInst(Ddiv);]
       | BinMod -> [JInst(Drem);]
+      | BinBitOr
+      | BinBitXor
+      | BinShiftLeft
+      | BinShiftRight
+      | BinBitAnd
+      | BinOr|BinAnd| BinBitAndNot -> raise NotImplemented
       )
   | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
 
