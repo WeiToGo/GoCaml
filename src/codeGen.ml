@@ -120,7 +120,7 @@ let process_literal = function
 | StringLit(s) -> [JInst(Ldc(quote_string s))] 
 | RuneLit(r) -> 
   let int_r = Char.code(String.get r 0) in 
-  [JInst(Ldc(string_of_int int_r))]  (*need to type cast to int before*)
+  [JInst(Ldc(string_of_int int_r))]  
 | IntLit(DecInt(s)) -> [JInst(Ldc(s))]
 | IntLit(OctalInt(s)) -> 
     let int_repr = int_of_string ("0o" ^ s) in 
@@ -187,7 +187,8 @@ and process_binary_expression op e1 e2 =
       JLabel(end_label);
     ] in 
   match exp_type e1 with
-  | GoInt -> e1_insts @ e2_insts @
+  | GoInt 
+  | GoRune -> e1_insts @ e2_insts @
     (match op with
       | BinEq -> 
         [ JInst(ICmpeq(true_label)) ] @ true_false_boilerplate
@@ -208,8 +209,8 @@ and process_binary_expression op e1 e2 =
       | BinMod -> [JInst(Irem);]
       | BinBitOr -> [JInst(Ior);]
       | BinBitXor -> [JInst(Ixor);]
-      | BinShiftLeft -> [JInst(Ishl)]
-      | BinShiftRight -> [JInst(Ishr);]
+      | BinShiftLeft -> [JInst(Ishl)] (* rune will cause overflow*)
+      | BinShiftRight -> [JInst(Ishr);] (* rune will cause overflow*)
       | BinBitAnd -> [JInst(Iand);]
       | BinBitAndNot -> 
         [JInst(Iconst_m1);
@@ -290,21 +291,6 @@ and process_binary_expression op e1 e2 =
           JInst(Iconst_0);
           JLabel(end_label);
         ]
-      | _ -> raise NotImplemented (*not needed*)
-    )
-  | GoRune -> e1_insts @ e2_insts @
-    (match op with
-      | BinEq -> raise NotImplemented (* TO DO*)
-      | BinNotEq -> raise NotImplemented (* TO DO*)
-      | BinLess -> raise NotImplemented (* TO DO*)
-      | BinLessEq -> raise NotImplemented (* TO DO*)
-      | BinGreater -> raise NotImplemented (* TO DO*)
-      | BinGreaterEq -> raise NotImplemented (* TO DO*)
-      | BinPlus -> raise NotImplemented (* TO DO*)
-      | BinMinus -> raise NotImplemented (* TO DO*)
-      | BinMult -> raise NotImplemented (* TO DO*)
-      | BinDiv -> raise NotImplemented (* TO DO*)
-      | BinMod -> raise NotImplemented (* TO DO*)
       | _ -> raise NotImplemented (*not needed*)
     )
   | GoString ->
