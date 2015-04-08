@@ -46,6 +46,7 @@ and jinstruction =
   | PutStatic of string * jtype
   | InvokeVirtual of jmethod_sig
   | InvokeStatic of jmethod_sig
+  | InvokeSpecial of jmethod_sig
   | Return
   | Pop
   | Iload of int
@@ -127,6 +128,7 @@ let string_of_jinst = function
 | PutStatic(s, t) -> "putstatic " ^ s ^ " " ^ (string_of_jtype t)
 | InvokeVirtual(jsig) -> "invokevirtual " ^ (string_of_jsig jsig)
 | InvokeStatic(jsig) -> "invokestatic " ^ (string_of_jsig jsig)
+| InvokeSpecial(jsig) -> "invokespecial" ^ (string_of_jsig jsig)
 | Return -> "return"
 | Iload(i) -> "iload " ^ (string_of_int i)
 | Dload(i) -> "dload " ^ (string_of_int i)
@@ -171,6 +173,7 @@ let calculate_ostack_limit jstmts = 25 (* Not implemented yet *)
 (*  A List of string constants so that you don't have to keep typing raw strings *)
 (* jc = jvm constant *)
 let jc_string = "java/lang/String"
+let jc_string_build = "java/lang/StringBuilder"
 let jc_object = "java/lang/Object"
 let jc_printstream = "java/io/PrintStream"
 let jc_sysout = "java/lang/System/out"
@@ -179,6 +182,7 @@ let jc_print = flstring jc_printstream "print"
 let jcr_booltostring = "RuntimeSupport/booltostring"
 let jc_equals = flstring jc_string "equals"
 let jc_compare = flstring jc_string "compareTo"
+let jc_append = flstring jc_string_build "append"
 
 (* Runtime method sigs *)
 let jcr_booltostring = {

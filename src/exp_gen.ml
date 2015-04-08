@@ -56,13 +56,13 @@ let print_ast prog file class_name =
 				| BinShiftLeft -> print_string "ishl\n"
 				| BinShiftRight -> print_string "ishr\n"
 				| BinBitAnd -> print_string "iand\n"
-				| BinBitAndNot -> print_string " &^ "
+				| BinBitAndNot -> print_string " &^ " (* iand and flip all bits *)
 			in 
 			print_binop_int binop
 		| GoFloat -> (* TO DO need to fix label jumping*)
 			let print_binop_fl op = match op with
 				| BinEq -> 
-					print_string 
+					print_string   (* use double jasmin instr. *)
 					("fcmpg
 					 ifeq Label_" ^ string_of_int !lc ^
 					 "iconst_0\nLabel_" ^ string_of_int !lc ^
@@ -82,7 +82,7 @@ let print_ast prog file class_name =
 					  Label_" ^ string_of_int !lc ^
 					  ":\niconst_1\n");
 					 lc := !lc + 1
-				| BinLessEq ->  () (* TO DO *)
+				| BinLessEq ->  () (* negation of > negation: if 0: 1 if != 0, 0*)
 				| BinGreater -> print_string
 					("fcmpg
 					 iconst_1
@@ -91,7 +91,7 @@ let print_ast prog file class_name =
 					 Label_" ^ string_of_int !lc ^
 					 ":\niconst_1\n");
 					 lc := !lc + 1
-				| BinGreaterEq -> () (* TO DO *)
+				| BinGreaterEq -> () (* negation of < *)
 				| BinPlus -> print_string " fadd "
 				| BinMinus -> print_string " fsub "
 				| BinMult -> print_string " fmul "
@@ -134,9 +134,9 @@ let print_ast prog file class_name =
 			let print_uop_int op = match op with
 				| UPlus -> ()
 				| UMinus -> print_string "ineg "
-				| UCaret -> print_string " ^ "
+				| UCaret -> print_string " ^ " (* xor with -1 depends ?*)
 			in print_uop_int unop 
-		| GoFloat ->
+		| GoFloat -> (* use double jasmin instr. *)
 			let print_unop_fl op = match op with
 				| UPlus -> ()
 				| UMinus -> print_string "fneg "
@@ -170,7 +170,7 @@ let print_ast prog file class_name =
 		| BlankID -> ()
 	in
 	let print_int_literal lit = match lit with
-		| Ast.DecInt (s) -> print_string ("iconst_" ^ s ^ "\n")
+		| Ast.DecInt (s) -> print_string ("iconst_" ^ s ^ "\n") (* only works for 0-5! *)
 		| Ast.HexInt (s) -> ()
 		| Ast.OctalInt (s) -> ()
 	in
