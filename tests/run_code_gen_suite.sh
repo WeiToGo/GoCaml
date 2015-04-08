@@ -38,7 +38,7 @@ while read -r line; do
     cd $gen_dir
     go run $filename &> gooutput.txt  # Go run prints to stderr on my mac 
   fi
-  rm -f *.j
+  rm -f *.j *.class gocamlout.txt
   ../../../main.byte f f $filename
   java -jar $JASMIN_JAR *.j  >/dev/null
   java GeneratedBytecode > gocaml.txt
