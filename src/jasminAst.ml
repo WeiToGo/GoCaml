@@ -49,6 +49,9 @@ and jinstruction =
   | InvokeStatic of jmethod_sig
   | InvokeSpecial of jmethod_sig
   | Return
+  | IReturn
+  | DReturn
+  | AReturn
   | Pop
   | Iload of int
   | Dload of int
@@ -79,7 +82,7 @@ and pseudo_instruction =
 and jstruct_field = string * jtype
 and jtype = JVoid 
           (* | JByte  *)
-          | JChar 
+          (* | JChar  *)
           (* | JShort  *)
           | JInt
           (* | JLong  *)
@@ -97,7 +100,7 @@ let quote_string s = "\"" ^ s ^ "\""
 let rec string_of_jtype get_struct_class = function
 | JVoid -> "V"
 (* | JByte -> raise NotImplemented *)
-| JChar -> "C"
+(* | JChar -> "C" *)
 (* | JShort -> raise NotImplemented *)
 | JInt -> "I"
 (* | JLong -> "J" *)
@@ -133,6 +136,9 @@ let string_of_jinst struct_map = function
 | InvokeStatic(jsig) -> "invokestatic " ^ (string_of_jsig struct_map jsig)
 | InvokeSpecial(jsig) -> "invokespecial " ^ (string_of_jsig struct_map jsig)
 | Return -> "return"
+| IReturn -> "ireturn"
+| DReturn -> "dreturn"
+| AReturn -> "areturn"
 | Iload(i) -> "iload " ^ (string_of_int i)
 | Dload(i) -> "dload " ^ (string_of_int i)
 | Aload(i) -> "aload " ^ (string_of_int i) 

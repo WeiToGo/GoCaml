@@ -42,6 +42,10 @@ let string_of_id id = match id with
 | BlankID -> "BlankID"
 | ID(name, _) -> name
 
+let is_blank_id (Expression(e, _)) = match e with
+| IdExp(BlankID) -> true
+| _ -> false
+
 
 (* Adds the symbol for an identifier to scope, and also updates
  * the ref field of id to point to the symbol table entry.
@@ -513,7 +517,9 @@ and tc_type_declaration ln ctx = function
       let new_type = NewType (gotype_of_typspec ctx ts) in
       add_id ctx id new_type ln
 
-and tc_expression ctx node = let _ = resolve_exp_type ctx node in ()
+and tc_expression ctx node = match node with 
+| Expression(IdExp(BlankID), _) -> () 
+| _ -> let _ = resolve_exp_type ctx node in ()
 
 and tc_statement ctx = function
   | LinedStatement(ln, s) -> 
@@ -607,8 +613,9 @@ and tc_plain_statement ln ctx = function
       let () = List.iter (tc_expression ctx) left_exp_list in
       let () = List.iter (tc_expression ctx) right_exp_list in
       let check_assignment (e1, e2) =
-        let e1_type = resolve_exp_type ctx e1 in
         let e2_type = resolve_exp_type ctx e2 in
+        let e1_type = if is_blank_id e1 then e2_type else
+                      resolve_exp_type ctx e1 in
         let is_function e = match e with 
           | GoFunction(_, _) -> true
           | _ -> false

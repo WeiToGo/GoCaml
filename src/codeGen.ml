@@ -73,7 +73,9 @@ let get_local_var_decl_mappings next_index mvd_list =
 let rec get_mapping_from_stmt prev_map next_index (LinedStatement(_, stmt)) = match stmt with
 | VarDeclBlockStatement(mvd_list) -> get_local_var_decl_mappings next_index mvd_list
 | ShortVarDeclStatement(shortvd_list) -> 
-    let mapping_from_single_shvd (ShortVarDecl(id, _)) = 
+    let mapping_from_single_shvd (ShortVarDecl(id, _)) = match id with
+    | BlankID -> LocalVarMap.empty
+    | _ -> 
       let _, gotype, var_num = id_info id in
       if LocalVarMap.mem var_num prev_map then LocalVarMap.empty 
       else LocalVarMap.add var_num (next_index (), get_jvm_type gotype) LocalVarMap.empty
@@ -486,7 +488,17 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
 | ExpressionStatement(e) -> process_expression(e) @ [JInst(Pop)]
 | EmptyStatement -> []
 | BlockStatement(stmt_list) -> List.flatten (List.map process_statement stmt_list)
-| ReturnStatement(e_op) -> raise NotImplemented
+| ReturnStatement(e_op) -> (match e_op with
+    | None -> [JInst(Return)];
+    | Some e -> (process_expression e) @ (match get_jvm_type (exp_type e) with
+      | JVoid -> raise (InternalError("Void expressions cannot be returned"))
+      | JInt -> [JInst(IReturn)]
+      | JDouble -> [JInst(DReturn)]
+      | JBool -> [JInst(IReturn)]
+      | JRef _ -> [JInst(AReturn)]
+      | JArray _ -> [JInst(AReturn)]
+      | JStruct _ -> [JInst(AReturn )] ) )
+
 | ForStatement(init_stmt_op, loop_cond_op, post_stmt_op, stmt_list) -> 
     let count = string_of_int (next_loop_count ()) in 
     let loop_check_label = "LoopCheck_" ^ count in 
@@ -521,15 +533,13 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
 | ShortVarDeclStatement(shortvd_list) -> 
     (* first evaluate all the arguments, then store them *)
     let exps = List.map (fun (ShortVarDecl(id, e)) -> e) shortvd_list in 
-    let vars = List.map 
-      (fun (ShortVarDecl(id, e)) -> 
-        let _, _, var_num = id_info id in var_num)
-      shortvd_list
-    in
+    let vars = List.map (fun (ShortVarDecl(id, e)) -> id) shortvd_list in 
     let exp_instructions = List.flatten (List.map process_expression exps) in 
     let store_instructions = 
       List.map
-        (fun var_num -> PS(StoreVar(var_num)))
+        (fun id -> match id with 
+        | BlankID -> JInst(Pop)
+        | id -> let _, _, var_num = id_info id in PS(StoreVar(var_num)) )
         (List.rev vars)
     in
     exp_instructions @ store_instructions
@@ -538,6 +548,7 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     let exps = List.map (fun (e1, e2) -> e2) ass_list in 
     let exp_instructions = List.flatten (List.map process_expression exps) in
     let single_store_instruction (Expression(e, _)) = match e with
+    | IdExp(BlankID) -> [JInst(Pop)]
     | IdExp(id) -> 
         let _, _, var_num = id_info id in 
         [PS(StoreVar(var_num))]
