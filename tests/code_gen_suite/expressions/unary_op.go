@@ -10,7 +10,10 @@ func main () {
 	println(^(34+ (-3))) 
 
 //rune
-
+	println(-'4') 
+	println(-'e') 
+	println(^'1')
+	println(^'w') 
 
 //bool
 	println(!(4>5))

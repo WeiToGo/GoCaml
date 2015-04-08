@@ -401,9 +401,9 @@ and process_unary_expression op e =
   | GoRune ->
     (match op with 
     | UPlus -> []
-    | UMinus -> print_string "Unimplemented"; raise NotImplemented
+    | UMinus -> [JInst(Ineg);]
     | UNot -> raise NotImplemented (*not needed*)
-    | UCaret -> print_string "Unimplemented"; raise NotImplemented
+    | UCaret -> [JInst(Iconst_m1);JInst(Ixor);]
     )
   | GoBool ->
     (match op with  
