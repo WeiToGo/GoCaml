@@ -10,6 +10,7 @@ exception InternalError of string
 (* global counters *)
 let next_bool_exp_count = Utils.new_counter 0
 let next_loop_count = Utils.new_counter 0
+let if_count = Utils.new_counter 0
 
 (* helper functions *)
 
@@ -117,7 +118,9 @@ let get_local_mapping_from_go_arg (FunctionArg (id, _)) =
 
 let process_literal = function
 | StringLit(s) -> [JInst(Ldc(quote_string s))] 
-(* | RuneLit(r) -> [JInst(Ldc(r))]  *) (*need to type cast to int before*)
+| RuneLit(r) -> 
+  let int_r = Char.code(String.get r 0) in 
+  [JInst(Ldc(string_of_int int_r))]  (*need to type cast to int before*)
 | IntLit(DecInt(s)) -> [JInst(Ldc(s))]
 | IntLit(OctalInt(s)) -> 
     let int_repr = int_of_string ("0o" ^ s) in 
@@ -595,6 +598,26 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
 | ContinueStatement -> ( match continue_label with
   | None -> raise (InternalError("I know not whence to continue"))
   | Some l -> [ JInst(Goto(l)) ] )
+| IfStatement(init_stmt_op, expr_cond, then_list, else_list_op) ->
+    let count = string_of_int (if_count ()) in
+    let end_label = "EndIf_" ^ count in 
+    let else_label = "Else_" ^ count in
+    let init_inst = match init_stmt_op with
+    | None -> []
+    | Some s -> process_statement s in 
+    let exp_inst = process_expression expr_cond in
+    let then_inst = List.flatten (List.map process_statement then_list) in
+    let else_inst = (match else_list_op with
+      | None -> []
+      | Some (sl) -> List.flatten (List.map process_statement sl) )
+    in
+    init_inst @ exp_inst @
+    [JInst(Ifeq(else_label))] @
+    then_inst @
+    [JInst(Goto(end_label));
+     JLabel(else_label)] @
+    else_inst @
+    [JLabel(end_label)]
 | _ -> print_string "statement not implemented"; raise NotImplemented
 
 let process_func_decl id funsig stmt_list = 
