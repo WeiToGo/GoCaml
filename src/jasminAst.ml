@@ -76,6 +76,7 @@ and jinstruction =
   | New of string
   | D2i
   | I2d
+  | Nop
 
   (* Keep adding more and more instructions here.
    * Then also change the string_of_jinst function below *)
@@ -180,6 +181,7 @@ let string_of_jinst struct_map = function
 | New(obj) -> "new " ^ obj
 | D2i -> "d2i "
 | I2d -> "i2d "
+| Nop -> "nop "
 
 let calculate_local_limit jstmts = 25  (* Not implemented yet *)
 let calculate_ostack_limit jstmts = 25 (* Not implemented yet *) 
