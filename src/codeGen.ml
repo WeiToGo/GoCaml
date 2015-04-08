@@ -117,7 +117,7 @@ let get_local_mapping_from_go_arg (FunctionArg (id, _)) =
 
 let process_literal = function
 | StringLit(s) -> [JInst(Ldc(quote_string s))] 
-(* | RuneLit(r) -> [JInst(Ldc(r))] *)  (*need to type cast to int before*)
+(* | RuneLit(r) -> [JInst(Ldc(r))]  *) (*need to type cast to int before*)
 | IntLit(DecInt(s)) -> [JInst(Ldc(s))]
 | IntLit(OctalInt(s)) -> 
     let int_repr = int_of_string ("0o" ^ s) in 
@@ -161,6 +161,9 @@ let rec process_expression (Expression(e, t)) = match e with
       stack_null_instrtuctions
 | BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
 | UnaryExp(op, e) -> process_unary_expression op e
+| TypeCastExp(ts, e) -> (match !t with 
+    | None -> raise (InternalError ("expr should have a type") )
+    | Some (t) -> process_type_cast ts e t )
 | _ -> print_string "expression not implemented"; raise NotImplemented
 
 and process_binary_expression op e1 e2 = 
@@ -419,6 +422,29 @@ and process_unary_expression op e =
     | UPlus | UMinus | UCaret -> raise NotImplemented (*not needed*)
     )
   | _ -> print_string "Unimplemented unary operation"; raise NotImplemented
+
+and process_type_cast ts e t = 
+  let e_inst = process_expression e in
+  match ts with
+    | BasicType typ -> 
+      (match typ with
+        | IntType -> (match t with
+            | GoRune -> []
+            | _ -> raise (InternalError ("should not be allowed in type checking"))
+          )
+        | FloatType -> (match t with
+            | GoInt -> e_inst @ [JInst(I2d);]
+            | GoRune -> e_inst @ [JInst(I2d);] (* may be wrong *)
+            | _ -> raise (InternalError ("should not be allowed in type checking")) 
+          )
+        | RuneType -> (match t with
+            | GoInt -> raise NotImplemented
+            | _ -> raise (InternalError ("should not be allowed in type checking"))
+          )
+        | _ -> raise (InternalError ("should not be allowed in type checking"))
+      )
+    | _ -> raise (InternalError ("should not be allowed in type checking"))
+
 let process_global_var_decl mvd_list =
   let mapping_from_svd svd = 
     let SingleVarDecl(id, tp_op, exp_op) = svd in
