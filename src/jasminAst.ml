@@ -39,6 +39,7 @@ and jmstatement = (* Jasmin method statement *)
 and jinstruction =
   | Iconst_0 | Iconst_1 | Iconst_2 | Iconst_3 | Iconst_m1
   | Ldc of string
+  (* | Ldcw of string *)
   | Ldc2w of string
   | Dup
   | BiPush of string  (* -128 to 127*)
@@ -122,6 +123,7 @@ let string_of_jinst struct_map = function
 | Iconst_3 -> "iconst_3"
 | Iconst_m1 -> "iconst_m1"
 | Ldc(s) -> "ldc " ^ s
+(* | Ldcw(s) -> "ldc_w " ^ s *)
 | Ldc2w(s) -> "ldc2_w " ^ s 
 | Dup -> "dup"
 | BiPush(s) -> "bipush " ^ s 

@@ -42,7 +42,7 @@ let rec get_jvm_type gotype = match gotype with
 | GoInt -> JInt
 | GoFloat -> JDouble
 | GoBool -> JInt
-| GoRune -> JChar  (* TODO: Make sure this is okay *)
+| GoRune -> JInt  (*rune is an int-32*)
 | GoString -> JRef(jc_string)
 | GoArray(_, t) -> JArray(get_jvm_type t)
 | GoStruct(sflist) -> 
@@ -115,6 +115,7 @@ let get_local_mapping_from_go_arg (FunctionArg (id, _)) =
 
 let process_literal = function
 | StringLit(s) -> [JInst(Ldc(quote_string s))] 
+(* | RuneLit(r) -> [JInst(Ldc(r))] *)  (*need to type cast to int before*)
 | IntLit(DecInt(s)) -> [JInst(Ldc(s))]
 | IntLit(OctalInt(s)) -> 
     let int_repr = int_of_string ("0o" ^ s) in 
