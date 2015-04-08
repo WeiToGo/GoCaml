@@ -10,7 +10,8 @@ func main () {
 	println("str" <= "rf")
 	println("str" > "rf")
 	println("str" >= "rf")
-	// println("str" + "rf")
+	println("str" + "rf")
+	println("srver" + "se")
 
 }
 

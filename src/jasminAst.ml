@@ -69,6 +69,7 @@ and jinstruction =
   | Dadd | Dsub | Dmul | Ddiv | Drem | Dneg
   | AConstNull
   | Goto of string
+  | New of string
   (* Keep adding more and more instructions here.
    * Then also change the string_of_jinst function below *)
 and pseudo_instruction = 
@@ -128,7 +129,7 @@ let string_of_jinst struct_map = function
 | PutStatic(s, t) -> "putstatic " ^ s ^ " " ^ (string_of_jtype struct_map t)
 | InvokeVirtual(jsig) -> "invokevirtual " ^ (string_of_jsig struct_map jsig)
 | InvokeStatic(jsig) -> "invokestatic " ^ (string_of_jsig struct_map jsig)
-| InvokeVirtual(jsig) -> "invokevirtual " ^ (string_of_jsig struct_map jsig)
+| InvokeSpecial(jsig) -> "invokespecial " ^ (string_of_jsig struct_map jsig)
 | Return -> "return"
 | Iload(i) -> "iload " ^ (string_of_int i)
 | Dload(i) -> "dload " ^ (string_of_int i)
@@ -165,6 +166,7 @@ let string_of_jinst struct_map = function
 | Pop -> "pop" 
 | AConstNull -> "aconst_null"
 | Goto(l) -> "goto " ^ l
+| New(obj) -> "new " ^ obj
 
 let calculate_local_limit jstmts = 25  (* Not implemented yet *)
 let calculate_ostack_limit jstmts = 25 (* Not implemented yet *) 
@@ -182,6 +184,8 @@ let jcr_booltostring = "RuntimeSupport/booltostring"
 let jc_equals = flstring jc_string "equals"
 let jc_compare = flstring jc_string "compareTo"
 let jc_append = flstring jc_string_build "append"
+let jc_sb_init = flstring jc_string_build "<init>"
+let jc_sb_toString = flstring jc_string_build "toString"
 
 (* Runtime method sigs *)
 let jcr_booltostring = {
