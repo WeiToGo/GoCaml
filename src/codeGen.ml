@@ -209,8 +209,8 @@ and process_binary_expression op e1 e2 =
       | BinMod -> [JInst(Irem);]
       | BinBitOr -> [JInst(Ior);]
       | BinBitXor -> [JInst(Ixor);]
-      | BinShiftLeft -> [JInst(Ishl)] (* rune will cause overflow*)
-      | BinShiftRight -> [JInst(Ishr);] (* rune will cause overflow*)
+      | BinShiftLeft -> [JInst(Ishl)] (* some rune will cause overflow*)
+      | BinShiftRight -> [JInst(Ishr);] (* some rune will cause overflow*)
       | BinBitAnd -> [JInst(Iand);]
       | BinBitAndNot -> 
         [JInst(Iconst_m1);
