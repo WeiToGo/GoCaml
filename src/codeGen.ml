@@ -10,6 +10,7 @@ exception InternalError of string
 (* global counters *)
 let next_bool_exp_count = Utils.new_counter 0
 let next_loop_count = Utils.new_counter 0
+let if_count = Utils.new_counter 0
 
 let scmap = ref ( fun x -> "StructMapReferenceVarNotInialized") 
 
@@ -99,7 +100,8 @@ let get_local_var_decl_mappings next_index mvd_list =
     LocalVarMap.empty
     map_list
 
-
+(* This function takes a statement and if there is any new local var, gives back a map of 
+variable number -> local_id_entry *)
 let rec get_mapping_from_stmt prev_map next_index (LinedStatement(_, stmt)) = match stmt with
 | VarDeclBlockStatement(mvd_list) -> get_local_var_decl_mappings next_index mvd_list
 | ShortVarDeclStatement(shortvd_list) -> 
@@ -115,7 +117,27 @@ let rec get_mapping_from_stmt prev_map next_index (LinedStatement(_, stmt)) = ma
         LocalVarMap.merge merge_maps old_map new_map)
       LocalVarMap.empty
       (List.map mapping_from_single_shvd shortvd_list)
-| IfStatement(tiny_stmt, _, then_stmts, else_stmts_op) -> raise NotImplemented
+| IfStatement(tiny_stmt_op, _, then_stmts, else_stmts_op) -> 
+    let init_mapping = match tiny_stmt_op with
+    | None -> LocalVarMap.empty
+    | Some s -> get_mapping_from_stmt prev_map next_index s 
+    in  
+    let else_mapping = (match else_stmts_op with
+      | None -> LocalVarMap.empty
+      | Some (sl) -> 
+          List.fold_left 
+            (LocalVarMap.merge merge_maps)
+            LocalVarMap.empty
+            (List.map (get_mapping_from_stmt prev_map next_index) sl)
+      )
+    in 
+    let body_mapping = 
+      List.fold_left 
+        (LocalVarMap.merge merge_maps)
+        else_mapping
+        (List.map (get_mapping_from_stmt prev_map next_index) then_stmts)
+    in 
+    LocalVarMap.merge merge_maps init_mapping body_mapping 
 | SwitchStatement(tiny_stmt, _, switch_case_list) -> raise NotImplemented
 | ForStatement(init_stmt_op, _, post_stmt_op, stmt_list) -> 
     let init_mapping = match init_stmt_op with
@@ -147,7 +169,9 @@ let get_local_mapping_from_go_arg (FunctionArg (id, _)) =
 
 let process_literal = function
 | StringLit(s) -> [JInst(Ldc(quote_string s))] 
-(* | RuneLit(r) -> [JInst(Ldc(r))] *)  (*need to type cast to int before*)
+| RuneLit(r) -> 
+  let int_r = Char.code(String.get r 0) in 
+  [JInst(Ldc(string_of_int int_r))]  
 | IntLit(DecInt(s)) -> [JInst(Ldc(s))]
 | IntLit(OctalInt(s)) -> 
     let int_repr = int_of_string ("0o" ^ s) in 
@@ -197,6 +221,12 @@ let Expression(e, t) = exp in match e with
     [JInst(GetField(
       flstring (struct_cname_of_expression e) (string_of_id id),
        get_jvm_type (exp_type exp) )) ]
+| TypeCastExp(ts, e) -> 
+  let e_inst = process_expression e in
+  e_inst @
+  (match !t with 
+    | None -> raise (InternalError ("expr should have a type") )
+    | Some (t) -> process_type_cast ts t )
 | _ -> print_string "expression not implemented"; raise NotImplemented
 
 and process_binary_expression op e1 e2 = 
@@ -217,7 +247,8 @@ and process_binary_expression op e1 e2 =
       JLabel(end_label);
     ] in 
   match exp_type e1 with
-  | GoInt -> e1_insts @ e2_insts @
+  | GoInt 
+  | GoRune -> e1_insts @ e2_insts @
     (match op with
       | BinEq -> 
         [ JInst(ICmpeq(true_label)) ] @ true_false_boilerplate
@@ -238,8 +269,8 @@ and process_binary_expression op e1 e2 =
       | BinMod -> [JInst(Irem);]
       | BinBitOr -> [JInst(Ior);]
       | BinBitXor -> [JInst(Ixor);]
-      | BinShiftLeft -> [JInst(Ishl)]
-      | BinShiftRight -> [JInst(Ishr);]
+      | BinShiftLeft -> [JInst(Ishl)] (* some rune will cause overflow*)
+      | BinShiftRight -> [JInst(Ishr);] (* some rune will cause overflow*)
       | BinBitAnd -> [JInst(Iand);]
       | BinBitAndNot -> 
         [JInst(Iconst_m1);
@@ -320,21 +351,6 @@ and process_binary_expression op e1 e2 =
           JInst(Iconst_0);
           JLabel(end_label);
         ]
-      | _ -> raise NotImplemented (*not needed*)
-    )
-  | GoRune -> e1_insts @ e2_insts @
-    (match op with
-      | BinEq -> raise NotImplemented (* TO DO*)
-      | BinNotEq -> raise NotImplemented (* TO DO*)
-      | BinLess -> raise NotImplemented (* TO DO*)
-      | BinLessEq -> raise NotImplemented (* TO DO*)
-      | BinGreater -> raise NotImplemented (* TO DO*)
-      | BinGreaterEq -> raise NotImplemented (* TO DO*)
-      | BinPlus -> raise NotImplemented (* TO DO*)
-      | BinMinus -> raise NotImplemented (* TO DO*)
-      | BinMult -> raise NotImplemented (* TO DO*)
-      | BinDiv -> raise NotImplemented (* TO DO*)
-      | BinMod -> raise NotImplemented (* TO DO*)
       | _ -> raise NotImplemented (*not needed*)
     )
   | GoString ->
@@ -445,9 +461,9 @@ and process_unary_expression op e =
   | GoRune ->
     (match op with 
     | UPlus -> []
-    | UMinus -> print_string "Unimplemented"; raise NotImplemented
+    | UMinus -> [JInst(Ineg);]
     | UNot -> raise NotImplemented (*not needed*)
-    | UCaret -> print_string "Unimplemented"; raise NotImplemented
+    | UCaret -> [JInst(Iconst_m1);JInst(Ixor);]
     )
   | GoBool ->
     (match op with  
@@ -455,6 +471,28 @@ and process_unary_expression op e =
     | UPlus | UMinus | UCaret -> raise NotImplemented (*not needed*)
     )
   | _ -> print_string "Unimplemented unary operation"; raise NotImplemented
+
+and process_type_cast ts t = 
+  match ts with
+    | BasicType typ -> 
+      (match typ with
+        | IntType -> (match t with
+            | GoRune -> [JInst(Nop)]
+            | _ -> raise (InternalError ("should not be allowed in type checking"))
+          )
+        | FloatType -> (match t with
+            | GoInt -> [JInst(I2d)]
+            | GoRune -> [JInst(I2d)] (* may be wrong *)
+            | _ -> raise (InternalError ("should not be allowed in type checking")) 
+          )
+        | RuneType -> (match t with
+            | GoInt -> [JInst(Nop)]
+            | _ -> raise (InternalError ("should not be allowed in type checking"))
+          )
+        | _ -> raise (InternalError ("should not be allowed in type checking"))
+      )
+    | _ -> raise (InternalError ("should not be allowed in type checking"))
+
 let process_global_var_decl mvd_list =
   let mapping_from_svd svd = 
     let SingleVarDecl(id, tp_op, exp_op) = svd in
@@ -606,6 +644,27 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
 | ContinueStatement -> ( match continue_label with
   | None -> raise (InternalError("I know not whence to continue"))
   | Some l -> [ JInst(Goto(l)) ] )
+| IfStatement(init_stmt_op, expr_cond, then_list, else_list_op) ->
+    let count = string_of_int (if_count ()) in
+    let end_label = "EndIf_" ^ count in 
+    let else_label = "Else_" ^ count in
+    let init_inst = match init_stmt_op with
+    | None -> []
+    | Some s -> process_statement s in 
+    let exp_inst = process_expression expr_cond in
+    let then_inst = List.flatten (List.map process_statement then_list) in
+    let else_inst = (match else_list_op with
+      | None -> []
+      | Some (sl) -> List.flatten (List.map process_statement sl) )
+    in
+    init_inst @ exp_inst @
+    [JInst(Ifeq(else_label))] @
+    then_inst @
+    [JInst(Goto(end_label));
+     JLabel(else_label)] @
+    else_inst @
+    [JLabel(end_label)]
+(* | SwitchStatement (s) -> raise NotImplemented *)
 | _ -> print_string "statement not implemented"; raise NotImplemented
 
 let process_func_decl id funsig stmt_list = 

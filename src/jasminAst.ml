@@ -79,6 +79,10 @@ and jinstruction =
   | AConstNull
   | Goto of string
   | New of string
+  | D2i
+  | I2d
+  | Nop
+
   (* Keep adding more and more instructions here.
    * Then also change the string_of_jinst function below *)
 and pseudo_instruction = 
@@ -182,6 +186,9 @@ let string_of_jinst = function
 | AConstNull -> "aconst_null"
 | Goto(l) -> "goto " ^ l
 | New(obj) -> "new " ^ obj
+| D2i -> "d2i "
+| I2d -> "i2d "
+| Nop -> "nop "
 
 let calculate_local_limit jstmts = 25  (* Not implemented yet *)
 let calculate_ostack_limit jstmts = 25 (* Not implemented yet *) 
