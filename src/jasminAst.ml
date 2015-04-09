@@ -9,6 +9,7 @@ let main_class_name = "GeneratedBytecode"
 type bytecode_ast = 
   { 
     source: string;
+    class_name: string; 
     top_level_vars: global_id_entry list;
     methods: jmethod list;
   }
@@ -42,9 +43,12 @@ and jinstruction =
   (* | Ldcw of string *)
   | Ldc2w of string
   | Dup
+  | Swap
   | BiPush of string  (* -128 to 127*)
   | GetStatic of string * jtype
   | PutStatic of string * jtype
+  | PutField of string (* field name *) * jtype (* field type *)
+  | GetField of string (* field name *) * jtype (* field type *)
   | InvokeVirtual of jmethod_sig
   | InvokeStatic of jmethod_sig
   | InvokeSpecial of jmethod_sig
@@ -59,6 +63,7 @@ and jinstruction =
   | IStore of int
   | DStore of int
   | AStore of int
+  | Aload_0
   | ICmpeq of string
   | ICmpne of string
   | ICmplt of string
@@ -91,13 +96,12 @@ and jtype = JVoid
           | JBool
           | JRef of string 
           | JArray of jtype
-          | JStruct of (jstruct_field list)
 
 (* Bunch of utility functions *)
 let flstring class_name field_name = class_name ^ "/" ^ field_name
 let quote_string s = "\"" ^ s ^ "\""
 
-let rec string_of_jtype get_struct_class = function
+let rec string_of_jtype = function
 | JVoid -> "V"
 (* | JByte -> raise NotImplemented *)
 (* | JChar -> "C" *)
@@ -108,18 +112,17 @@ let rec string_of_jtype get_struct_class = function
 | JDouble -> "D"
 | JBool -> "Z"
 | JRef(s) -> "L" ^ s ^ ";"
-| JArray(atype) -> "[" ^ (string_of_jtype get_struct_class atype)
-| JStruct(sfl) -> "L" ^ (get_struct_class sfl) ^ ";"
+| JArray(atype) -> "[" ^ (string_of_jtype atype)
 
-let rec string_of_jsig get_struct_class {method_name; arg_types; return_type;} = 
+let rec string_of_jsig {method_name; arg_types; return_type;} = 
   method_name ^ "(" ^
   List.fold_left
-    (fun x y -> x ^ (string_of_jtype get_struct_class y) )
+    (fun x y -> x ^ (string_of_jtype y) )
     ""
     arg_types
-  ^ ")" ^ (string_of_jtype get_struct_class return_type)
+  ^ ")" ^ (string_of_jtype return_type)
 
-let string_of_jinst struct_map = function
+let string_of_jinst = function
 | Iconst_0 -> "iconst_0"
 | Iconst_1 -> "iconst_1"
 | Iconst_2 -> "iconst_2"
@@ -129,12 +132,15 @@ let string_of_jinst struct_map = function
 (* | Ldcw(s) -> "ldc_w " ^ s *)
 | Ldc2w(s) -> "ldc2_w " ^ s 
 | Dup -> "dup"
+| Swap -> "swap"
 | BiPush(s) -> "bipush " ^ s 
-| GetStatic(s, t) -> "getstatic " ^ s ^ " " ^ (string_of_jtype struct_map t)
-| PutStatic(s, t) -> "putstatic " ^ s ^ " " ^ (string_of_jtype struct_map t)
-| InvokeVirtual(jsig) -> "invokevirtual " ^ (string_of_jsig struct_map jsig)
-| InvokeStatic(jsig) -> "invokestatic " ^ (string_of_jsig struct_map jsig)
-| InvokeSpecial(jsig) -> "invokespecial " ^ (string_of_jsig struct_map jsig)
+| GetStatic(s, t) -> "getstatic " ^ s ^ " " ^ (string_of_jtype t)
+| PutStatic(s, t) -> "putstatic " ^ s ^ " " ^ (string_of_jtype t)
+| PutField(s, t) -> "putfield " ^ s ^ " " ^ (string_of_jtype t)
+| GetField(s, t) -> "getfield " ^ s ^ " " ^ (string_of_jtype t) 
+| InvokeVirtual(jsig) -> "invokevirtual " ^ (string_of_jsig jsig)
+| InvokeStatic(jsig) -> "invokestatic " ^ (string_of_jsig jsig)
+| InvokeSpecial(jsig) -> "invokespecial " ^ (string_of_jsig jsig)
 | Return -> "return"
 | IReturn -> "ireturn"
 | DReturn -> "dreturn"
@@ -144,7 +150,8 @@ let string_of_jinst struct_map = function
 | Aload(i) -> "aload " ^ (string_of_int i) 
 | IStore(i) -> "istore " ^ (string_of_int i)
 | DStore(i) -> "dstore " ^ (string_of_int i) 
-| AStore(i) -> "astore " ^ (string_of_int i) 
+| AStore(i) -> "astore " ^ (string_of_int i)
+| Aload_0 -> "aload_0"
 | ICmpeq(l) -> "if_icmpeq " ^ l
 | ICmpne(l) -> "if_icmpne " ^ l
 | ICmplt(l) -> "if_icmplt " ^ l
@@ -229,7 +236,7 @@ let local_store_instructions lindex jvm_type = match jvm_type with
 let global_store_instructions name jvm_type = 
   [JInst(PutStatic(main_class_name ^ "/" ^ name, jvm_type))]
 
-let real_statements (global_map, local_map, struct_map) pinst = 
+let real_statements (global_map, local_map) pinst = 
   let lookup_in_local var_num = 
     try let lindex, jtype = LocalVarMap.find var_num local_map in Some(lindex, jtype)
     with Not_found -> None
@@ -252,8 +259,4 @@ let real_statements (global_map, local_map, struct_map) pinst =
     | Some(name, jt), None -> global_store_instructions name jt
     | _ -> raise (InternalError("Same variable defined with both local and global map.")) )
 
-let default_init jtype var_num = match jtype with
-| JInt -> [JInst(Iconst_0); PS(StoreVar(var_num));]
-| JDouble -> [JInst(Ldc2w("0")); PS(StoreVar(var_num));]
-| JStruct(sfl) -> raise NotImplemented
-| _ -> raise NotImplemented 
+

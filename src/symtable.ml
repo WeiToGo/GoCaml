@@ -23,12 +23,13 @@ type gotype =
       | GoString
       | GoSlice of gotype
       | GoArray of (int * gotype)
-      | GoStruct of ( (string * gotype) list)
+      | GoStruct of ( go_struct)
       | GoFunction of (gotype list * gotype option)  (* GoFunction of (argument list, return type) *)
       | GoCustom of (string * gotype)  (* CustomType of name of custom type * the return type *)
       | NewType of gotype  (* This is the type for newly defined types. 
                               e.g. `type length int` will put `("length", NewType(GoInt))` in the 
                               symbol table *)
+and go_struct = (string * gotype) list
 
 type scope = Scope of (scope option * (string, sym_table_entry) Hashtbl.t)
              (* Scope of parent * symbol hashtable *)

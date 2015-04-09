@@ -11,6 +11,8 @@ exception InternalError of string
 let next_bool_exp_count = Utils.new_counter 0
 let next_loop_count = Utils.new_counter 0
 
+let scmap = ref ( fun x -> "StructMapReferenceVarNotInialized") 
+
 (* helper functions *)
 
 let string_of_id id = match id with
@@ -36,6 +38,12 @@ let id_info id =
   | Some(entry) -> 
     let Symtable.Entry(name, gotype, _, _, var_num) = entry in
     name, gotype, var_num
+
+
+let rec base_type gotype = match gotype with
+| GoCustom(_, t) -> base_type t
+| _ -> gotype
+
 (*~~ read deal ~~*)
 
 let rec get_jvm_type gotype = match gotype with
@@ -45,13 +53,35 @@ let rec get_jvm_type gotype = match gotype with
 | GoRune -> JInt  (*rune is an int-32*)
 | GoString -> JRef(jc_string)
 | GoArray(_, t) -> JArray(get_jvm_type t)
-| GoStruct(sflist) -> 
-    let jsflist = List.map (fun (name, gt) -> (name, get_jvm_type gt)) sflist in 
-    JStruct(jsflist)
+| GoStruct(sflist) -> JRef(!(scmap) sflist)
 | GoFunction(_) -> raise (InternalError("Trick question - functions don't have types in jvm.")) 
 | GoCustom(_, t) -> get_jvm_type t
 | GoSlice(_) -> raise NotImplemented
 | NewType(t) -> raise (InternalError("Custom types suffer from existential crisis in jvm bytecode."))
+
+let struct_cname_of_expression (Expression(e, topref)) = match !topref with 
+| Some (t) -> (match (base_type t) with 
+    | GoStruct(gs) -> !scmap gs
+    | _ -> raise (InternalError("Select Expression can only be done on structs. This should be caught in typechecker.")) )
+| None -> raise (InternalError("Missing type when trying to infer struct class name of expression. Did you typecheck the tree?"))
+
+  
+let rec type_init_exps gotype = match gotype with
+| GoInt| GoRune | GoBool -> [JInst(Iconst_0)]
+| GoFloat -> [JInst(Ldc2w("0.0"))]
+| GoString -> [JInst(Ldc(quote_string ""))]
+| GoStruct(gs) -> 
+    let scname = (!scmap gs) in 
+    [JInst(New(scname)); JInst(Dup);
+     JInst(InvokeSpecial(
+        { method_name = scname ^ "/<init>";
+          arg_types = [];
+          return_type = JVoid; }
+     ))]
+| GoCustom(_, t) -> type_init_exps t
+| GoArray _ -> raise NotImplemented 
+| GoSlice _ -> raise NotImplemented
+| GoFunction _ | NewType _ -> raise (InternalError("You shouldn't have to do initilize these types"))
 
 let get_local_var_decl_mappings next_index mvd_list = 
   let mapping_from_svd svd = 
@@ -130,7 +160,8 @@ let process_literal = function
 
 
 
-let rec process_expression (Expression(e, t)) = match e with 
+let rec process_expression exp = 
+let Expression(e, t) = exp in match e with 
 | LiteralExp(lit) -> process_literal lit
 | IdExp(id) -> 
     let _, _, var_num = id_info id in
@@ -161,6 +192,11 @@ let rec process_expression (Expression(e, t)) = match e with
       stack_null_instrtuctions
 | BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
 | UnaryExp(op, e) -> process_unary_expression op e
+| SelectExp(e, id) -> 
+    (process_expression e) @ 
+    [JInst(GetField(
+      flstring (struct_cname_of_expression e) (string_of_id id),
+       get_jvm_type (exp_type exp) )) ]
 | _ -> print_string "expression not implemented"; raise NotImplemented
 
 and process_binary_expression op e1 e2 = 
@@ -424,7 +460,7 @@ let process_global_var_decl mvd_list =
     let SingleVarDecl(id, tp_op, exp_op) = svd in
     let name, gotype, var_num = id_info id in
     let init_code = match exp_op with
-    | None -> []
+    | None -> (type_init_exps gotype) @ [PS(StoreVar(var_num))]
     | Some(e) -> (process_expression e) @ [PS(StoreVar(var_num))] in 
     { name = name ^ "_" ^ (string_of_int var_num);
       var_number = var_num;
@@ -441,9 +477,9 @@ let process_global_var_decl mvd_list =
 let get_local_var_decl_instructions mvd_list = 
   let insts_from_svd svd = 
     let SingleVarDecl(id, tp_op, exp_op) = svd in 
-    let _, _, var_num = id_info id in 
+    let _, gotype, var_num = id_info id in 
     match exp_op with
-    | None -> []
+    | None -> (type_init_exps gotype) @ [PS(StoreVar(var_num))]
     | Some e -> (process_expression e) @ [PS(StoreVar(var_num))]
   in 
   let insts_from_mvd mvd = 
@@ -496,8 +532,7 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
       | JDouble -> [JInst(DReturn)]
       | JBool -> [JInst(IReturn)]
       | JRef _ -> [JInst(AReturn)]
-      | JArray _ -> [JInst(AReturn)]
-      | JStruct _ -> [JInst(AReturn )] ) )
+      | JArray _ -> [JInst(AReturn)] ) )
 
 | ForStatement(init_stmt_op, loop_cond_op, post_stmt_op, stmt_list) -> 
     let count = string_of_int (next_loop_count ()) in 
@@ -544,23 +579,25 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     in
     exp_instructions @ store_instructions
 | AssignmentStatement(ass_list) -> 
-    let lvals = List.map (fun (e1, e2) -> e1) ass_list in 
     let exps = List.map (fun (e1, e2) -> e2) ass_list in 
     let exp_instructions = List.flatten (List.map process_expression exps) in
-    let single_store_instruction (Expression(e, _)) = match e with
+    let single_store_instruction (Expression(e, _)) rexp = match e with
     | IdExp(BlankID) -> [JInst(Pop)]
     | IdExp(id) -> 
         let _, _, var_num = id_info id in 
         [PS(StoreVar(var_num))]
     | IndexExp(id) -> raise NotImplemented
-    | SelectExp(id) -> raise NotImplemented
+    | SelectExp(lexp, id) -> 
+        let cname = struct_cname_of_expression lexp in
+        (process_expression lexp) 
+      @ [JInst(Swap); JInst(PutField(flstring cname (string_of_id id), get_jvm_type (exp_type rexp) ))]
     | FunctionCallExp(id) -> raise NotImplemented
     | AppendExp _ | TypeCastExp _ | LiteralExp _ 
     | UnaryExp _ | BinaryExp _  -> raise (InternalError("This is not a valid lvalue"))
     in
     let store_instructions = 
       List.flatten 
-        (List.map single_store_instruction (List.rev lvals))
+        (List.map (fun (l, r) -> single_store_instruction l r)  (List.rev ass_list))
     in
     exp_instructions @ store_instructions
 | BreakStatement -> ( match break_label with
@@ -629,6 +666,7 @@ let create_byte_code_ast (Program(_, lined_top_decls)) go_filename =
       ([], [])
       field_method_nest in 
   { 
+    class_name = main_class_name;
     source = go_filename;
     top_level_vars = List.rev rev_tlvars; 
     methods = List.rev rev_methods;

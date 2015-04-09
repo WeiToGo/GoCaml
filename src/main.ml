@@ -83,28 +83,19 @@ let () = Typecheck.build_symbol_table ast;;
 
 let () = close_out sym_out ;; 
 
-let bytecode_ast = CodeGen.create_byte_code_ast ast in_file_name in
-let struct_map, struct_list = CodeEmitter.crawl_structs bytecode_ast in 
-let () = CodeEmitter.print_main_class bytecode_ast struct_map (Filename.dirname in_file_name) in
-CodeEmitter.print_struct_classes struct_list struct_map (Filename.dirname in_file_name)
-;;
+let out_directory = Filename.dirname in_file_name;;
 
-let copy_file infilename outfilename = 
-  let ic = open_in infilename in 
-  let oc = open_out outfilename in  
-  try (
-    let rec rec_write () = 
-      let line = input_line ic in 
-      let () = output oc line 0 (String.length line) in 
-      let () = output oc "\n" 0 1 in 
-      rec_write () 
-    in rec_write ())
-  with End_of_file -> close_in ic; close_out oc;
-;;
+let struct_map = StructCrawler.generate_struct_to_class_map ast in 
+let () = CodeGen.scmap := (StructCrawler.struct_class_getter_factory_factory_JAVA struct_map) in 
+let gostruct_list = StructCrawler.get_all_sructs struct_map in 
+let struct_class_list = List.map StructCodeGen.create_struct_class gostruct_list in 
+let () = List.iter (fun c -> CodeEmitter.print_struct_class c out_directory) struct_class_list in 
+let bytecode_ast = CodeGen.create_byte_code_ast ast in_file_name in
+CodeEmitter.print_main_class bytecode_ast (Filename.dirname in_file_name);;
 
 let runtime_support_file_source = Filename.concat (Filename.dirname Sys.argv.(0)) "staticlib/runtimesupport.j" in 
 let runtime_support_file_dest = Filename.concat (Filename.dirname in_file_name) "runtimesupport.j" in 
-copy_file runtime_support_file_source runtime_support_file_dest;;
+Utils.copy_file runtime_support_file_source runtime_support_file_dest;;
 
 
 
