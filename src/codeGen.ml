@@ -12,7 +12,7 @@ let next_bool_exp_count = Utils.new_counter 0
 let next_loop_count = Utils.new_counter 0
 let if_count = Utils.new_counter 0
 
-let scmap = ref ( fun x -> "StructMapReferenceVarNotInialized") 
+let scmap = ref ( fun x -> raise (InternalError("StructMapReferenceVarNotInitializedError")) ) 
 
 (* helper functions *)
 
