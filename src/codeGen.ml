@@ -11,6 +11,7 @@ exception InternalError of string
 let next_bool_exp_count = Utils.new_counter 0
 let next_loop_count = Utils.new_counter 0
 let if_count = Utils.new_counter 0
+let switch_count = Utils.new_counter 0
 
 let scmap = ref ( fun x -> raise (InternalError("StructMapReferenceVarNotInitializedError")) ) 
 
@@ -182,7 +183,38 @@ let process_literal = function
 | FloatLit(s) -> [JInst(Ldc2w(s))]
 | _ -> raise NotImplemented
 
-
+(*this function assumes e1 e2 are computed and results are on top of the stack.
+It leaves a 0 or 1 on stack depending on the result. *)
+let compare_expressions t = 
+  let label_serial = next_bool_exp_count () in 
+  let true_label = "True_" ^ (string_of_int label_serial) in
+  let false_label = "False_" ^ (string_of_int label_serial) in 
+  let end_label = "EndBoolExp_" ^ (string_of_int label_serial) in
+  let true_false_boilerplate = 
+    [ JLabel(false_label);
+      JInst(Iconst_0);
+      JInst(Goto(end_label));
+      JLabel(true_label);
+      JInst(Iconst_1);
+      JLabel(end_label);
+    ] in 
+  (match t with
+   | GoInt | GoRune -> [ JInst(ICmpeq(true_label)) ] @ true_false_boilerplate
+   | GoFloat ->
+     [ JInst(DCmpg);
+      JInst(Ifeq(true_label)); ]
+    @ true_false_boilerplate
+   | GoString ->
+      [ JInst(InvokeVirtual({
+        method_name = jc_equals;
+        arg_types = [JRef(jc_object)];
+        return_type = JBool; } ) ) ]
+   | GoArray(e, t) -> raise NotImplemented
+   | GoStruct(l) -> raise NotImplemented
+   | GoCustom(n, t) -> raise NotImplemented
+   | NewType(t) -> raise NotImplemented 
+   | _ -> raise NotImplemented  
+  )
 
 let rec process_expression exp = 
 let Expression(e, t) = exp in match e with 
@@ -248,8 +280,28 @@ and process_binary_expression op e1 e2 =
     ] in 
   match exp_type e1 with
   | GoInt 
-  | GoRune -> e1_insts @ e2_insts @
+  | GoRune -> e1_insts @ e2_insts @ (process_binary_int_expr op true_label true_false_boilerplate)
+  | GoFloat -> e1_insts @ e2_insts @ (process_binary_float_expr op true_label true_false_boilerplate)
+  | GoBool -> e1_insts @ e2_insts @ (process_binary_bool_expr op true_label true2_label 
+                                      false_label false2_label end_label true_false_boilerplate)
+  | GoString -> process_binary_string_expr op (exp_type e1) e1_insts e2_insts true_label true_false_boilerplate
+  | GoArray(i, t) ->
     (match op with
+      | BinEq -> raise NotImplemented (* TO DO*)
+      | BinNotEq -> raise NotImplemented (* TO DO*)
+      | _ -> raise NotImplemented (*not needed*)
+    )
+  | GoStruct(fl) ->
+    (match op with
+      | BinEq -> raise NotImplemented (* TO DO*)
+      | BinNotEq -> raise NotImplemented (* TO DO*)
+      | _ -> raise NotImplemented (*not needed*)
+    )
+  | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
+
+(*BinEq is not extracted to compare_expressions before it requires typ argument.
+and also because instructions are very short. *)
+and process_binary_int_expr op true_label true_false_boilerplate = (match op with
       | BinEq -> 
         [ JInst(ICmpeq(true_label)) ] @ true_false_boilerplate
       | BinNotEq -> 
@@ -279,8 +331,10 @@ and process_binary_expression op e1 e2 =
         ]
       | BinOr|BinAnd-> raise NotImplemented
     )
-  | GoFloat -> e1_insts @ e2_insts @
-    (match op with
+
+(*BinEq is not extracted to compare_expressions before it requires typ argument.
+and also because instructions are very short. *)
+and process_binary_float_expr op true_label true_false_boilerplate = (match op with
       | BinEq -> 
         [ JInst(DCmpg);
           JInst(Ifeq(true_label)); ]
@@ -321,8 +375,8 @@ and process_binary_expression op e1 e2 =
       | BinBitAnd
       | BinOr|BinAnd| BinBitAndNot -> raise NotImplemented (*not needed*)
     )
-  | GoBool -> e1_insts @ e2_insts @
-    (match op with
+and process_binary_bool_expr op true_label true2_label false_label false2_label end_label true_false_boilerplate =
+   (match op with
       | BinOr -> (* only [0 0] is false*)
         [ JInst(Ifne(true_label));
           JInst(Ifne(true2_label));
@@ -353,7 +407,8 @@ and process_binary_expression op e1 e2 =
         ]
       | _ -> raise NotImplemented (*not needed*)
     )
-  | GoString ->
+(* typ argument is added so it can use compare_expression function *)
+and process_binary_string_expr op typ e1_insts e2_insts true_label true_false_boilerplate = 
     let invoke_comp = 
         [ JInst(InvokeVirtual({
           method_name = jc_compare;
@@ -415,19 +470,6 @@ and process_binary_expression op e1 e2 =
           ]
       | _ -> raise NotImplemented (*not needed*)
     )
-  | GoArray(i, t) ->
-    (match op with
-      | BinEq -> raise NotImplemented (* TO DO*)
-      | BinNotEq -> raise NotImplemented (* TO DO*)
-      | _ -> raise NotImplemented (*not needed*)
-    )
-  | GoStruct(fl) ->
-    (match op with
-      | BinEq -> raise NotImplemented (* TO DO*)
-      | BinNotEq -> raise NotImplemented (* TO DO*)
-      | _ -> raise NotImplemented (*not needed*)
-    )
-  | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
 
 and process_unary_expression op e = 
   let e_insts = process_expression e in 
@@ -664,9 +706,62 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
      JLabel(else_label)] @
     else_inst @
     [JLabel(end_label)]
-(* | SwitchStatement (s) -> raise NotImplemented *)
-| _ -> print_string "statement not implemented"; raise NotImplemented
+(* | SwitchStatement (stmt_op, exp, case_list) -> 
+    let init_inst = (match stmt_op with
+    | None -> []
+    | Some s -> process_statement s) in 
+    let case_inst = process_case_list exp case_list in 
+    init_inst @ case_inst *)
+ | _ -> print_string "statement not implemented"; raise NotImplemented 
+(*
 
+and process_case_list switch_exp case_list = 
+  let count = string_of_int (switch_count ()) in
+  (* let end_label = "EndSwitch_" ^ count in  *)
+  let case_label = "Case_" ^ count in 
+  let default_label = "Default_" ^ count in 
+  (*func to pass to List.find *)
+  let get_default case = (match case with
+    | SwitchCase(exp_list, sl) -> false
+    | DefaultCase(sl) -> true
+    )
+  in 
+  let get_default_inst df = (match df with
+    | DefaultCase(sl) -> let stmt_list_inst = List.flatten (List.map process_statement sl) in
+      [ JLabel(default_label)] @ stmt_list_inst
+    | _ -> raise (InternalError ("shouldn't get here"))
+  )
+  in
+  let default_inst = get_default_inst (List.find get_default case_list) in
+  let switch_exp_inst = process_expression switch_exp in
+  let rec process_helper l = (match l with
+    | [] -> raise (InternalError ("should have at least 1 case in switch"))
+    | h::[] -> (match h with 
+      | SwitchCase(exp_list, sl) -> 
+      (*generate instructions for case 0, 1, 2 : stmt_list since all these cases leads to the same label(stmt_list) *)
+        let rec one_switch_case_inst el = (match el with
+        | [] -> raise (InternalError ("should have at least 1 expression in a switch case. "))
+        | h::[] -> 
+          let typ = exp_type h in 
+          let case_exp_insts = process_expression h in
+          (* e1 @ e2 so their results are on top of the stack*)
+          switch_exp_inst @ case_exp_insts @
+          compare_expressions typ @
+          [JInst(Ifne(case_label))] 
+        | h::t -> (one_switch_case_inst h) @ (one_switch_case_inst t) 
+        )
+        in
+        let stmt_list_inst = List.flatten (List.map process_statement sl) in
+         one_switch_case_inst exp_list @ 
+          [ JLabel(case_label)] @ stmt_list_inst
+      | _ -> [] (* don't need to generate anything for default case here.*)
+      )
+    | h::t -> (process_helper h) @ (process_helper t) @ default_inst
+    )
+  in
+  default_inst @ (process_helper case_list)
+
+*)
 let process_func_decl id funsig stmt_list = 
   let next_index = Utils.new_counter 0 in 
   let method_name, gotype, _ = id_info id in 
