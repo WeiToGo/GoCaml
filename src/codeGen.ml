@@ -1,7 +1,7 @@
 open JasminAst
 open Ast
 open Symtable
-open Typecheck
+(* open Typecheck *)
 
 (* exceptions *)
 exception ImproperType
@@ -251,11 +251,12 @@ let Expression(e, t) = exp in match e with
 | FunctionCallExp(fun_expression, arg_expressions) -> 
     let Expression(fun_exp, _) = fun_expression in
     let fun_name, fun_type, _ = (match fun_exp with
-    | IdExp(id) -> id_info id
+    | IdExp(id) -> id_info id 
     | _ -> raise (InternalError("Only identifiers can be called."))  )
     in 
     let arg_gotypes, ret_gotypeop = match fun_type with
     | GoFunction(at, rto) -> at, rto 
+    | NewType(gotype) -> process_type_cast gotype arg_expressions
     | _ -> raise (InternalError("Only function types can be called. Do we have a typechecker bug?"))
     in 
     let jfunction_sig = 
@@ -279,9 +280,20 @@ let Expression(e, t) = exp in match e with
     [JInst(GetField(
       flstring (struct_cname_of_expression e) (string_of_id id),
        get_jvm_type (exp_type exp) )) ]
-| TypeCastExp(ts, e) -> 
-  let e_inst = process_expression e in
-  let cast_inst = process_type_cast ts (exp_type e) in
+| TypeCastExp(ts, origin_exp) -> 
+  let e_inst = process_expression exp in
+  let target_type = (match ts with
+    | BasicType (typ) -> (match typ with
+      | IntType -> GoInt
+      | FloatType -> GoFloat
+      | RuneType -> GoRune
+      | _ ->  raise (InternalError ("invalid type for type cast. "))
+      )
+    | _ -> raise (InternalError ("invalid type for type cast. "))
+  )
+  in
+  let origin_type = exp_type origin_exp in
+  let cast_inst = process_type_cast target_type origin_type in
   e_inst @ cast_inst 
 | _ -> print_string "expression not implemented"; raise NotImplemented
 
@@ -539,26 +551,23 @@ and process_unary_expression op e =
     )
   | _ -> print_string "Unimplemented unary operation"; raise NotImplemented
 
-and process_type_cast ts t = 
-  match ts with
-    | BasicType typ -> 
-      (match typ with
-        | IntType -> (match t with
-            | GoRune -> []
-            | _ -> raise (InternalError ("other int should not be allowed in type checking"))
-          )
-        | FloatType -> (match t with
-            | GoInt -> [JInst(I2d)]
-            | GoRune -> [JInst(I2d)]
-            | _ -> raise (InternalError (" other flo should not be allowed in type checking")) 
-          )
-        | RuneType -> (match t with
-            | GoInt -> []
-            | _ -> raise (InternalError ("other rune should not be allowed in type checking"))
-          )
-        | _ -> raise (InternalError ("should not be allowed in type checking"))
-      )
-    | _ -> raise (InternalError ("should not be allowed in type checking"))
+and process_type_cast target_t origin_t = (match target_t with
+  | GoInt -> (match origin_t with
+      | GoRune -> []
+      | _ -> raise (InternalError ("other int should not be allowed in type checking"))
+    )
+  | GoFloat -> (match origin_t with
+      | GoInt -> [JInst(I2d)]
+      | GoRune -> [JInst(I2d)]
+      | _ -> raise (InternalError (" other flo should not be allowed in type checking")) 
+    )
+  | GoRune -> (match origin_t with
+      | GoInt -> []
+      | _ -> raise (InternalError ("other rune should not be allowed in type checking"))
+    )
+  | _ -> raise (InternalError ("should not be allowed in type checking"))
+)
+
 
 let process_global_var_decl mvd_list =
   let mapping_from_svd svd = 
