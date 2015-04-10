@@ -1,7 +1,6 @@
 open JasminAst
 open Ast
 open Symtable
-(* open Typecheck *)
 
 (* exceptions *)
 exception ImproperType
@@ -45,6 +44,7 @@ let id_info id =
 
 let rec base_type gotype = match gotype with
 | GoCustom(_, t) -> base_type t
+| NewType(t) -> base_type t
 | _ -> gotype
 
 (*~~ read deal ~~*)
@@ -253,26 +253,13 @@ let Expression(e, t) = exp in match e with
     let fun_name, fun_type, _ = (match fun_exp with
     | IdExp(id) -> id_info id 
     | _ -> raise (InternalError("Only identifiers can be called."))  )
-    in 
-    let arg_gotypes, ret_gotypeop = match fun_type with
-    | GoFunction(at, rto) -> at, rto 
-    | NewType(gotype) -> process_type_cast gotype arg_expressions
+    in     
+    let call_inst = match fun_type with
+    | GoFunction(at, rto) -> process_func_call fun_name arg_expressions at rto
+    (* | NewType(t) -> process_type_cast (base_type fun_type) (base_type t) *)
     | _ -> raise (InternalError("Only function types can be called. Do we have a typechecker bug?"))
-    in 
-    let jfunction_sig = 
-      { method_name = main_class_name ^ "/" ^ fun_name;
-        arg_types = List.map get_jvm_type arg_gotypes;
-        return_type = match ret_gotypeop with
-        | None -> JVoid 
-        | Some t -> get_jvm_type t ;
-      } in 
-    let arg_load_instructions = List.map process_expression arg_expressions in
-    let stack_null_instrtuctions = match ret_gotypeop with
-    | None -> [JInst(AConstNull)]
-    | Some _ -> [] in  
-      (List.flatten arg_load_instructions) @ 
-      [JInst(InvokeStatic(jfunction_sig))] @
-      stack_null_instrtuctions
+    in call_inst 
+
 | BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
 | UnaryExp(op, e) -> process_unary_expression op e
 | SelectExp(e, id) -> 
@@ -296,6 +283,23 @@ let Expression(e, t) = exp in match e with
   let cast_inst = process_type_cast target_type origin_type in
   e_inst @ cast_inst 
 | _ -> print_string "expression not implemented"; raise NotImplemented
+
+(*helper function to process func call in process_expression, only meant to be called from there.*)
+and process_func_call fun_name arg_expressions arg_gotypes ret_gotypeop = 
+    let jfunction_sig = 
+      { method_name = main_class_name ^ "/" ^ fun_name;
+        arg_types = List.map get_jvm_type arg_gotypes;
+        return_type = match ret_gotypeop with
+        | None -> JVoid 
+        | Some t -> get_jvm_type t ;
+      } in 
+    let arg_load_instructions = List.map process_expression arg_expressions in
+    let stack_null_instructions = match ret_gotypeop with
+    | None -> [JInst(AConstNull)]
+    | Some _ -> [] in  
+      (List.flatten arg_load_instructions) @ 
+      [JInst(InvokeStatic(jfunction_sig))] @
+      stack_null_instructions
 
 and process_binary_expression op e1 e2 = 
   let e1_insts = process_expression e1 in 
@@ -551,19 +555,21 @@ and process_unary_expression op e =
     )
   | _ -> print_string "Unimplemented unary operation"; raise NotImplemented
 
+(* Assume target type and origin type are GoType reduced to base type.*)
 and process_type_cast target_t origin_t = (match target_t with
   | GoInt -> (match origin_t with
-      | GoRune -> []
-      | _ -> raise (InternalError ("other int should not be allowed in type checking"))
+      | GoRune | GoInt -> []
+      | _ -> raise (InternalError ("should not be allowed in type checking"))
     )
   | GoFloat -> (match origin_t with
+      | GoFloat -> []
       | GoInt -> [JInst(I2d)]
       | GoRune -> [JInst(I2d)]
-      | _ -> raise (InternalError (" other flo should not be allowed in type checking")) 
+      | _ -> raise (InternalError ("should not be allowed in type checking")) 
     )
   | GoRune -> (match origin_t with
-      | GoInt -> []
-      | _ -> raise (InternalError ("other rune should not be allowed in type checking"))
+      | GoInt | GoRune -> []
+      | _ -> raise (InternalError ("should not be allowed in type checking"))
     )
   | _ -> raise (InternalError ("should not be allowed in type checking"))
 )
@@ -705,7 +711,7 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
         let cname = struct_cname_of_expression lexp in
         (process_expression lexp) 
       @ [JInst(Swap); JInst(PutField(flstring cname (string_of_id id), get_jvm_type (exp_type rexp) ))]
-    | FunctionCallExp(id) -> raise NotImplemented
+    | FunctionCallExp _ 
     | AppendExp _ | TypeCastExp _ | LiteralExp _ 
     | UnaryExp _ | BinaryExp _  -> raise (InternalError("This is not a valid lvalue"))
     in

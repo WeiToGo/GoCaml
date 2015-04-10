@@ -1,9 +1,10 @@
 package main 
 
 type  length int
-var x length = length(4)
-func main () {
 
+func main () {
+	var y = 4
+	var x length = length(y)
 	println(x)
 
 }
