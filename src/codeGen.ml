@@ -238,7 +238,7 @@ let compare_expressions t =
    | GoBool -> 
       [JInst(Ixor);
        JInst(Ifeq(true_label));] @ true_false_boilerplate
-   | GoArray(e, t) -> raise (InternalError("compare_expressions array not implemented"))
+   | GoArray(e, t) -> [JInst(IACmpeq(true_label))] @ true_false_boilerplate
    | GoStruct(l) -> raise NotImplemented
    | GoCustom(n, t) -> raise NotImplemented
    | NewType(t) -> raise NotImplemented 
@@ -316,8 +316,8 @@ and process_binary_expression op e1 e2 =
   | GoString -> process_binary_string_expr op (exp_type e1) e1_insts e2_insts true_label true_false_boilerplate
   | GoArray(i, t) ->
     (match op with
-      | BinEq -> raise (InternalError("process_binary_expression array equal not implemented")) (* TO DO*)
-      | BinNotEq -> raise (InternalError("process_binary_expression array not equal not implemented")) (* TO DO*)
+      | BinEq -> e1_insts @ e2_insts @ [JInst(IACmpeq(true_label))] @ true_false_boilerplate
+      | BinNotEq -> e1_insts @ e2_insts @ [JInst(IACmpne(true_label))] @ true_false_boilerplate
       | _ -> raise NotImplemented (*not needed*)
     )
   | GoStruct(fl) ->
