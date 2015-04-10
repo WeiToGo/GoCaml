@@ -82,7 +82,11 @@ let rec type_init_exps gotype = match gotype with
           return_type = JVoid; }
      ))]
 | GoCustom(_, t) -> type_init_exps t
-| GoArray _ -> raise NotImplemented 
+| GoArray(size, t) ->
+	let s = (match t with
+	| GoInt -> "int"
+	| _ -> raise (InternalError("Array type not implemented")) ) in
+	[JInst(Ldc(string_of_int size)); JInst(NewArray(s))]
 | GoSlice _ -> raise NotImplemented
 | GoFunction _ | NewType _ -> raise (InternalError("You shouldn't have to do initilize these types"))
 
@@ -205,7 +209,7 @@ let process_literal = function
     let int_repr = int_of_string s in
     [JInst(Ldc(string_of_int int_repr))]
 | FloatLit(s) -> [JInst(Ldc2w(s))]
-| _ -> raise NotImplemented
+| _ -> raise (InternalError("process_literal not matched"))
 
 (*this function assumes e1 e2 are computed and results are on top of the stack.
 It leaves a 0 or 1 on stack depending on the result. *)
@@ -235,7 +239,7 @@ let compare_expressions t =
    | GoBool -> 
       [JInst(Ixor);
        JInst(Ifeq(true_label));] @ true_false_boilerplate
-   | GoArray(e, t) -> raise NotImplemented
+   | GoArray(e, t) -> raise (InternalError("compare_expressions array not implemented"))
    | GoStruct(l) -> raise NotImplemented
    | GoCustom(n, t) -> raise NotImplemented
    | NewType(t) -> raise NotImplemented 
@@ -283,7 +287,9 @@ let Expression(e, t) = exp in match e with
   let e_inst = process_expression e in
   let cast_inst = process_type_cast ts (exp_type e) in
   e_inst @ cast_inst 
-| _ -> print_string "expression not implemented"; raise NotImplemented
+| IndexExp(e, inte) ->
+  (process_expression e) @ (process_expression inte) @ [JInst(IAload)]
+| _ -> print_string "expression not implemented"; raise (InternalError("expression not matched in process_expression"))
 
 and process_binary_expression op e1 e2 = 
   let e1_insts = process_expression e1 in 
@@ -311,8 +317,8 @@ and process_binary_expression op e1 e2 =
   | GoString -> process_binary_string_expr op (exp_type e1) e1_insts e2_insts true_label true_false_boilerplate
   | GoArray(i, t) ->
     (match op with
-      | BinEq -> raise NotImplemented (* TO DO*)
-      | BinNotEq -> raise NotImplemented (* TO DO*)
+      | BinEq -> raise (InternalError("process_binary_expression array equal not implemented")) (* TO DO*)
+      | BinNotEq -> raise (InternalError("process_binary_expression array not equal not implemented")) (* TO DO*)
       | _ -> raise NotImplemented (*not needed*)
     )
   | GoStruct(fl) ->
@@ -537,7 +543,7 @@ and process_unary_expression op e =
     | UNot -> [JInst(Ifeq(true_label));] @ true_false_boilerplate
     | UPlus | UMinus | UCaret -> raise NotImplemented (*not needed*)
     )
-  | _ -> print_string "Unimplemented unary operation"; raise NotImplemented
+  | _ -> print_string "Unimplemented unary operation"; raise (InternalError("Unimplemented unary operation"))
 
 and process_type_cast ts t = 
   match ts with
@@ -691,7 +697,7 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     | IdExp(id) -> 
         let _, _, var_num = id_info id in 
         [PS(StoreVar(var_num))]
-    | IndexExp(id) -> raise NotImplemented
+    | IndexExp(id) -> raise (InternalError("IndexExp not implemented in process_statement -> AssignmentStatement"))
     | SelectExp(lexp, id) -> 
         let cname = struct_cname_of_expression lexp in
         (process_expression lexp) 
