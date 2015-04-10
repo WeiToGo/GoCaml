@@ -44,7 +44,7 @@ let id_info id =
 
 let rec base_type gotype = match gotype with
 | GoCustom(_, t) -> base_type t
-(* | NewType(t) -> base_type t *)
+| NewType(t) -> base_type t
 | _ -> gotype
 
 (*~~ read deal ~~*)
@@ -262,7 +262,7 @@ let Expression(e, t) = exp in match e with
     (* | NewType(t) -> process_type_cast (base_type fun_type) (base_type t) *)
     | _ -> raise (InternalError("Only function types can be called. Do we have a typechecker bug?"))
     in call_inst 
-
+    
 | BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
 | UnaryExp(op, e) -> process_unary_expression op e
 | SelectExp(e, id) -> 
@@ -271,7 +271,7 @@ let Expression(e, t) = exp in match e with
       flstring (struct_cname_of_expression e) (string_of_id id),
        get_jvm_type (exp_type exp) )) ]
 | TypeCastExp(ts, origin_exp) -> 
-  let e_inst = process_expression exp in
+  let e_inst = process_expression origin_exp in
   let target_type = (match ts with
     | BasicType (typ) -> (match typ with
       | IntType -> GoInt
@@ -580,7 +580,6 @@ and process_type_cast target_t origin_t = (match target_t with
     )
   | _ -> raise (InternalError ("should not be allowed in type checking"))
 )
-
 
 let process_global_var_decl mvd_list =
   let mapping_from_svd svd = 
