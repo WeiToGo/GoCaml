@@ -285,7 +285,11 @@ let Expression(e, t) = exp in match e with
   let origin_type = exp_type origin_exp in
   let cast_inst = process_type_cast target_type origin_type in
   e_inst @ cast_inst 
-| _ -> print_string "expression not implemented"; raise NotImplemented
+| IndexExp(e, inte) ->
+  (process_expression e) @ (process_expression inte) @ [JInst(IAload)]
+| _ -> print_string "expression not implemented"; raise (InternalError("expression not matched in process_expression"))
+
+
 
 (*helper function to process func call in process_expression, only meant to be called from there.*)
 and process_func_call fun_name arg_expressions arg_gotypes ret_gotypeop = 
@@ -302,21 +306,8 @@ and process_func_call fun_name arg_expressions arg_gotypes ret_gotypeop =
     | Some _ -> [] in  
       (List.flatten arg_load_instructions) @ 
       [JInst(InvokeStatic(jfunction_sig))] @
-      stack_null_instrtuctions
-| BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
-| UnaryExp(op, e) -> process_unary_expression op e
-| SelectExp(e, id) -> 
-    (process_expression e) @ 
-    [JInst(GetField(
-      flstring (struct_cname_of_expression e) (string_of_id id),
-       get_jvm_type (exp_type exp) )) ]
-| TypeCastExp(ts, e) -> 
-  let e_inst = process_expression e in
-  let cast_inst = process_type_cast ts (exp_type e) in
-  e_inst @ cast_inst 
-| IndexExp(e, inte) ->
-  (process_expression e) @ (process_expression inte) @ [JInst(IAload)]
-| _ -> print_string "expression not implemented"; raise (InternalError("expression not matched in process_expression"))
+      stack_null_instructions
+
 
 and process_binary_expression op e1 e2 = 
   let e1_insts = process_expression e1 in 
