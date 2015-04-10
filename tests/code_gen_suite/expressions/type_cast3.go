@@ -1,16 +1,11 @@
+
 package main 
 
-// type length float64
-// type letter string
-type ap rune
+
+type letter bool
 
 func main () {
-	// var y = 4.5
-	// var y2 = "aejoif"
-	// var x length = length(y)
-	// var z letter = letter(y2)
-	var b ap = ap('r')
-	// println(x)
-	// println(z)
-	println(b)
+	var y2 =  true
+	var z letter = letter(y2)
+	println(z)
 }

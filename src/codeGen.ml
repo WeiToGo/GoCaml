@@ -332,7 +332,7 @@ and process_binary_expression op e1 e2 =
       JInst(Iconst_1);
       JLabel(end_label);
     ] in 
-  match exp_type e1 with
+  match base_type (exp_type e1) with
   | GoInt 
   | GoRune -> e1_insts @ e2_insts @ (process_binary_int_expr op true_label true_false_boilerplate)
   | GoFloat -> e1_insts @ e2_insts @ (process_binary_float_expr op true_label true_false_boilerplate)
@@ -351,7 +351,6 @@ and process_binary_expression op e1 e2 =
       | BinNotEq -> raise NotImplemented (* TO DO*)
       | _ -> raise NotImplemented (*not needed*)
     )
-  | GoCustom(name, gotype) -> raise NotImplemented (* TO DO *)
   | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
 
 (*BinEq is not extracted to compare_expressions before it requires typ argument.
@@ -569,7 +568,9 @@ and process_unary_expression op e =
     )
   | _ -> print_string "Unimplemented unary operation"; raise (InternalError("Unimplemented unary operation"))
 
-(* Assume target type and origin type are GoType reduced to base type.*)
+(* Assume target type and origin type are GoType reduced to base type.
+this function supports more types then types allowed in type_cast_expressions 
+in order to support type cast with custom types. *)
 and process_type_cast target_t origin_t = (match target_t with
   | GoInt -> (match origin_t with
       | GoRune | GoInt -> []
@@ -585,6 +586,13 @@ and process_type_cast target_t origin_t = (match target_t with
       | GoInt | GoRune -> []
       | _ -> raise (InternalError ("should not be allowed in type checking"))
     )
+  | GoBool -> (match origin_t with 
+      | GoBool -> []
+      | _ -> raise (InternalError ("should not be allowed in type checking"))
+  )
+  | GoArray(i, t) -> raise NotImplemented
+  | GoSlice(t) -> raise NotImplemented
+  | GoStruct(gs)-> raise NotImplemented
   | _ -> raise (InternalError ("should not be allowed in type checking"))
 )
 
@@ -623,7 +631,7 @@ let get_local_var_decl_instructions mvd_list =
 
 let print_single_expression print_method_name e = 
   JInst(GetStatic(jc_sysout, JRef(jc_printstream))) :: 
-  (match exp_type e with
+  (match base_type (exp_type e) with
   | GoBool -> process_expression e @ 
       [ JInst(InvokeStatic(jcr_booltostring));
         JInst(InvokeVirtual({
