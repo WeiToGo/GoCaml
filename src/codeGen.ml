@@ -787,12 +787,15 @@ and process_case_list switch_exp case_list =
         x ) case_list
   in 
   let case_list_inst = 
-    List.map (fun (a, _) -> a) tuple_list_inst
+    List.flatten (List.map (fun (a, _) -> a) tuple_list_inst)
   in
   let stmt_list_inst = 
-    List.map (fun (_, b) -> b) tuple_list_inst
+    List.flatten (List.map (fun (_, b) -> b) tuple_list_inst)
   in
-  List.flatten (case_list_inst @ default_inst @ stmt_list_inst @ [JLabel(end_label);])
+  case_list_inst @ 
+  default_inst @ 
+  stmt_list_inst @ 
+  [JLabel(end_label)]
 
 let process_func_decl id funsig stmt_list = 
   let next_index = Utils.new_counter 0 in 
