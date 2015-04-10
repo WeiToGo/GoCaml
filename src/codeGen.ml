@@ -44,7 +44,7 @@ let id_info id =
 
 let rec base_type gotype = match gotype with
 | GoCustom(_, t) -> base_type t
-| NewType(t) -> base_type t
+(* | NewType(t) -> base_type t *)
 | _ -> gotype
 
 (*~~ read deal ~~*)
@@ -307,7 +307,6 @@ and process_func_call fun_name arg_expressions arg_gotypes ret_gotypeop =
       (List.flatten arg_load_instructions) @ 
       [JInst(InvokeStatic(jfunction_sig))] @
       stack_null_instructions
-
 
 and process_binary_expression op e1 e2 = 
   let e1_insts = process_expression e1 in 
