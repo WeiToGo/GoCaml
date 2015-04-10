@@ -259,10 +259,17 @@ let Expression(e, t) = exp in match e with
     in     
     let call_inst = match fun_type with
     | GoFunction(at, rto) -> process_func_call fun_name arg_expressions at rto
-    (* | NewType(t) -> process_type_cast (base_type fun_type) (base_type t) *)
+    | NewType(t) -> 
+        let exp_inst = (match arg_expressions with
+          | [] -> raise (InternalError ("should have a value"))
+          | h::[] -> process_expression h
+          | h::t -> raise (InternalError ("should only have 1 expression"))
+        ) in
+        let cast_inst = process_type_cast (base_type fun_type) (base_type t) in
+        exp_inst @ cast_inst
     | _ -> raise (InternalError("Only function types can be called. Do we have a typechecker bug?"))
     in call_inst 
-    
+
 | BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
 | UnaryExp(op, e) -> process_unary_expression op e
 | SelectExp(e, id) -> 
