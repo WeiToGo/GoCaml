@@ -82,7 +82,10 @@ let rec type_init_exps gotype = match gotype with
           return_type = JVoid; }
      ))]
 | GoCustom(_, t) -> type_init_exps t
-| GoArray _ -> raise NotImplemented 
+| GoArray(size, t) ->
+	(match t with
+	| GoInt -> [JInst(Ldc(string_of_int size)); JInst(NewArray("int"))]
+	| _ -> raise (InternalError("Array type not implemented")) )
 | GoSlice _ -> raise NotImplemented
 | GoFunction _ | NewType _ -> raise (InternalError("You shouldn't have to do initilize these types"))
 
@@ -205,7 +208,7 @@ let process_literal = function
     let int_repr = int_of_string s in
     [JInst(Ldc(string_of_int int_repr))]
 | FloatLit(s) -> [JInst(Ldc2w(s))]
-| _ -> raise NotImplemented
+| _ -> raise (InternalError("process_literal not matched"))
 
 (*this function assumes e1 e2 are computed and results are on top of the stack.
 It leaves a 0 or 1 on stack depending on the result. *)
@@ -235,7 +238,7 @@ let compare_expressions t =
    | GoBool -> 
       [JInst(Ixor);
        JInst(Ifeq(true_label));] @ true_false_boilerplate
-   | GoArray(e, t) -> raise NotImplemented
+   | GoArray(e, t) -> raise (InternalError("compare_expressions array not implemented"))
    | GoStruct(l) -> raise NotImplemented
    | GoCustom(n, t) -> raise NotImplemented
    | NewType(t) -> raise NotImplemented 
@@ -299,7 +302,21 @@ and process_func_call fun_name arg_expressions arg_gotypes ret_gotypeop =
     | Some _ -> [] in  
       (List.flatten arg_load_instructions) @ 
       [JInst(InvokeStatic(jfunction_sig))] @
-      stack_null_instructions
+      stack_null_instrtuctions
+| BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
+| UnaryExp(op, e) -> process_unary_expression op e
+| SelectExp(e, id) -> 
+    (process_expression e) @ 
+    [JInst(GetField(
+      flstring (struct_cname_of_expression e) (string_of_id id),
+       get_jvm_type (exp_type exp) )) ]
+| TypeCastExp(ts, e) -> 
+  let e_inst = process_expression e in
+  let cast_inst = process_type_cast ts (exp_type e) in
+  e_inst @ cast_inst 
+| IndexExp(e, inte) ->
+  (process_expression e) @ (process_expression inte) @ [JInst(IAload)]
+| _ -> print_string "expression not implemented"; raise (InternalError("expression not matched in process_expression"))
 
 and process_binary_expression op e1 e2 = 
   let e1_insts = process_expression e1 in 
@@ -327,8 +344,8 @@ and process_binary_expression op e1 e2 =
   | GoString -> process_binary_string_expr op (exp_type e1) e1_insts e2_insts true_label true_false_boilerplate
   | GoArray(i, t) ->
     (match op with
-      | BinEq -> raise NotImplemented (* TO DO*)
-      | BinNotEq -> raise NotImplemented (* TO DO*)
+      | BinEq -> raise (InternalError("process_binary_expression array equal not implemented")) (* TO DO*)
+      | BinNotEq -> raise (InternalError("process_binary_expression array not equal not implemented")) (* TO DO*)
       | _ -> raise NotImplemented (*not needed*)
     )
   | GoStruct(fl) ->
@@ -553,7 +570,7 @@ and process_unary_expression op e =
     | UNot -> [JInst(Ifeq(true_label));] @ true_false_boilerplate
     | UPlus | UMinus | UCaret -> raise NotImplemented (*not needed*)
     )
-  | _ -> print_string "Unimplemented unary operation"; raise NotImplemented
+  | _ -> print_string "Unimplemented unary operation"; raise (InternalError("Unimplemented unary operation"))
 
 (* Assume target type and origin type are GoType reduced to base type.*)
 and process_type_cast target_t origin_t = (match target_t with
@@ -706,7 +723,14 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     | IdExp(id) -> 
         let _, _, var_num = id_info id in 
         [PS(StoreVar(var_num))]
-    | IndexExp(id) -> raise NotImplemented
+    | IndexExp(e, inte) ->
+		let Expression(_, tref) = e in
+		(match !tref with
+		| Some(GoArray(n, gotype)) -> 
+			(match gotype with
+			| GoInt -> (process_expression e) @ (process_expression inte) @ [JInst(Dup2_x1); JInst(Pop2); JInst(IAstore)]
+			| _ -> raise (InternalError("Array type not handled in process_statement -> assignment")))
+		| _ -> raise (InternalError("Unexpected type in: process_statement -> assignment -> indexExp")))
     | SelectExp(lexp, id) -> 
         let cname = struct_cname_of_expression lexp in
         (process_expression lexp) 

@@ -43,6 +43,7 @@ and jinstruction =
   (* | Ldcw of string *)
   | Ldc2w of string
   | Dup
+  | Dup2_x1
   | Swap
   | BiPush of string  (* -128 to 127*)
   | GetStatic of string * jtype
@@ -57,6 +58,7 @@ and jinstruction =
   | DReturn
   | AReturn
   | Pop
+  | Pop2
   | Iload of int
   | Dload of int
   | Aload of int
@@ -82,6 +84,10 @@ and jinstruction =
   | D2i
   | I2d
   | Nop
+  | NewArray of string
+  | IAload
+  | IAstore
+
 
   (* Keep adding more and more instructions here.
    * Then also change the string_of_jinst function below *)
@@ -136,6 +142,7 @@ let string_of_jinst = function
 (* | Ldcw(s) -> "ldc_w " ^ s *)
 | Ldc2w(s) -> "ldc2_w " ^ s 
 | Dup -> "dup"
+| Dup2_x1 -> "dup2_x1"
 | Swap -> "swap"
 | BiPush(s) -> "bipush " ^ s 
 | GetStatic(s, t) -> "getstatic " ^ s ^ " " ^ (string_of_jtype t)
@@ -183,12 +190,17 @@ let string_of_jinst = function
 | Drem -> "drem"
 | Dneg -> "dneg"
 | Pop -> "pop" 
+| Pop2 -> "pop2"
 | AConstNull -> "aconst_null"
 | Goto(l) -> "goto " ^ l
 | New(obj) -> "new " ^ obj
 | D2i -> "d2i "
 | I2d -> "i2d "
 | Nop -> "nop "
+| NewArray(t) -> "newarray " ^ t
+| IAload -> "iaload"
+| IAstore -> "iastore"
+
 
 let calculate_local_limit jstmts = 25  (* Not implemented yet *)
 let calculate_ostack_limit jstmts = 25 (* Not implemented yet *) 
@@ -229,7 +241,8 @@ let local_load_instructions lindex jvm_type = match jvm_type with
 | JInt -> [JInst(Iload(lindex))]
 | JDouble -> [JInst(Dload(lindex))]
 | JRef _ -> [JInst(Aload(lindex))]
-| _ -> raise NotImplemented
+| JArray(t) -> [JInst(Aload(lindex))]
+| _ -> raise (InternalError("local_load_instructions not matched"))
 
 let global_load_instructions name jvm_type = 
   [JInst(GetStatic(main_class_name ^ "/" ^ name, jvm_type))] 
@@ -238,7 +251,8 @@ let local_store_instructions lindex jvm_type = match jvm_type with
 | JInt -> [JInst(IStore(lindex))]
 | JDouble -> [JInst(DStore(lindex))]
 | JRef _ -> [JInst(AStore(lindex))]
-| _ -> raise NotImplemented
+| JArray(t) -> [JInst(AStore(lindex))]
+| _ -> raise (InternalError("local_store_instructions not matched"))
 
 let global_store_instructions name jvm_type = 
   [JInst(PutStatic(main_class_name ^ "/" ^ name, jvm_type))]
