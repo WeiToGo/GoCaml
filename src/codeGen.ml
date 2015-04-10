@@ -139,7 +139,30 @@ let rec get_mapping_from_stmt prev_map next_index (LinedStatement(_, stmt)) = ma
         (List.map (get_mapping_from_stmt prev_map next_index) then_stmts)
     in 
     LocalVarMap.merge merge_maps init_mapping body_mapping 
-| SwitchStatement(tiny_stmt, _, switch_case_list) -> raise NotImplemented
+| SwitchStatement(tiny_stmt_op, _, switch_case_list) -> 
+    let init_mapping = match tiny_stmt_op with
+    | None -> LocalVarMap.empty
+    | Some s -> get_mapping_from_stmt prev_map next_index s 
+    in 
+    let switch_mapping sw = (match sw with 
+    | SwitchCase(_, sl) -> 
+        List.fold_left 
+          (LocalVarMap.merge merge_maps)
+          LocalVarMap.empty
+          (List.map (get_mapping_from_stmt prev_map next_index) sl)
+    | DefaultCase (sl) -> 
+        List.fold_left 
+          (LocalVarMap.merge merge_maps)
+          LocalVarMap.empty
+          (List.map (get_mapping_from_stmt prev_map next_index) sl) )
+    in 
+    let body_mapping = 
+      List.fold_left
+        (LocalVarMap.merge merge_maps)
+        LocalVarMap.empty
+        (List.map switch_mapping switch_case_list) in
+    LocalVarMap.merge merge_maps init_mapping body_mapping 
+
 | ForStatement(init_stmt_op, _, post_stmt_op, stmt_list) -> 
     let init_mapping = match init_stmt_op with
     | None -> LocalVarMap.empty
@@ -706,19 +729,20 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
      JLabel(else_label)] @
     else_inst @
     [JLabel(end_label)]
-(* | SwitchStatement (stmt_op, exp, case_list) -> 
+| SwitchStatement (stmt_op, exp, case_list) -> 
     let init_inst = (match stmt_op with
     | None -> []
     | Some s -> process_statement s) in 
     let case_inst = process_case_list exp case_list in 
-    init_inst @ case_inst *)
- | _ -> print_string "statement not implemented"; raise NotImplemented 
-(*
+    (* let case_stmt_inst = process_case_list_stmt case_list in *)
+    init_inst @ case_inst (* @ case_stmt_inst *)
+ (* | _ -> print_string "statement not implemented"; raise NotImplemented  *)
+
 
 and process_case_list switch_exp case_list = 
   let count = string_of_int (switch_count ()) in
-  (* let end_label = "EndSwitch_" ^ count in  *)
-  let case_label = "Case_" ^ count in 
+  let end_label = "EndSwitch_" ^ count in 
+(*   let case_label = "Case_" ^ count in  *)
   let default_label = "Default_" ^ count in 
   (*func to pass to List.find *)
   let get_default case = (match case with
@@ -728,40 +752,46 @@ and process_case_list switch_exp case_list =
   in 
   let get_default_inst df = (match df with
     | DefaultCase(sl) -> let stmt_list_inst = List.flatten (List.map process_statement sl) in
-      [ JLabel(default_label)] @ stmt_list_inst
+      [ JLabel(default_label)] @ stmt_list_inst @
+      [ JInst(Goto(end_label))]
     | _ -> raise (InternalError ("shouldn't get here"))
   )
   in
   let default_inst = get_default_inst (List.find get_default case_list) in
   let switch_exp_inst = process_expression switch_exp in
-  let rec process_helper l = (match l with
-    | [] -> raise (InternalError ("should have at least 1 case in switch"))
-    | h::[] -> (match h with 
-      | SwitchCase(exp_list, sl) -> 
-      (*generate instructions for case 0, 1, 2 : stmt_list since all these cases leads to the same label(stmt_list) *)
-        let rec one_switch_case_inst el = (match el with
-        | [] -> raise (InternalError ("should have at least 1 expression in a switch case. "))
-        | h::[] -> 
-          let typ = exp_type h in 
-          let case_exp_insts = process_expression h in
-          (* e1 @ e2 so their results are on top of the stack*)
-          switch_exp_inst @ case_exp_insts @
-          compare_expressions typ @
-          [JInst(Ifne(case_label))] 
-        | h::t -> (one_switch_case_inst h) @ (one_switch_case_inst t) 
-        )
-        in
-        let stmt_list_inst = List.flatten (List.map process_statement sl) in
-         one_switch_case_inst exp_list @ 
-          [ JLabel(case_label)] @ stmt_list_inst
-      | _ -> [] (* don't need to generate anything for default case here.*)
-      )
-    | h::t -> (process_helper h) @ (process_helper t) @ default_inst
-    )
-  in
-  default_inst @ (process_helper case_list)
+  (*generate instructions for <case 0, 1, 2 : label> since all these cases leads to the same label(stmt_list) *)
+  let process_case c_label one_case = (match one_case with 
+  | SwitchCase(exp_list, sl) -> 
+  (*takes 1 exp from one case and generate code for that exp compared to switch expr. *)
+    let get_one_case_inst exp =
+      let typ = exp_type exp in 
+      let case_exp_insts = process_expression exp in
+      (* e1 @ e2 so their results are on top of the stack*)
+      switch_exp_inst @ case_exp_insts @
+      compare_expressions typ @
+      [JInst(Ifne(c_label))] 
+    in 
+    List.flatten (List.map get_one_case_inst exp_list)
+  | _ -> [] (* don't need to generate anything for default case here.*)
+  )
+  in (*need to increment case_label for each element. *)
+  let case_list_inst = 
+  List.flatten
+    (List.map (fun x -> process_case 
+      ("Case_" ^ (string_of_int (switch_count ())))
+      x) case_list) in
+(*   let stmt_list_inst = 
+  (* need to generate stmt_list instructions here*)
+  in *)
+  case_list_inst @ default_inst @ (* stmt_list_inst @ *)
+  [JLabel(end_label)]
 
-*)
+(* and process_case_list_stmt case_list = 
+      let stmt_list_inst = List.flatten (List.map process_statement sl) in
+     one_switch_case_inst exp_list @ 
+      [ JLabel(case_label)] @ stmt_list_inst *)
+
+
 let process_func_decl id funsig stmt_list = 
   let next_index = Utils.new_counter 0 in 
   let method_name, gotype, _ = id_info id in 
