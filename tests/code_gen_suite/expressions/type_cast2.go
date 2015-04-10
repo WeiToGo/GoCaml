@@ -11,4 +11,5 @@ var q er = er(6)
 
 func main() {
 	println(x+ y)
+	println(z*q)
 }

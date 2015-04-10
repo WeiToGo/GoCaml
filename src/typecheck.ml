@@ -256,7 +256,7 @@ let e_type = match e with
     in
     ( match op with
       | BinOr | BinAnd -> 
-          let _ = get_bin_exp_type (fun x -> x == GoBool) "of type boolean" in
+          let _ = get_bin_exp_type (fun x -> resolve_to_base x == GoBool) "of type boolean" in
           GoBool
       | BinEq | BinNotEq -> 
           let _ = get_bin_exp_type is_comparable "comparable" in

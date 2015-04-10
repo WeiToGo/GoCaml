@@ -6,6 +6,7 @@ open Symtable
 exception ImproperType
 exception NotImplemented
 exception InternalError of string
+exception TypeCastError of string 
 
 (* global counters *)
 let next_bool_exp_count = Utils.new_counter 0
@@ -284,9 +285,9 @@ let Expression(e, t) = exp in match e with
       | IntType -> GoInt
       | FloatType -> GoFloat
       | RuneType -> GoRune
-      | _ ->  raise (InternalError ("invalid type for type cast. "))
+      | _ ->  raise (TypeCastError ("invalid type for type cast. "))
       )
-    | _ -> raise (InternalError ("invalid type for type cast. "))
+    | _ -> raise (TypeCastError ("invalid type for type cast. "))
   )
   in
   let origin_type = exp_type origin_exp in
@@ -574,21 +575,22 @@ in order to support type cast with custom types. *)
 and process_type_cast target_t origin_t = (match target_t with
   | GoInt -> (match origin_t with
       | GoRune | GoInt -> []
-      | _ -> raise (InternalError ("should not be allowed in type checking"))
+      | _ -> raise (TypeCastError ("Cannot type cast to int "))
     )
   | GoFloat -> (match origin_t with
       | GoFloat -> []
       | GoInt -> [JInst(I2d)]
       | GoRune -> [JInst(I2d)]
-      | _ -> raise (InternalError ("should not be allowed in type checking")) 
+      | _ -> raise (TypeCastError ("Cannot type cast to float "))
     )
   | GoRune -> (match origin_t with
       | GoInt | GoRune -> []
-      | _ -> raise (InternalError ("should not be allowed in type checking"))
+      | _ -> raise (TypeCastError ("Cannot type cast to rune "))
     )
   | GoBool -> (match origin_t with 
       | GoBool -> []
-      | _ -> raise (InternalError ("should not be allowed in type checking"))
+      | GoInt -> raise (TypeCastError ("Cannot type cast from int to boolean. "))
+      | _ -> raise (TypeCastError ("Cannot type cast to boolean "))
   )
   | GoArray(i, t) -> raise NotImplemented
   | GoSlice(t) -> raise NotImplemented

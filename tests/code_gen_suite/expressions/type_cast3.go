@@ -5,7 +5,8 @@ package main
 type letter bool
 
 func main () {
-	var y2 =  true
+	var y2 , y3 = true, false
 	var z letter = letter(y2)
-	println(z)
+	var a letter = letter(y3)
+	println(z || a)
 }
