@@ -1,7 +1,8 @@
 package main
 
 
-var x int = 6
+var x int
+var c int
 
 func main () {
 	
@@ -10,11 +11,17 @@ func main () {
 	default: println ("zero")
 	case "pa", "qw", "ad": println("four")
 	}
-	
-	// switch {
-	// case x < 0: println("negative")
-	// case x > 0: println("positive")
-	// default: println("zero")
-	// }
 
+	switch x = 4 ; 'e' {
+	case 'w' : println("negative")
+	case 'e': println("positive")
+	default: println("zero")
+	}
+	
+	switch 4.5 {
+	case 2.76 : println("negative")
+	case 5.44 : println("positive")
+	default: println("zero")
+	}
+	
 }

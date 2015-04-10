@@ -226,13 +226,15 @@ let compare_expressions t =
    | GoInt | GoRune -> [ JInst(ICmpeq(true_label)) ] @ true_false_boilerplate
    | GoFloat ->
      [ JInst(DCmpg);
-      JInst(Ifeq(true_label)); ]
-    @ true_false_boilerplate
+      JInst(Ifeq(true_label)); ] @ true_false_boilerplate
    | GoString ->
       [ JInst(InvokeVirtual({
         method_name = jc_equals;
         arg_types = [JRef(jc_object)];
         return_type = JBool; } ) ) ]
+   | GoBool -> 
+      [JInst(Ixor);
+       JInst(Ifeq(true_label));] @ true_false_boilerplate
    | GoArray(e, t) -> raise NotImplemented
    | GoStruct(l) -> raise NotImplemented
    | GoCustom(n, t) -> raise NotImplemented
