@@ -1,6 +1,7 @@
 open JasminAst
 open Ast
 open Symtable
+open Typecheck
 
 (* exceptions *)
 exception ImproperType
@@ -320,6 +321,7 @@ and process_binary_expression op e1 e2 =
       | BinNotEq -> raise NotImplemented (* TO DO*)
       | _ -> raise NotImplemented (*not needed*)
     )
+  | GoCustom(name, gotype) -> raise NotImplemented (* TO DO *)
   | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
 
 (*BinEq is not extracted to compare_expressions before it requires typ argument.
@@ -734,8 +736,7 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     | None -> []
     | Some s -> process_statement s) in 
     let case_inst = process_case_list exp case_list in 
-    (* let case_stmt_inst = process_case_list_stmt case_list in *)
-    init_inst @ case_inst (* @ case_stmt_inst *)
+    init_inst @ case_inst 
  (* | _ -> print_string "statement not implemented"; raise NotImplemented  *)
 
 
@@ -759,7 +760,8 @@ and process_case_list switch_exp case_list =
   in
   let default_inst = get_default_inst (List.find get_default case_list) in
   let switch_exp_inst = process_expression switch_exp in
-  (*generate instructions for <case 0, 1, 2 : label> since all these cases leads to the same label(stmt_list) *)
+  (*generate instructions for <case 0, 1, 2 : label> since all these cases leads to the same label(stmt_list) 
+    returns a tuple of (case_eval_instruction, corresponding stmt list instruction) *)  
   let process_case c_label one_case = (match one_case with 
   | SwitchCase(exp_list, sl) -> 
   (*takes 1 exp from one case and generate code for that exp compared to switch expr. *)
@@ -770,27 +772,27 @@ and process_case_list switch_exp case_list =
       switch_exp_inst @ case_exp_insts @
       compare_expressions typ @
       [JInst(Ifne(c_label))] 
-    in 
-    List.flatten (List.map get_one_case_inst exp_list)
-  | _ -> [] (* don't need to generate anything for default case here.*)
+    in
+    let evaluation_inst = List.flatten (List.map get_one_case_inst exp_list) in
+    let label_stmt_inst = 
+      [JLabel(c_label)] @
+      List.flatten (List.map process_statement sl) @ [JInst(Goto(end_label))] in
+    evaluation_inst, label_stmt_inst
+  | _ -> ([JInst(Nop)] , [JInst(Nop)]) (* don't need to generate anything for default case here.*)
   )
   in (*need to increment case_label for each element. *)
+  let tuple_list_inst = 
+      List.map (fun x -> process_case 
+        ("Case_" ^ (string_of_int (switch_count ())))
+        x ) case_list
+  in 
   let case_list_inst = 
-  List.flatten
-    (List.map (fun x -> process_case 
-      ("Case_" ^ (string_of_int (switch_count ())))
-      x) case_list) in
-(*   let stmt_list_inst = 
-  (* need to generate stmt_list instructions here*)
-  in *)
-  case_list_inst @ default_inst @ (* stmt_list_inst @ *)
-  [JLabel(end_label)]
-
-(* and process_case_list_stmt case_list = 
-      let stmt_list_inst = List.flatten (List.map process_statement sl) in
-     one_switch_case_inst exp_list @ 
-      [ JLabel(case_label)] @ stmt_list_inst *)
-
+    List.map (fun (a, _) -> a) tuple_list_inst
+  in
+  let stmt_list_inst = 
+    List.map (fun (_, b) -> b) tuple_list_inst
+  in
+  List.flatten (case_list_inst @ default_inst @ stmt_list_inst @ [JLabel(end_label);])
 
 let process_func_decl id funsig stmt_list = 
   let next_index = Utils.new_counter 0 in 
