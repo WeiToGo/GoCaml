@@ -43,6 +43,7 @@ and jinstruction =
   (* | Ldcw of string *)
   | Ldc2w of string
   | Dup
+  | Dup2_x1
   | Swap
   | BiPush of string  (* -128 to 127*)
   | GetStatic of string * jtype
@@ -57,6 +58,7 @@ and jinstruction =
   | DReturn
   | AReturn
   | Pop
+  | Pop2
   | Iload of int
   | Dload of int
   | Aload of int
@@ -84,6 +86,7 @@ and jinstruction =
   | Nop
   | NewArray of string
   | IAload
+  | IAstore
 
 
   (* Keep adding more and more instructions here.
@@ -139,6 +142,7 @@ let string_of_jinst = function
 (* | Ldcw(s) -> "ldc_w " ^ s *)
 | Ldc2w(s) -> "ldc2_w " ^ s 
 | Dup -> "dup"
+| Dup2_x1 -> "dup2_x1"
 | Swap -> "swap"
 | BiPush(s) -> "bipush " ^ s 
 | GetStatic(s, t) -> "getstatic " ^ s ^ " " ^ (string_of_jtype t)
@@ -186,6 +190,7 @@ let string_of_jinst = function
 | Drem -> "drem"
 | Dneg -> "dneg"
 | Pop -> "pop" 
+| Pop2 -> "pop2"
 | AConstNull -> "aconst_null"
 | Goto(l) -> "goto " ^ l
 | New(obj) -> "new " ^ obj
@@ -194,6 +199,7 @@ let string_of_jinst = function
 | Nop -> "nop "
 | NewArray(t) -> "newarray " ^ t
 | IAload -> "iaload"
+| IAstore -> "iastore"
 
 
 let calculate_local_limit jstmts = 25  (* Not implemented yet *)

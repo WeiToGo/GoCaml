@@ -83,10 +83,9 @@ let rec type_init_exps gotype = match gotype with
      ))]
 | GoCustom(_, t) -> type_init_exps t
 | GoArray(size, t) ->
-	let s = (match t with
-	| GoInt -> "int"
-	| _ -> raise (InternalError("Array type not implemented")) ) in
-	[JInst(Ldc(string_of_int size)); JInst(NewArray(s))]
+	(match t with
+	| GoInt -> [JInst(Ldc(string_of_int size)); JInst(NewArray("int"))]
+	| _ -> raise (InternalError("Array type not implemented")) )
 | GoSlice _ -> raise NotImplemented
 | GoFunction _ | NewType _ -> raise (InternalError("You shouldn't have to do initilize these types"))
 
@@ -697,7 +696,14 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     | IdExp(id) -> 
         let _, _, var_num = id_info id in 
         [PS(StoreVar(var_num))]
-    | IndexExp(id) -> raise (InternalError("IndexExp not implemented in process_statement -> AssignmentStatement"))
+    | IndexExp(e, inte) ->
+		let Expression(_, tref) = e in
+		(match !tref with
+		| Some(GoArray(n, gotype)) -> 
+			(match gotype with
+			| GoInt -> (process_expression e) @ (process_expression inte) @ [JInst(Dup2_x1); JInst(Pop2); JInst(IAstore)]
+			| _ -> raise (InternalError("Array type not handled in process_statement -> assignment")))
+		| _ -> raise (InternalError("Unexpected type in: process_statement -> assignment -> indexExp")))
     | SelectExp(lexp, id) -> 
         let cname = struct_cname_of_expression lexp in
         (process_expression lexp) 
