@@ -281,10 +281,8 @@ let Expression(e, t) = exp in match e with
        get_jvm_type (exp_type exp) )) ]
 | TypeCastExp(ts, e) -> 
   let e_inst = process_expression e in
-  e_inst @
-  (match !t with 
-    | None -> raise (InternalError ("expr should have a type") )
-    | Some (t) -> process_type_cast ts t )
+  let cast_inst = process_type_cast ts (exp_type e) in
+  e_inst @ cast_inst 
 | _ -> print_string "expression not implemented"; raise NotImplemented
 
 and process_binary_expression op e1 e2 = 
@@ -546,17 +544,17 @@ and process_type_cast ts t =
     | BasicType typ -> 
       (match typ with
         | IntType -> (match t with
-            | GoRune -> [JInst(Nop)]
-            | _ -> raise (InternalError ("should not be allowed in type checking"))
+            | GoRune -> []
+            | _ -> raise (InternalError ("other int should not be allowed in type checking"))
           )
         | FloatType -> (match t with
             | GoInt -> [JInst(I2d)]
-            | GoRune -> [JInst(I2d)] (* may be wrong *)
-            | _ -> raise (InternalError ("should not be allowed in type checking")) 
+            | GoRune -> [JInst(I2d)]
+            | _ -> raise (InternalError (" other flo should not be allowed in type checking")) 
           )
         | RuneType -> (match t with
-            | GoInt -> [JInst(Nop)]
-            | _ -> raise (InternalError ("should not be allowed in type checking"))
+            | GoInt -> []
+            | _ -> raise (InternalError ("other rune should not be allowed in type checking"))
           )
         | _ -> raise (InternalError ("should not be allowed in type checking"))
       )
