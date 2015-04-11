@@ -13,6 +13,7 @@ let next_bool_exp_count = Utils.new_counter 0
 let next_loop_count = Utils.new_counter 0
 let if_count = Utils.new_counter 0
 let switch_count = Utils.new_counter 0
+(* let array_init_count = Utils.new_counter 0 *)
 
 let scmap = ref ( fun x -> raise (InternalError("StructMapReferenceVarNotInitializedError")) ) 
 
@@ -48,6 +49,34 @@ let rec base_type gotype = match gotype with
 | NewType(t) -> base_type t
 | _ -> gotype
 
+let array_create_inst gotype = (* match basetype gotype with 
+| GoInt | GoBool | GoRune -> [NewArray("int")]
+| GoFloat -> [NewArray("double")]
+| GoString -> [JInst(ANewArray(jc_string))]
+| GoArray(, t) -> 
+| GoStruct _ 
+| GoSlice _ -> raise NotImplemented
+| GoFunction(_) -> raise (InternalError("No function arrays allowed")) 
+| GoCustom(_, t) -> raise (InternalError("No custom types allowed. Call base type."))
+| NewType(t) -> raise (InternalError("No new types allowed")) *)
+print_endline "Array creation not implemented yet"; raise NotImplemented
+
+
+let array_store_inst gotype = match base_type gotype with
+| GoInt | GoBool | GoRune -> [JInst(IAstore)]
+| GoFloat -> [JInst(DAstore)]
+| GoString | GoArray _ | GoStruct _ | GoSlice _ -> [JInst(AAstore)]
+| GoFunction(_) -> raise (InternalError("No function arrays allowed")) 
+| GoCustom(_, t) -> raise (InternalError("No custom types allowed. Call base type."))
+| NewType(t) -> raise (InternalError("No new types allowed"))
+
+let array_load_inst gotype = match base_type gotype with
+| GoInt | GoBool | GoRune -> [JInst(IAload)]
+| GoFloat -> [JInst(DAload)]
+| GoString | GoArray _ | GoStruct _ | GoSlice _ -> [JInst(AAload)]
+| GoFunction(_) -> raise (InternalError("No function arrays allowed")) 
+| GoCustom(_, t) -> raise (InternalError("No custom types allowed. Call base type."))
+| NewType(t) -> raise (InternalError("No new types allowed"))
 (*~~ read deal ~~*)
 
 let rec get_jvm_type gotype = match gotype with
@@ -83,10 +112,27 @@ let rec type_init_exps gotype = match gotype with
           return_type = JVoid; }
      ))]
 | GoCustom(_, t) -> type_init_exps t
-| GoArray(size, t) ->
+| GoArray(size, t) -> raise NotImplemented
+ (*    let elm_init_instructions = type_init_exps t in
+    let store_instructions = array_store_inst t in  
+    let count = string_of_int (array_init_count ()) in 
+    let comp_label = "ArrayInitComp_" ^ count in 
+    let body_label = "ArrayInitElement_" ^ count in 
+    let end_label = "ArrayInitEnd_" ^ count in 
+    [ JInst(Ldc(string_of_int size));
+      JLabel(init_label);
+      JInst(Dup);
+      JInst(Ifeq(end_label));
+      JInst(Iconst_1);
+      JInst(Isub);
+      JInst(Dup);
+
+
+
+    ] 
 	(match t with
 	| GoInt -> [JInst(Ldc(string_of_int size)); JInst(NewArray("int"))]
-	| _ -> raise (InternalError("Array type not implemented")) )
+	| _ -> [] ) *)
 | GoSlice _ -> raise NotImplemented
 | GoFunction _ | NewType _ -> raise (InternalError("You shouldn't have to do initilize these types"))
 
@@ -309,12 +355,13 @@ and process_func_call fun_name arg_expressions arg_gotypes ret_gotypeop =
         | Some t -> get_jvm_type t ;
       } in 
     let arg_load_instructions = List.map process_expression arg_expressions in
-    let stack_null_instructions = match ret_gotypeop with
-    | None -> [JInst(AConstNull)]
-    | Some _ -> [] in  
-      (List.flatten arg_load_instructions) @ 
-      [JInst(InvokeStatic(jfunction_sig))] @
-      stack_null_instructions
+    let stack_null_instructions = (match ret_gotypeop with
+      | None -> [JInst(AConstNull)]
+      | Some _ -> [])
+    in  
+    (List.flatten arg_load_instructions) @ 
+    [JInst(InvokeStatic(jfunction_sig))] @
+    stack_null_instructions
 
 and process_binary_expression op e1 e2 = 
   let e1_insts = process_expression e1 in 
@@ -598,13 +645,29 @@ and process_type_cast target_t origin_t = (match target_t with
   | _ -> raise (InternalError ("should not be allowed in type checking"))
 )
 
+
+let process_exp_for_assignment e = 
+  let exp_eval = process_expression e in 
+  let jt = get_jvm_type (exp_type e) in 
+  let clone_instructions = match jt with
+    | JRef(class_name) ->
+        if class_name = jc_string then [] else 
+          [ JInst(InvokeVirtual({ 
+              method_name = flstring class_name jc_clone;
+              arg_types = []; return_type = JRef(jc_object); }));
+            JInst(CheckCast(class_name)); ]
+    | JVoid | JInt | JDouble | JBool -> []
+    | JArray _ -> raise NotImplemented
+  in
+  exp_eval @ clone_instructions
+
 let process_global_var_decl mvd_list =
   let mapping_from_svd svd = 
     let SingleVarDecl(id, tp_op, exp_op) = svd in
     let name, gotype, var_num = id_info id in
     let init_code = match exp_op with
     | None -> (type_init_exps gotype) @ [PS(StoreVar(var_num))]
-    | Some(e) -> (process_expression e) @ [PS(StoreVar(var_num))] in 
+    | Some(e) -> (process_exp_for_assignment e) @ [PS(StoreVar(var_num))] in 
     { name = name ^ "_" ^ (string_of_int var_num);
       var_number = var_num;
       jtype = get_jvm_type gotype;
@@ -623,7 +686,7 @@ let get_local_var_decl_instructions mvd_list =
     let _, gotype, var_num = id_info id in 
     match exp_op with
     | None -> (type_init_exps gotype) @ [PS(StoreVar(var_num))]
-    | Some e -> (process_expression e) @ [PS(StoreVar(var_num))]
+    | Some e -> (process_exp_for_assignment e) @ [PS(StoreVar(var_num))]
   in 
   let insts_from_mvd mvd = 
     let MultipleVarDecl(svd_list) = mvd in 
@@ -648,6 +711,38 @@ let print_single_expression print_method_name e =
               return_type = JVoid; } )); ] )
 
 
+let rec get_word_size gotype = match gotype with
+| GoInt -> One
+| GoFloat -> Two
+| GoBool -> One
+| GoRune -> One
+| GoString -> One
+| GoSlice _ -> One
+| GoArray _ -> One
+| GoStruct _ -> One
+| GoFunction _ -> raise (InternalError("Functions are not put on stack"))
+| GoCustom(s, t) -> get_word_size t
+| NewType _ -> raise (InternalError("It is impossible to put newtype on stack"))
+
+let rec dummy_pop_instruction_of_type gotype = match gotype with
+| GoInt | GoBool | GoRune | GoString | GoStruct _
+| GoArray _ | GoSlice _ -> [JInst(Pop)]
+| GoFloat -> [JInst(Pop2)]
+| GoCustom(s, t) -> dummy_pop_instruction_of_type t
+| NewType _ -> raise (InternalError("What are you even trying to do here"))
+| GoFunction(_, ret_op) -> raise (InternalError("Um not you can't leave a function on stack"))
+
+let is_exp_void_fun_call exp = 
+  let Expression(e, t) = exp in 
+  match !t with 
+  | Some _ -> false 
+  | None -> match e with 
+      | FunctionCallExp(fun_exp, _) -> (match exp_type fun_exp with 
+        | GoFunction(_, None) -> true
+        | GoFunction(_, Some _) -> false 
+        | _ -> raise (InternalError("Typechecker - you had one job.")) )
+      | _ -> raise (InternalError("Life is so void of meaning."))
+
 let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = match s with
 | PrintlnStatement(exp_list) -> 
     (* get instructions for each expression *)
@@ -664,7 +759,10 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     List.flatten print_instructions
 | VarDeclBlockStatement(mvd_list) -> get_local_var_decl_instructions mvd_list
 | TypeDeclBlockStatement _ -> [] (* Ignore type declarations *)
-| ExpressionStatement(e) -> process_expression(e) @ [JInst(Pop)]
+| ExpressionStatement(e) -> 
+    let exp_insts =  process_expression(e) in 
+    if is_exp_void_fun_call e then exp_insts @ [JInst(Pop)]
+    else exp_insts @ (dummy_pop_instruction_of_type (exp_type e))
 | EmptyStatement -> []
 | BlockStatement(stmt_list) -> List.flatten (List.map process_statement stmt_list)
 | ReturnStatement(e_op) -> (match e_op with
@@ -723,24 +821,30 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     exp_instructions @ store_instructions
 | AssignmentStatement(ass_list) -> 
     let exps = List.map (fun (e1, e2) -> e2) ass_list in 
-    let exp_instructions = List.flatten (List.map process_expression exps) in
+    let exp_instructions = List.flatten (List.map process_exp_for_assignment exps) in
     let single_store_instruction (Expression(e, _)) rexp = match e with
     | IdExp(BlankID) -> [JInst(Pop)]
     | IdExp(id) -> 
         let _, _, var_num = id_info id in 
         [PS(StoreVar(var_num))]
-    | IndexExp(e, inte) ->
-		let Expression(_, tref) = e in
-		(match !tref with
-		| Some(GoArray(n, gotype)) -> 
-			(match gotype with
-			| GoInt -> (process_expression e) @ (process_expression inte) @ [JInst(Dup2_x1); JInst(Pop2); JInst(IAstore)]
-			| _ -> raise (InternalError("Array type not handled in process_statement -> assignment")))
-		| _ -> raise (InternalError("Unexpected type in: process_statement -> assignment -> indexExp")))
+    | IndexExp(e, inte) -> 
+        let lvalue_load_inst = process_expression e in 
+        let index_load_inst = process_expression inte in 
+        let rest_of_the_inst = (match exp_type e with 
+          | GoArray(_, t) -> (
+              let dup_inst = (match get_word_size t with 
+                | One -> [JInst(Dup2_x1);]
+                | Two -> [JInst(Dup2_x2);] ) in 
+              let store_inst = array_store_inst t in 
+              dup_inst @ [JInst(Pop2)] @ store_inst )
+          | GoSlice _ -> raise NotImplemented
+          | _ -> raise (InternalError("Typechecker should only allow indices to arrays and slices.")) )
+        in 
+        lvalue_load_inst @ index_load_inst @ rest_of_the_inst 
     | SelectExp(lexp, id) -> 
         let cname = struct_cname_of_expression lexp in
         (process_expression lexp) 
-      @ [JInst(Swap); JInst(PutField(flstring cname (string_of_id id), get_jvm_type (exp_type rexp) ))]
+        @ [JInst(Swap); JInst(PutField(flstring cname (string_of_id id), get_jvm_type (exp_type rexp) ))]
     | FunctionCallExp _ 
     | AppendExp _ | TypeCastExp _ | LiteralExp _ 
     | UnaryExp _ | BinaryExp _  -> raise (InternalError("This is not a valid lvalue"))

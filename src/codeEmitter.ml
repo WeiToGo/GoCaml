@@ -9,9 +9,10 @@ let print_class { source; top_level_vars; methods; class_name } out_directory is
   let print s = fprintf out_channel "%s" s  in 
   let println s = fprintf out_channel "%s\n" s in 
   let newline () = fprintf out_channel "\n" in 
+  let superclass = if is_struct then "GoStructAbstract" else "java/lang/Object" in 
   let () = println (".source " ^ source) in 
   let () = println (".class public " ^ class_name) in
-  let () = println (".super java/lang/Object") in
+  let () = println (".super " ^ superclass) in
   let () = newline () in 
   let print_global_field {name; jtype; _} = 
     let () = 
@@ -53,7 +54,7 @@ let print_class { source; top_level_vars; methods; class_name } out_directory is
     let () = println ".limit locals 25" in 
     let () = println ".limit stack 25" in 
     let () = println "  aload_0" in
-    let () = println "  invokespecial java/lang/Object/<init>()V" in 
+    let () = println ("  invokespecial " ^ superclass ^ "/<init>()V") in 
     let init_clause_list = List.map (fun {init_code; _ } -> init_code) top_level_vars in
     let init_stmts = List.flatten init_clause_list in 
     let () = List.iter (print_method_statement LocalVarMap.empty) init_stmts in

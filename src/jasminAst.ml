@@ -44,6 +44,7 @@ and jinstruction =
   | Ldc2w of string
   | Dup
   | Dup2_x1
+  | Dup2_x2
   | Swap
   | BiPush of string  (* -128 to 127*)
   | GetStatic of string * jtype
@@ -87,8 +88,14 @@ and jinstruction =
   | I2d
   | Nop
   | NewArray of string
+  | ANewArray of string 
   | IAload
+  | DAload
+  | AAload
   | IAstore
+  | DAstore
+  | AAstore
+  | CheckCast of string
 
 
   (* Keep adding more and more instructions here.
@@ -108,6 +115,9 @@ and jtype = JVoid
           | JBool
           | JRef of string 
           | JArray of jtype
+
+type word_size = One | Two
+
 
 (* Bunch of utility functions *)
 let flstring class_name field_name = class_name ^ "/" ^ field_name
@@ -145,6 +155,7 @@ let string_of_jinst = function
 | Ldc2w(s) -> "ldc2_w " ^ s 
 | Dup -> "dup"
 | Dup2_x1 -> "dup2_x1"
+| Dup2_x2 -> "dup2_x2"
 | Swap -> "swap"
 | BiPush(s) -> "bipush " ^ s 
 | GetStatic(s, t) -> "getstatic " ^ s ^ " " ^ (string_of_jtype t)
@@ -202,8 +213,14 @@ let string_of_jinst = function
 | I2d -> "i2d "
 | Nop -> "nop "
 | NewArray(t) -> "newarray " ^ t
+| ANewArray(t) -> "anewarray " ^ t 
 | IAload -> "iaload"
+| DAload -> "daload"
+| AAload -> "aaload"
 | IAstore -> "iastore"
+| DAstore -> "dastore"
+| AAstore -> "aastore"
+| CheckCast(s) -> "checkcast " ^ s
 
 
 let calculate_local_limit jstmts = 25  (* Not implemented yet *)
@@ -224,6 +241,7 @@ let jc_compare = flstring jc_string "compareTo"
 let jc_append = flstring jc_string_build "append"
 let jc_sb_init = flstring jc_string_build "<init>"
 let jc_sb_toString = flstring jc_string_build "toString"
+let jc_clone = "clone"
 
 (* Runtime method sigs *)
 let jcr_booltostring = {
