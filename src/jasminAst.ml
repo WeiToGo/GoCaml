@@ -73,6 +73,8 @@ and jinstruction =
   | ICmpgt of string
   | ICmple of string
   | ICmpge of string
+  | IACmpeq of string
+  | IACmpne of string
   | DCmpg
   | Ifeq of string
   | Ifne of string
@@ -180,6 +182,8 @@ let string_of_jinst = function
 | ICmpgt(l) -> "if_icmpgt " ^ l
 | ICmple(l) -> "if_icmple " ^ l
 | ICmpge(l) -> "if_icmpge " ^ l
+| IACmpeq(l) -> "if_acmpeq " ^ l
+| IACmpne(l) -> "if_acmpne " ^ l
 | DCmpg -> "dcmpg"
 | Ifeq(l) -> "ifeq " ^ l  
 | Ifne(l) -> "ifne " ^ l

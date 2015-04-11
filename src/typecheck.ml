@@ -256,7 +256,7 @@ let e_type = match e with
     in
     ( match op with
       | BinOr | BinAnd -> 
-          let _ = get_bin_exp_type (fun x -> x == GoBool) "of type boolean" in
+          let _ = get_bin_exp_type (fun x -> resolve_to_base x == GoBool) "of type boolean" in
           GoBool
       | BinEq | BinNotEq -> 
           let _ = get_bin_exp_type is_comparable "comparable" in
@@ -321,7 +321,7 @@ and resolve_func_call_type ctx param_types ret_type arg_exps =
     else () ) in
   let passed_types = List.map (resolve_exp_type ctx) arg_exps in
   let _ = List.map2 
-            (fun x y -> if x != y then raise (TypeCheckError  
+            (fun x y -> if resolve_to_base x != resolve_to_base y then raise (TypeCheckError  
               ( "Function expected argument of type " ^ (string_of_type x) ^
                 " but it was called with argument of type " ^ (string_of_type y) ) ) 
               else () ) param_types passed_types in

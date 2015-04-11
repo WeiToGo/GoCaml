@@ -1,12 +1,12 @@
 open JasminAst
 open Ast
 open Symtable
-open Typecheck
 
 (* exceptions *)
 exception ImproperType
 exception NotImplemented
 exception InternalError of string
+exception TypeCastError of string 
 
 (* global counters *)
 let next_bool_exp_count = Utils.new_counter 0
@@ -46,6 +46,7 @@ let id_info id =
 
 let rec base_type gotype = match gotype with
 | GoCustom(_, t) -> base_type t
+| NewType(t) -> base_type t
 | _ -> gotype
 
 let array_create_inst gotype = (* match basetype gotype with 
@@ -284,7 +285,7 @@ let compare_expressions t =
    | GoBool -> 
       [JInst(Ixor);
        JInst(Ifeq(true_label));] @ true_false_boilerplate
-   | GoArray(e, t) -> raise (InternalError("compare_expressions array not implemented"))
+   | GoArray(e, t) -> [JInst(IACmpeq(true_label))] @ true_false_boilerplate
    | GoStruct(l) -> raise NotImplemented
    | GoCustom(n, t) -> raise NotImplemented
    | NewType(t) -> raise NotImplemented 
@@ -300,13 +301,52 @@ let Expression(e, t) = exp in match e with
 | FunctionCallExp(fun_expression, arg_expressions) -> 
     let Expression(fun_exp, _) = fun_expression in
     let fun_name, fun_type, _ = (match fun_exp with
-    | IdExp(id) -> id_info id
+    | IdExp(id) -> id_info id 
     | _ -> raise (InternalError("Only identifiers can be called."))  )
-    in 
-    let arg_gotypes, ret_gotypeop = match fun_type with
-    | GoFunction(at, rto) -> at, rto 
+    in     
+    let call_inst = match fun_type with
+    | GoFunction(at, rto) -> process_func_call fun_name arg_expressions at rto
+    | NewType(t) -> 
+        let exp_inst = (match arg_expressions with
+          | [] -> raise (InternalError ("should have a value"))
+          | h::[] -> process_expression h
+          | h::t -> raise (InternalError ("should only have 1 expression"))
+        ) in
+        let cast_inst = process_type_cast (base_type fun_type) (base_type t) in
+        exp_inst @ cast_inst
     | _ -> raise (InternalError("Only function types can be called. Do we have a typechecker bug?"))
-    in 
+    in call_inst 
+
+| BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
+| UnaryExp(op, e) -> process_unary_expression op e
+| SelectExp(e, id) -> 
+    (process_expression e) @ 
+    [JInst(GetField(
+      flstring (struct_cname_of_expression e) (string_of_id id),
+       get_jvm_type (exp_type exp) )) ]
+| TypeCastExp(ts, origin_exp) -> 
+  let e_inst = process_expression origin_exp in
+  let target_type = (match ts with
+    | BasicType (typ) -> (match typ with
+      | IntType -> GoInt
+      | FloatType -> GoFloat
+      | RuneType -> GoRune
+      | _ ->  raise (TypeCastError ("invalid type for type cast. "))
+      )
+    | _ -> raise (TypeCastError ("invalid type for type cast. "))
+  )
+  in
+  let origin_type = exp_type origin_exp in
+  let cast_inst = process_type_cast target_type origin_type in
+  e_inst @ cast_inst 
+| IndexExp(e, inte) ->
+  (process_expression e) @ (process_expression inte) @ [JInst(IAload)]
+| _ -> print_string "expression not implemented"; raise (InternalError("expression not matched in process_expression"))
+
+
+
+(*helper function to process func call in process_expression, only meant to be called from there.*)
+and process_func_call fun_name arg_expressions arg_gotypes ret_gotypeop = 
     let jfunction_sig = 
       { method_name = main_class_name ^ "/" ^ fun_name;
         arg_types = List.map get_jvm_type arg_gotypes;
@@ -315,32 +355,13 @@ let Expression(e, t) = exp in match e with
         | Some t -> get_jvm_type t ;
       } in 
     let arg_load_instructions = List.map process_expression arg_expressions in
-    let stack_null_instrtuctions = match ret_gotypeop with
-    | None -> [JInst(AConstNull)]
-    | Some _ -> [] in  
-      (List.flatten arg_load_instructions) @ 
-      [JInst(InvokeStatic(jfunction_sig))] @
-      stack_null_instrtuctions
-| BinaryExp(op, e1, e2) -> process_binary_expression op e1 e2
-| UnaryExp(op, e) -> process_unary_expression op e
-| SelectExp(e, id) -> 
-    (process_expression e) @ 
-    [JInst(GetField(
-      flstring (struct_cname_of_expression e) (string_of_id id),
-       get_jvm_type (exp_type exp) )) ]
-| TypeCastExp(ts, e) -> 
-  let e_inst = process_expression e in
-  let cast_inst = process_type_cast ts (exp_type e) in
-  e_inst @ cast_inst 
-| IndexExp(e, inte) -> (match base_type (exp_type e) with
-    | GoArray(_, t) -> 
-        let load_insts = array_load_inst (base_type t) in 
-        (* TODO: Must cast Integer to int etc. here *)
-        (process_expression e) @ (process_expression inte) @ load_insts
-    | GoSlice(t) -> raise NotImplemented
-    | _ -> raise (InternalError("TypeCheck fail - this is not a valid index exp"))
-) 
-| AppendExp _ -> print_string "expression not implemented"; raise (InternalError("expression not matched in process_expression"))
+    let stack_null_instructions = (match ret_gotypeop with
+      | None -> [JInst(AConstNull)]
+      | Some _ -> [])
+    in  
+    (List.flatten arg_load_instructions) @ 
+    [JInst(InvokeStatic(jfunction_sig))] @
+    stack_null_instructions
 
 and process_binary_expression op e1 e2 = 
   let e1_insts = process_expression e1 in 
@@ -359,7 +380,7 @@ and process_binary_expression op e1 e2 =
       JInst(Iconst_1);
       JLabel(end_label);
     ] in 
-  match exp_type e1 with
+  match base_type (exp_type e1) with
   | GoInt 
   | GoRune -> e1_insts @ e2_insts @ (process_binary_int_expr op true_label true_false_boilerplate)
   | GoFloat -> e1_insts @ e2_insts @ (process_binary_float_expr op true_label true_false_boilerplate)
@@ -368,8 +389,8 @@ and process_binary_expression op e1 e2 =
   | GoString -> process_binary_string_expr op (exp_type e1) e1_insts e2_insts true_label true_false_boilerplate
   | GoArray(i, t) ->
     (match op with
-      | BinEq -> raise (InternalError("process_binary_expression array equal not implemented")) (* TO DO*)
-      | BinNotEq -> raise (InternalError("process_binary_expression array not equal not implemented")) (* TO DO*)
+      | BinEq -> e1_insts @ e2_insts @ [JInst(IACmpeq(true_label))] @ true_false_boilerplate
+      | BinNotEq -> e1_insts @ e2_insts @ [JInst(IACmpne(true_label))] @ true_false_boilerplate
       | _ -> raise NotImplemented (*not needed*)
     )
   | GoStruct(fl) ->
@@ -378,7 +399,6 @@ and process_binary_expression op e1 e2 =
       | BinNotEq -> raise NotImplemented (* TO DO*)
       | _ -> raise NotImplemented (*not needed*)
     )
-  | GoCustom(name, gotype) -> raise NotImplemented (* TO DO *)
   | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
 
 (*BinEq is not extracted to compare_expressions before it requires typ argument.
@@ -568,7 +588,7 @@ and process_unary_expression op e =
       JLabel(end_label);
     ] in 
   e_insts @
-  match exp_type e with 
+  match base_type (exp_type e) with 
   | GoInt ->
     (match op with 
     | UPlus -> []
@@ -596,26 +616,34 @@ and process_unary_expression op e =
     )
   | _ -> print_string "Unimplemented unary operation"; raise (InternalError("Unimplemented unary operation"))
 
-and process_type_cast ts t = 
-  match ts with
-    | BasicType typ -> 
-      (match typ with
-        | IntType -> (match t with
-            | GoRune -> []
-            | _ -> raise (InternalError ("other int should not be allowed in type checking"))
-          )
-        | FloatType -> (match t with
-            | GoInt -> [JInst(I2d)]
-            | GoRune -> [JInst(I2d)]
-            | _ -> raise (InternalError (" other flo should not be allowed in type checking")) 
-          )
-        | RuneType -> (match t with
-            | GoInt -> []
-            | _ -> raise (InternalError ("other rune should not be allowed in type checking"))
-          )
-        | _ -> raise (InternalError ("should not be allowed in type checking"))
-      )
-    | _ -> raise (InternalError ("should not be allowed in type checking"))
+(* Assume target type and origin type are GoType reduced to base type.
+this function supports more types then types allowed in type_cast_expressions 
+in order to support type cast with custom types. *)
+and process_type_cast target_t origin_t = (match target_t with
+  | GoInt -> (match origin_t with
+      | GoRune | GoInt -> []
+      | _ -> raise (TypeCastError ("Cannot type cast to int "))
+    )
+  | GoFloat -> (match origin_t with
+      | GoFloat -> []
+      | GoInt -> [JInst(I2d)]
+      | GoRune -> [JInst(I2d)]
+      | _ -> raise (TypeCastError ("Cannot type cast to float "))
+    )
+  | GoRune -> (match origin_t with
+      | GoInt | GoRune -> []
+      | _ -> raise (TypeCastError ("Cannot type cast to rune "))
+    )
+  | GoBool -> (match origin_t with 
+      | GoBool -> []
+      | GoInt -> raise (TypeCastError ("Cannot type cast from int to boolean. "))
+      | _ -> raise (TypeCastError ("Cannot type cast to boolean "))
+  )
+  | GoArray(i, t) -> raise NotImplemented
+  | GoSlice(t) -> raise NotImplemented
+  | GoStruct(gs)-> raise NotImplemented
+  | _ -> raise (InternalError ("should not be allowed in type checking"))
+)
 
 
 let process_exp_for_assignment e = 
@@ -668,7 +696,7 @@ let get_local_var_decl_instructions mvd_list =
 
 let print_single_expression print_method_name e = 
   JInst(GetStatic(jc_sysout, JRef(jc_printstream))) :: 
-  (match exp_type e with
+  (match base_type (exp_type e) with
   | GoBool -> process_expression e @ 
       [ JInst(InvokeStatic(jcr_booltostring));
         JInst(InvokeVirtual({
@@ -815,9 +843,9 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
         lvalue_load_inst @ index_load_inst @ rest_of_the_inst 
     | SelectExp(lexp, id) -> 
         let cname = struct_cname_of_expression lexp in
-        (process_expression lexp)
+        (process_expression lexp) 
         @ [JInst(Swap); JInst(PutField(flstring cname (string_of_id id), get_jvm_type (exp_type rexp) ))]
-    | FunctionCallExp(id) -> raise NotImplemented
+    | FunctionCallExp _ 
     | AppendExp _ | TypeCastExp _ | LiteralExp _ 
     | UnaryExp _ | BinaryExp _  -> raise (InternalError("This is not a valid lvalue"))
     in
