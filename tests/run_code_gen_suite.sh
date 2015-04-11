@@ -41,6 +41,7 @@ while read -r line; do
   rm -f *.j *.class gocamlout.txt
   ../../../main.byte f f $filename
   java -jar $JASMIN_JAR *.j  >/dev/null
+  cp ../../../staticlib/GoStructAbstract.class .
   java GeneratedBytecode > gocaml.txt
   diff gooutput.txt gocaml.txt >/dev/null
   if [[ $? != 0 ]]; then

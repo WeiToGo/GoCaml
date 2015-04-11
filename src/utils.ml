@@ -18,6 +18,9 @@ let copy_file infilename outfilename =
       let () = output oc "\n" 0 1 in 
       rec_write () 
     in rec_write ())
-  with End_of_file -> close_in ic; close_out oc;
-;;
+  with End_of_file -> close_in ic; close_out oc; ()
 
+let copy_from_staticlib infilename fname = 
+  let src = Filename.concat (Filename.dirname Sys.argv.(0)) ("staticlib/" ^ fname) in 
+  let dest = Filename.concat (Filename.dirname infilename) fname in 
+  copy_file src dest
