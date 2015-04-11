@@ -1,6 +1,6 @@
 import java.lang.reflect.Field;
 
-public abstract class GoStructAbstract{
+public abstract class GoStructAbstract implements GoLiteCloneable {
 
 	public Object clone() { 
 		Object clonedObject = null;
