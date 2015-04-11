@@ -7,7 +7,7 @@ compile:
 
 	# Compile java files and move to staticlib
 	mkdir -p _build/staticlib
-	cd src/java && javac GoLiteCloneable.java GoList.java GoStructAbstract.java
+	cd src/java && javac GoLiteCloneable.java GoLiteList.java GoStructAbstract.java
 	cp src/java/*.class _build/staticlib
 
 	# Copy runtime support jasmin file

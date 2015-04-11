@@ -1,13 +1,6 @@
 import java.util.ArrayList;
 
-public class GoList extends ArrayList<GoLiteCloneable>{
-
-public static void main (String[] args) {
-	GoList l = new GoList();
-
-	l.clone();
-
-}
+public class GoLiteList extends ArrayList<GoLiteCloneable>{
 
 public ArrayList clone() { 
 
