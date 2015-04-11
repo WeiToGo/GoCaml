@@ -541,7 +541,7 @@ and process_unary_expression op e =
       JLabel(end_label);
     ] in 
   e_insts @
-  match exp_type e with 
+  match base_type (exp_type e) with 
   | GoInt ->
     (match op with 
     | UPlus -> []
