@@ -567,7 +567,7 @@ and process_unary_expression op e =
     | UNot -> [JInst(Ifeq(true_label));] @ true_false_boilerplate
     | UPlus | UMinus | UCaret -> raise NotImplemented (*not needed*)
     )
-  | _ -> print_string "Unimplemented unary operation"; raise (InternalError("Unimplemented unary operation"))
+  | _ -> raise (InternalError("Unimplemented unary operation"))
 
 (* Assume target type and origin type are GoType reduced to base type.
 this function supports more types then types allowed in type_cast_expressions 
