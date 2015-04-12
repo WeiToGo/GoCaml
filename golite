@@ -1,23 +1,82 @@
 #!/bin/bash
 
+set -e
+JASMIN_JAR_PATH="$(pwd)/jasmin.jar"
+symtabflag="f"
+ppflag="f"
 
-if [[ $# -eq 1 ]]; then
-	if [[ "$1" = "-v" ]]; then
+print_usage() { 
+	echo "usage: ./run_code_gen.sh [FLAGS] <go_file_to_compile>
+	Supported flags: 
+		-v: version number
+		-h: Print this usage blurb
+		--pptype: Pretty print with types (Produced in filename.pretty.go)
+		--dumpsymtab: Dump symbol table (Produced in filename.symtab)
+	./run_code_gen.sh <file_path> to compile file"
+}
+
+process_flag () { 
+	case $1 in
+	"--pptype")
+	 	ppflag="t"
+	 	return
+	  ;;
+	"--dumpsymtab")
+		symtabflag="t"
+		return 
+	  ;;
+	"-h")
+		print_usage
+		exit 0
+	  ;;
+	"-v")
 		echo "version -- gocaml1.0"
-	elif [[ "$1" = "-h" ]]; then
-	echo "usage: ./run_code_gen.sh -h for help 
-	./run_code_gen.sh -v for version number
-	./run_code_gen.sh <PATH_TO_JASMIN_JAR> 
-		to generate code for all test files"
-	else 
-		JASMIN_JAR=$1 
-		cd tests/
-		./run_code_gen_suite.sh $JASMIN_JAR -all
-	fi
-else
-	echo "usage: ./run_code_gen.sh -h for help 
-	./run_code_gen.sh -v for version number
-	./run_code_gen.sh <PATH_TO_JASMIN_JAR> 
-		to generate code for all test files"
+		return
+	  ;;
+	-*)
+		echo "Invalid flag $1"
+		print_usage
+		exit 1
+	  ;;
+	*)
+		echo "Bug: this is not a flag"
+	esac
+
+}
+
+compile_file () { 
+	./main.byte $ppflag $symtabflag "$1"
+	echo "Produced jasmin files"
+	file_dirname=$(dirname "$1")
+	echo "Copying supporting classes"
+	cp _build/staticlib/* $file_dirname
+	echo "Compiling jasmin files to bytecode"
+	cd $file_dirname
+	java -jar $JASMIN_JAR_PATH *.j >/dev/null
+	echo "----------------"
+	echo "Comilation success :)"
+	echo "Compiled files generated in $file_dirname"
+	echo "Run \`java GeneratedBytecode\` in that directory to run the code."
+	exit 0
+}
+
+if [[ $# -lt 1 ]]; then 
+	print_usage
+	exit 1
 fi
 
+while [[ $# -ge 1 ]]; do
+	case $1 in 
+		"-"*) 
+			process_flag $1
+			shift
+			;;
+		*)
+			if [[ $# -gt 1 ]]; then 
+				echo "You can only compile one file at a time"
+				print_usage
+				exit 1
+			fi
+			compile_file $1
+	esac
+done

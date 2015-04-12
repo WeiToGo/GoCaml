@@ -1,14 +1,14 @@
 open Scan
 open Parser
-(* open PrettyPrint *)
-(* open Exp_gen *)
 open Lexing
 ;;
 
 let build_ast input = 
 	let ic = match input with
 	| "stdin" -> stdin
-	| filename -> open_in filename
+	| filename -> (try 
+        open_in filename
+      with Sys_error(s) -> Printf.fprintf stderr "Error: Failed to open %s\n" filename;raise (Sys_error(s)) )
 	in
 	let lexbuf = Lexing.from_channel ic in
 	let ast = 
@@ -58,11 +58,12 @@ let symtab_file_name = file_basename ^ ".symtab"
 let jasmin_file_name = file_basename ^ ".j"
 let jasmin_class_name = file_basename
 ;;
+let sym_out = open_out symtab_file_name
 
-let sym_out = open_out symtab_file_name  ;;
 let () = Symtable.out_channel := sym_out
 
-let inp = open_in in_file_name 
+let inp = try open_in in_file_name 
+  with Sys_error _ as e -> print_endline ("Error: Failed to open file " ^ in_file_name); raise e ;;
 let filebuf = Lexing.from_channel inp 
 let ast = build_ast in_file_name
 ;;
