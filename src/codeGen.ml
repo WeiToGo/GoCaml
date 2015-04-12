@@ -280,7 +280,11 @@ let rec get_mapping_from_stmt prev_map next_index (LinedStatement(_, stmt)) = ma
         (List.map (get_mapping_from_stmt prev_map next_index) stmt_list)
     in 
     LocalVarMap.merge merge_maps init_mapping body_mapping 
-| BlockStatement(stmt_list) -> raise NotImplemented
+| BlockStatement(stmt_list) -> 
+      List.fold_left 
+        (LocalVarMap.merge merge_maps)
+        LocalVarMap.empty
+        (List.map (get_mapping_from_stmt prev_map next_index) stmt_list)
 | EmptyStatement
 | ExpressionStatement _
 | AssignmentStatement _ 
