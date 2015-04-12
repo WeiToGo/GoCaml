@@ -10,10 +10,9 @@ if [[ $# -eq 1 ]]; then
 	./run_code_gen.sh <PATH_TO_JASMIN_JAR> 
 		to generate code for all test files"
 	else 
-		JASMIN_JAR=$1
-		echo $JASMIN_JAR
+		JASMIN_JAR=$1 
 		cd tests/
-		./run_code_gen_suite.sh $JASMIN_JAR 
+		./run_code_gen_suite.sh $JASMIN_JAR -all
 	fi
 else
 	echo "usage: ./run_code_gen.sh -h for help 
