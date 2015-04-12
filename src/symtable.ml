@@ -37,7 +37,6 @@ and sym_table_entry = Entry of (string * gotype * scope * int * int)
                        (* Entry of true_name, its gotype,
                            the scope it was declared in, the declaration line, and a global serial *)
 
-
 (* --- Printing functions --- *)
 
 let rec string_of_type typ = match typ with

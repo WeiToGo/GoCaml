@@ -29,7 +29,7 @@ let print_class { source; top_level_vars; methods; class_name } out_directory is
   | PS(pinst) -> List.iter (print_method_statement locals) (real_statements (global_field_map, locals) pinst )
   in
   let print_method_body locals stmts = 
-    let local_limit = calculate_local_limit stmts in
+    let local_limit = calculate_local_limit locals in
     let operand_stack_limit = calculate_ostack_limit stmts in
     let () = println ("  .limit locals " ^ (string_of_int local_limit)) in
     let () = println ("  .limit stack " ^ (string_of_int operand_stack_limit)) in

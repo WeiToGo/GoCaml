@@ -140,6 +140,19 @@ let unwrap_type gotype = match base_type gotype with
 | GoFunction _  | NewType _ -> invalid_arg "unwrap type cannot take Newtype or function"
 
 
+let rec get_word_size gotype = match gotype with
+| GoInt -> One
+| GoFloat -> Two
+| GoBool -> One
+| GoRune -> One
+| GoString -> One
+| GoSlice _ -> One
+| GoArray _ -> One
+| GoStruct _ -> One
+| GoFunction _ -> raise (InternalError("Functions are not put on stack"))
+| GoCustom(s, t) -> get_word_size t
+| NewType _ -> raise (InternalError("It is impossible to put newtype on stack"))
+
 let rec type_init_exps gotype = match gotype with
 | GoInt| GoRune | GoBool -> [JInst(Iconst_0)]
 | GoFloat -> [JInst(Ldc2w("0.0"))]
@@ -194,7 +207,11 @@ let get_local_var_decl_mappings next_index mvd_list =
   let mapping_from_svd svd = 
     let SingleVarDecl(id, _, _) = svd in 
     let _, gotype, var_num = id_info id in 
-    (var_num, (next_index (), get_jvm_type gotype))
+    let ind = next_index () in 
+    let () = (match get_word_size gotype with
+    | Two -> ignore (next_index ()) (* It takes up two spots *)
+    | One -> ()) in 
+    (var_num, (ind, get_jvm_type gotype))
   in 
   let mapping_from_mvd mvd = 
     let MultipleVarDecl(svd_list) = mvd in 
@@ -216,7 +233,12 @@ let rec get_mapping_from_stmt prev_map next_index (LinedStatement(_, stmt)) = ma
     | _ -> 
       let _, gotype, var_num = id_info id in
       if LocalVarMap.mem var_num prev_map then LocalVarMap.empty 
-      else LocalVarMap.add var_num (next_index (), get_jvm_type gotype) LocalVarMap.empty
+      else 
+        let ind = next_index () in 
+        let () = (match get_word_size gotype with
+          | Two -> ignore (next_index ()) (* It takes up two spots *)
+          | One -> ()) in 
+        LocalVarMap.add var_num (ind, get_jvm_type gotype) LocalVarMap.empty
     in 
     List.fold_left 
       (fun old_map new_map -> 
@@ -430,7 +452,7 @@ and process_func_call fun_name arg_expressions arg_gotypes ret_gotypeop =
         | None -> JVoid 
         | Some t -> get_jvm_type t ;
       } in 
-    let arg_load_instructions = List.map process_expression arg_expressions in
+    let arg_load_instructions = List.map process_exp_for_assignment arg_expressions in
     let stack_null_instructions = (match ret_gotypeop with
       | None -> [JInst(AConstNull)]
       | Some _ -> [])
@@ -795,19 +817,6 @@ let print_single_expression print_method_name e =
               return_type = JVoid; } )); ] )
 
 
-let rec get_word_size gotype = match gotype with
-| GoInt -> One
-| GoFloat -> Two
-| GoBool -> One
-| GoRune -> One
-| GoString -> One
-| GoSlice _ -> One
-| GoArray _ -> One
-| GoStruct _ -> One
-| GoFunction _ -> raise (InternalError("Functions are not put on stack"))
-| GoCustom(s, t) -> get_word_size t
-| NewType _ -> raise (InternalError("It is impossible to put newtype on stack"))
-
 let rec dummy_pop_instruction_of_type gotype = match gotype with
 | GoInt | GoBool | GoRune | GoString | GoStruct _
 | GoArray _ | GoSlice _ -> [JInst(Pop)]
@@ -1065,7 +1074,11 @@ let process_func_decl id funsig stmt_list =
         List.fold_left
           (fun old_map id -> 
             let _, gt, var_num = id_info id in 
-            LocalVarMap.add var_num (next_index (), get_jvm_type gt) old_map)
+            let ind = next_index () in 
+            let () = (match get_word_size gt with
+            | Two -> ignore (next_index ()) (* It takes up two spots *)
+            | One -> ()) in 
+            LocalVarMap.add var_num (ind, get_jvm_type gt) old_map)
           LocalVarMap.empty
           arg_ids
   in
