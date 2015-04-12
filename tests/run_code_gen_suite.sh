@@ -39,7 +39,7 @@ while read -r line; do
     go run $filename &> gooutput.txt  # Go run prints to stderr on my mac 
   fi
   rm -f *.j *.class gocamlout.txt
-  ../../../main.byte f f $filename
+  ../../../main.byte f t $filename
   java -jar $JASMIN_JAR *.j  >/dev/null
   cp ../../../_build/staticlib/*.class .
   java GeneratedBytecode > gocaml.txt
