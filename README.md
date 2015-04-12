@@ -44,7 +44,7 @@ There is a test script in the `tests/` directory that compiles a suite of test g
 
     # Make sure you compiled the compiler first
     cd tests
-    ./run_code_gen_suite.sh ./run_code_gen_suite.sh "$(dirname $(pwd))/jasmin.jar" -all  # The second argument is absolute path to jasmin jar.
+    ./run_code_gen_suite.sh "$(dirname $(pwd))/jasmin.jar" -all  # The second argument is absolute path to jasmin jar.
 
 If the gocaml god is feeling generous, all tests should pass.
 
