@@ -1,0 +1,8 @@
+package main 
+
+func main () {
+	var x [2]float64
+	x[0], x[1] = 23.4, -23.2323
+	println(x[0])
+	println(x[1])
+}

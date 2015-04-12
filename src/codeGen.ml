@@ -13,7 +13,7 @@ let next_bool_exp_count = Utils.new_counter 0
 let next_loop_count = Utils.new_counter 0
 let if_count = Utils.new_counter 0
 let switch_count = Utils.new_counter 0
-(* let array_init_count = Utils.new_counter 0 *)
+let array_init_count = Utils.new_counter 0
 
 let scmap = ref ( fun x -> raise (InternalError("StructMapReferenceVarNotInitializedError")) ) 
 
@@ -85,7 +85,7 @@ let rec get_jvm_type gotype = match gotype with
 | GoBool -> JInt
 | GoRune -> JInt  (*rune is an int-32*)
 | GoString -> JRef(jc_string)
-| GoArray(_, t) -> JArray(get_jvm_type t)
+| GoArray(_, t) -> JRef(jc_list_class)
 | GoStruct(sflist) -> JRef(!(scmap) sflist)
 | GoFunction(_) -> raise (InternalError("Trick question - functions don't have types in jvm.")) 
 | GoCustom(_, t) -> get_jvm_type t
@@ -98,7 +98,47 @@ let struct_cname_of_expression (Expression(e, topref)) = match !topref with
     | _ -> raise (InternalError("Select Expression can only be done on structs. This should be caught in typechecker.")) )
 | None -> raise (InternalError("Missing type when trying to infer struct class name of expression. Did you typecheck the tree?"))
 
-  
+
+let wrap_type gotype = match base_type gotype with
+| GoInt | GoRune | GoBool -> 
+  [ JInst(New(jc_integer));
+    JInst(Dup);
+    JInst(Dup2_x1);
+    JInst(Pop2);
+    JInst(InvokeSpecial{ 
+      method_name = flstring jc_integer "<init>";
+      arg_types = [JInt]; return_type = JVoid;}); ]
+| GoFloat -> 
+  [ JInst(New(jc_double));
+    JInst(Dup);
+    JInst(Dup2_x2);
+    JInst(Pop2);
+    JInst(InvokeSpecial{ 
+      method_name = flstring jc_double "<init>";
+      arg_types = [JDouble]; return_type = JVoid;}); ]
+| GoArray _ | GoStruct _ | GoString | GoSlice _ -> []
+| GoCustom _ -> raise (InternalError("wrap: Cannot match custom type. Call base_type on type"))
+| GoFunction _  | NewType _ -> invalid_arg "wrap type cannot take Newtype or function"
+
+
+let unwrap_type gotype = match base_type gotype with 
+| GoInt | GoRune | GoBool -> 
+  [ JInst(CheckCast(jc_integer));
+    JInst(InvokeVirtual{ 
+      method_name = flstring jc_integer "intValue";
+      arg_types = []; return_type = JInt;}); ]
+| GoFloat -> 
+  [ JInst(CheckCast(jc_double));
+    JInst(InvokeVirtual{ 
+      method_name = flstring jc_double "doubleValue";
+      arg_types = []; return_type = JDouble;}); ]
+| GoString -> [ JInst(CheckCast(jc_string))]
+| GoArray _ | GoSlice _ -> [ JInst(CheckCast(jc_list_class)) ]
+| GoStruct(s) -> [ JInst(CheckCast(!scmap s)) ]
+| GoCustom _ -> raise (InternalError("unwrap: Cannot match custom type. Call base_type on type"))
+| GoFunction _  | NewType _ -> invalid_arg "unwrap type cannot take Newtype or function"
+
+
 let rec type_init_exps gotype = match gotype with
 | GoInt| GoRune | GoBool -> [JInst(Iconst_0)]
 | GoFloat -> [JInst(Ldc2w("0.0"))]
@@ -112,27 +152,34 @@ let rec type_init_exps gotype = match gotype with
           return_type = JVoid; }
      ))]
 | GoCustom(_, t) -> type_init_exps t
-| GoArray(size, t) -> raise NotImplemented
- (*    let elm_init_instructions = type_init_exps t in
-    let store_instructions = array_store_inst t in  
+| GoArray(size, t) ->
     let count = string_of_int (array_init_count ()) in 
     let comp_label = "ArrayInitComp_" ^ count in 
     let body_label = "ArrayInitElement_" ^ count in 
     let end_label = "ArrayInitEnd_" ^ count in 
-    [ JInst(Ldc(string_of_int size));
-      JLabel(init_label);
+    [ JInst(New(jc_list_class));
+      JInst(Dup);
+      JInst(InvokeSpecial({ 
+        method_name = flstring jc_list_class "<init>";
+        arg_types = []; return_type = JVoid; }));
+      JInst(Ldc(string_of_int size));
+      JLabel(comp_label);
       JInst(Dup);
       JInst(Ifeq(end_label));
       JInst(Iconst_1);
       JInst(Isub);
-      JInst(Dup);
-
-
-
-    ] 
-	(match t with
-	| GoInt -> [JInst(Ldc(string_of_int size)); JInst(NewArray("int"))]
-	| _ -> [] ) *)
+      JInst(Dup2);
+      JInst(Pop);
+      JLabel(body_label) ] @ 
+    (type_init_exps t) @ 
+    (wrap_type t) @
+    [ JInst(InvokeVirtual({
+        method_name = flstring jc_list_class "add";
+        arg_types = [JRef(jc_object)]; return_type = JBool; }));
+      JInst(Pop);
+      JInst(Goto(comp_label));
+      JLabel(end_label);
+      JInst(Pop) ]
 | GoSlice _ -> raise NotImplemented
 | GoFunction _ | NewType _ -> raise (InternalError("You shouldn't have to do initilize these types"))
 
@@ -339,8 +386,10 @@ let Expression(e, t) = exp in match e with
   let origin_type = exp_type origin_exp in
   let cast_inst = process_type_cast target_type origin_type in
   e_inst @ cast_inst 
-| IndexExp(e, inte) ->
-  (process_expression e) @ (process_expression inte) @ [JInst(IAload)]
+| IndexExp(lexp, inte) ->
+    (process_expression lexp) @ (process_expression inte) @ 
+    [  JInst(InvokeVirtual({ method_name = flstring jc_list_class "get";
+         arg_types = [JInt]; return_type = JRef(jc_object); })) ] @ (unwrap_type (exp_type exp))
 | _ -> print_string "expression not implemented"; raise (InternalError("expression not matched in process_expression"))
 
 
@@ -810,7 +859,7 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     (* first evaluate all the arguments, then store them *)
     let exps = List.map (fun (ShortVarDecl(id, e)) -> e) shortvd_list in 
     let vars = List.map (fun (ShortVarDecl(id, e)) -> id) shortvd_list in 
-    let exp_instructions = List.flatten (List.map process_expression exps) in 
+    let exp_instructions = List.flatten (List.map process_exp_for_assignment exps) in 
     let store_instructions = 
       List.map
         (fun id -> match id with 
@@ -822,32 +871,34 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
 | AssignmentStatement(ass_list) -> 
     let exps = List.map (fun (e1, e2) -> e2) ass_list in 
     let exp_instructions = List.flatten (List.map process_exp_for_assignment exps) in
+    
     let single_store_instruction (Expression(e, _)) rexp = match e with
-    | IdExp(BlankID) -> [JInst(Pop)]
-    | IdExp(id) -> 
-        let _, _, var_num = id_info id in 
-        [PS(StoreVar(var_num))]
-    | IndexExp(e, inte) -> 
-        let lvalue_load_inst = process_expression e in 
-        let index_load_inst = process_expression inte in 
-        let rest_of_the_inst = (match exp_type e with 
-          | GoArray(_, t) -> (
-              let dup_inst = (match get_word_size t with 
-                | One -> [JInst(Dup2_x1);]
-                | Two -> [JInst(Dup2_x2);] ) in 
-              let store_inst = array_store_inst t in 
-              dup_inst @ [JInst(Pop2)] @ store_inst )
-          | GoSlice _ -> raise NotImplemented
-          | _ -> raise (InternalError("Typechecker should only allow indices to arrays and slices.")) )
-        in 
-        lvalue_load_inst @ index_load_inst @ rest_of_the_inst 
-    | SelectExp(lexp, id) -> 
-        let cname = struct_cname_of_expression lexp in
-        (process_expression lexp) 
-        @ [JInst(Swap); JInst(PutField(flstring cname (string_of_id id), get_jvm_type (exp_type rexp) ))]
-    | FunctionCallExp _ 
-    | AppendExp _ | TypeCastExp _ | LiteralExp _ 
-    | UnaryExp _ | BinaryExp _  -> raise (InternalError("This is not a valid lvalue"))
+      | IdExp(BlankID) -> [JInst(Pop)]
+      | IdExp(id) -> 
+          let _, _, var_num = id_info id in 
+          [PS(StoreVar(var_num))]
+      | IndexExp(e, inte) -> 
+          let lvalue_load_inst = process_expression e in 
+          let index_load_inst = process_expression inte in 
+          let dup_inst = (match get_word_size (exp_type rexp) with 
+                  | One -> [JInst(Dup2_x1);]
+                  | Two -> [JInst(Dup2_x2);] ) in
+          lvalue_load_inst @ index_load_inst @ dup_inst @ 
+          [ JInst(Pop2); ] @ (wrap_type (exp_type rexp)) @
+          [ JInst(InvokeVirtual({
+             method_name = flstring jc_list_class "set";
+             arg_types = [JInt; JRef(jc_object)]; return_type = JRef(jc_object);}));
+            JInst(Pop); ]
+      | SelectExp(lexp, id) -> 
+          let cname = struct_cname_of_expression lexp in
+          let dup_inst = (match get_word_size (exp_type rexp) with 
+                  | One -> [JInst(Dup_x1);]
+                  | Two -> [JInst(Dup_x2);] ) in 
+          (process_expression lexp) 
+          @ dup_inst @ [JInst(Pop); JInst(PutField(flstring cname (string_of_id id), get_jvm_type (exp_type rexp) ))]
+      | FunctionCallExp _ 
+      | AppendExp _ | TypeCastExp _ | LiteralExp _ 
+      | UnaryExp _ | BinaryExp _  -> raise (InternalError("This is not a valid lvalue"))
     in
     let store_instructions = 
       List.flatten 

@@ -93,7 +93,7 @@ let () = List.iter (fun c -> CodeEmitter.print_struct_class c out_directory) str
 let bytecode_ast = CodeGen.create_byte_code_ast ast in_file_name in
 CodeEmitter.print_main_class bytecode_ast (Filename.dirname in_file_name);;
 
-let runtime_support_file_source = Filename.concat (Filename.dirname Sys.argv.(0)) "staticlib/runtimesupport.j" in 
+let runtime_support_file_source = Filename.concat (Filename.dirname Sys.argv.(0)) "_build/staticlib/runtimesupport.j" in 
 let runtime_support_file_dest = Filename.concat (Filename.dirname in_file_name) "runtimesupport.j" in 
 Utils.copy_file runtime_support_file_source runtime_support_file_dest;;
 
