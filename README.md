@@ -38,4 +38,11 @@ The list of supported flags can be obtained through `./golite -h`
 ## Note about jasmin 
 The version of jasmin assembler we used is provided as a jar file in the repository. The presence of that jar file is important for the assembler phase to work.
 
+## Optional test of codegen 
+There is a test script in the `tests/` directory that compiles a suite of test go files (provided in `tests/code_gen_suite/`) first with go, and then with our compilers, and takes the diff to check for identical output. To run these tests:
+
+    # Make sure you compiled the compiler first
+    cd tests
+    ./run_code_gen_suite.sh ./run_code_gen_suite.sh "$(dirname $(pwd))/jasmin.jar" -all  # The second argument is absolute path to jasmin jar.
+
 _files in ./dev directory are stuff used in development process. Not for grading._
