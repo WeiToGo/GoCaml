@@ -17,6 +17,7 @@ public abstract class GoStructAbstract implements GoLiteCloneable {
 						break;
 					case "double":
 						f.setDouble(clonedObject, f.getDouble(this));
+						break;
 					default:
 						System.err.println("WARNING: I KNOW NOT HOW TO CLONE "
 							 + f.getType().getCanonicalName() + "\nPLEASE IMPLEMENT ME.");

@@ -85,7 +85,7 @@ let rec get_jvm_type gotype = match gotype with
 | GoBool -> JInt
 | GoRune -> JInt  (*rune is an int-32*)
 | GoString -> JRef(jc_string)
-| GoArray(_, t) -> JArray(get_jvm_type t)
+| GoArray(_, t) -> JRef(jc_list_class)
 | GoStruct(sflist) -> JRef(!(scmap) sflist)
 | GoFunction(_) -> raise (InternalError("Trick question - functions don't have types in jvm.")) 
 | GoCustom(_, t) -> get_jvm_type t
@@ -891,8 +891,11 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
             JInst(Pop); ]
       | SelectExp(lexp, id) -> 
           let cname = struct_cname_of_expression lexp in
+          let dup_inst = (match get_word_size (exp_type rexp) with 
+                  | One -> [JInst(Dup_x1);]
+                  | Two -> [JInst(Dup_x2);] ) in 
           (process_expression lexp) 
-          @ [JInst(Swap); JInst(PutField(flstring cname (string_of_id id), get_jvm_type (exp_type rexp) ))]
+          @ dup_inst @ [JInst(Pop); JInst(PutField(flstring cname (string_of_id id), get_jvm_type (exp_type rexp) ))]
       | FunctionCallExp _ 
       | AppendExp _ | TypeCastExp _ | LiteralExp _ 
       | UnaryExp _ | BinaryExp _  -> raise (InternalError("This is not a valid lvalue"))

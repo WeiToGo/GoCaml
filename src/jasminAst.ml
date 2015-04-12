@@ -46,6 +46,8 @@ and jinstruction =
   | Dup2
   | Dup2_x1
   | Dup2_x2
+  | Dup_x1
+  | Dup_x2
   | Swap
   | BiPush of string  (* -128 to 127*)
   | GetStatic of string * jtype
@@ -157,6 +159,8 @@ let string_of_jinst = function
 | Dup2 -> "dup2"
 | Dup2_x1 -> "dup2_x1"
 | Dup2_x2 -> "dup2_x2"
+| Dup_x1 -> "dup_x1"
+| Dup_x2 -> "dup_x2"
 | Swap -> "swap"
 | BiPush(s) -> "bipush " ^ s 
 | GetStatic(s, t) -> "getstatic " ^ s ^ " " ^ (string_of_jtype t)
