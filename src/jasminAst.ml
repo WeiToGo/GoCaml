@@ -43,6 +43,7 @@ and jinstruction =
   (* | Ldcw of string *)
   | Ldc2w of string
   | Dup
+  | Dup2
   | Dup2_x1
   | Dup2_x2
   | Swap
@@ -154,6 +155,7 @@ let string_of_jinst = function
 (* | Ldcw(s) -> "ldc_w " ^ s *)
 | Ldc2w(s) -> "ldc2_w " ^ s 
 | Dup -> "dup"
+| Dup2 -> "dup2"
 | Dup2_x1 -> "dup2_x1"
 | Dup2_x2 -> "dup2_x2"
 | Swap -> "swap"

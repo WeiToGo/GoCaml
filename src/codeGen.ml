@@ -909,6 +909,14 @@ and process_case_list switch_exp case_list =
   in
   let default_inst = get_default_inst (List.find get_default case_list) in
   let switch_exp_inst = process_expression switch_exp in
+  let type_of_switch_exp = exp_type switch_exp in
+  let dup_inst = (match get_word_size type_of_switch_exp with 
+    | One -> [JInst(Dup);]
+    | Two -> [JInst(Dup2);] ) in
+  let pop_inst = (match get_word_size type_of_switch_exp with 
+    | One -> [JInst(Pop);]
+    | Two -> [JInst(Pop2);] ) in
+
   (*generate instructions for <case 0, 1, 2 : label> since all these cases leads to the same label(stmt_list) 
     returns a tuple of (case_eval_instruction, corresponding stmt list instruction) *)  
   let process_case c_label one_case = (match one_case with 
@@ -918,7 +926,7 @@ and process_case_list switch_exp case_list =
       let typ = exp_type exp in 
       let case_exp_insts = process_expression exp in
       (* e1 @ e2 so their results are on top of the stack*)
-      switch_exp_inst @ case_exp_insts @
+      dup_inst @ case_exp_insts @
       compare_expressions typ @
       [JInst(Ifne(c_label))] 
     in
@@ -941,9 +949,8 @@ and process_case_list switch_exp case_list =
   let stmt_list_inst = 
     List.flatten (List.map (fun (_, b) -> b) tuple_list_inst)
   in
-  case_list_inst @ 
-  default_inst @ 
-  stmt_list_inst @ 
+  switch_exp_inst @ case_list_inst @ default_inst @ 
+  stmt_list_inst @ pop_inst @ 
   [JLabel(end_label)]
 
 let process_func_decl id funsig stmt_list = 

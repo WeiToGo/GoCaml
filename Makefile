@@ -15,3 +15,6 @@ dev:
 clean:
 	ocamlbuild -clean
 
+stack:
+	ocamlbuild -quiet -r -I src -use-menhir calc_stack.byte
+	
