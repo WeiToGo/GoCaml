@@ -871,32 +871,31 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
 | AssignmentStatement(ass_list) -> 
     let exps = List.map (fun (e1, e2) -> e2) ass_list in 
     let exp_instructions = List.flatten (List.map process_exp_for_assignment exps) in
+    
     let single_store_instruction (Expression(e, _)) rexp = match e with
-    | IdExp(BlankID) -> [JInst(Pop)]
-    | IdExp(id) -> 
-        let _, _, var_num = id_info id in 
-        [PS(StoreVar(var_num))]
-    | IndexExp(e, inte) -> 
-        let lvalue_load_inst = process_expression e in 
-        let index_load_inst = process_expression inte in 
-        let rest_of_the_inst = (match exp_type e with 
-          | GoArray(_, t) -> (
-              let dup_inst = (match get_word_size t with 
-                | One -> [JInst(Dup2_x1);]
-                | Two -> [JInst(Dup2_x2);] ) in 
-              let store_inst = array_store_inst t in 
-              dup_inst @ [JInst(Pop2)] @ store_inst )
-          | GoSlice _ -> raise NotImplemented
-          | _ -> raise (InternalError("Typechecker should only allow indices to arrays and slices.")) )
-        in 
-        lvalue_load_inst @ index_load_inst @ rest_of_the_inst 
-    | SelectExp(lexp, id) -> 
-        let cname = struct_cname_of_expression lexp in
-        (process_expression lexp) 
-        @ [JInst(Swap); JInst(PutField(flstring cname (string_of_id id), get_jvm_type (exp_type rexp) ))]
-    | FunctionCallExp _ 
-    | AppendExp _ | TypeCastExp _ | LiteralExp _ 
-    | UnaryExp _ | BinaryExp _  -> raise (InternalError("This is not a valid lvalue"))
+      | IdExp(BlankID) -> [JInst(Pop)]
+      | IdExp(id) -> 
+          let _, _, var_num = id_info id in 
+          [PS(StoreVar(var_num))]
+      | IndexExp(e, inte) -> 
+          let lvalue_load_inst = process_expression e in 
+          let index_load_inst = process_expression inte in 
+          let dup_inst = (match get_word_size (exp_type rexp) with 
+                  | One -> [JInst(Dup2_x1);]
+                  | Two -> [JInst(Dup2_x2);] ) in
+          lvalue_load_inst @ index_load_inst @ dup_inst @ 
+          [ JInst(Pop2); ] @ (wrap_type (exp_type rexp)) @
+          [ JInst(InvokeVirtual({
+             method_name = flstring jc_list_class "set";
+             arg_types = [JInt; JRef(jc_object)]; return_type = JRef(jc_object);}));
+            JInst(Pop); ]
+      | SelectExp(lexp, id) -> 
+          let cname = struct_cname_of_expression lexp in
+          (process_expression lexp) 
+          @ [JInst(Swap); JInst(PutField(flstring cname (string_of_id id), get_jvm_type (exp_type rexp) ))]
+      | FunctionCallExp _ 
+      | AppendExp _ | TypeCastExp _ | LiteralExp _ 
+      | UnaryExp _ | BinaryExp _  -> raise (InternalError("This is not a valid lvalue"))
     in
     let store_instructions = 
       List.flatten 
