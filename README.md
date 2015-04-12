@@ -8,13 +8,14 @@ Deepanjan Roy (#260469677)
 
 This compiler compiles Go-Lite (a subset of Go) to Java bytecode. 
 
-The compilation happens in several steps. The main compiler compiles a go file to Jasmin code. The .j files are then compiled to bytecode using the jasmin assembler. There are several pre-compiled jvm classes that provide runtime support to implement go data structures, and currently these classes are copied over to accompany the class files produced from go. 
+The compilation happens in several steps. The main compiler compiles a go file to Jasmin code. The .j files are then compiled to bytecode using the jasmin assembler. There are several pre-compiled jvm classes that provide runtime support to implement go data structures, and in the last step these classes are copied over to accompany the class files produced from go. 
 
 ## Dependencies
 - OCaml (along with ocamllex and ocamlbuild)
 - menhir (For parsing)
 - JDK 7 or higher (because we use java reflection)
 - Make
+- Jasmin (provided in the repo)
 
 ## Compiling the compiler
 
@@ -44,5 +45,8 @@ There is a test script in the `tests/` directory that compiles a suite of test g
     # Make sure you compiled the compiler first
     cd tests
     ./run_code_gen_suite.sh ./run_code_gen_suite.sh "$(dirname $(pwd))/jasmin.jar" -all  # The second argument is absolute path to jasmin jar.
+
+If the gocaml god is feeling generous, all tests should pass.
+
 
 _files in ./dev directory are stuff used in development process. Not for grading._
