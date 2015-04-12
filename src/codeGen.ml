@@ -859,7 +859,7 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     (* first evaluate all the arguments, then store them *)
     let exps = List.map (fun (ShortVarDecl(id, e)) -> e) shortvd_list in 
     let vars = List.map (fun (ShortVarDecl(id, e)) -> id) shortvd_list in 
-    let exp_instructions = List.flatten (List.map process_expression exps) in 
+    let exp_instructions = List.flatten (List.map process_exp_for_assignment exps) in 
     let store_instructions = 
       List.map
         (fun id -> match id with 
