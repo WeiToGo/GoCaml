@@ -14,6 +14,7 @@ let next_loop_count = Utils.new_counter 0
 let if_count = Utils.new_counter 0
 let switch_count = Utils.new_counter 0
 let array_init_count = Utils.new_counter 0
+let negate_boolean_count = Utils.new_counter 0
 
 let scmap = ref ( fun x -> raise (InternalError("StructMapReferenceVarNotInitializedError")) ) 
 
@@ -49,18 +50,6 @@ let rec base_type gotype = match gotype with
 | NewType(t) -> base_type t
 | _ -> gotype
 
-let array_create_inst gotype = (* match basetype gotype with 
-| GoInt | GoBool | GoRune -> [NewArray("int")]
-| GoFloat -> [NewArray("double")]
-| GoString -> [JInst(ANewArray(jc_string))]
-| GoArray(, t) -> 
-| GoStruct _ 
-| GoSlice _ -> raise NotImplemented
-| GoFunction(_) -> raise (InternalError("No function arrays allowed")) 
-| GoCustom(_, t) -> raise (InternalError("No custom types allowed. Call base type."))
-| NewType(t) -> raise (InternalError("No new types allowed")) *)
-print_endline "Array creation not implemented yet"; raise NotImplemented
-
 
 let array_store_inst gotype = match base_type gotype with
 | GoInt | GoBool | GoRune -> [JInst(IAstore)]
@@ -77,7 +66,19 @@ let array_load_inst gotype = match base_type gotype with
 | GoFunction(_) -> raise (InternalError("No function arrays allowed")) 
 | GoCustom(_, t) -> raise (InternalError("No custom types allowed. Call base type."))
 | NewType(t) -> raise (InternalError("No new types allowed"))
-(*~~ read deal ~~*)
+
+
+let negate_boolean () = 
+  let count = string_of_int (negate_boolean_count ()) in 
+  let it_was_false = "ItWasFalse_" ^ count in 
+  let end_label = "EndNegateBoolean_" ^ count in 
+  [ JInst(Ifeq(it_was_false)); 
+    JInst(Iconst_0);
+    JInst(Goto(end_label));
+    JLabel(it_was_false);
+    JInst(Iconst_1);
+    JLabel(end_label); ] 
+
 
 let rec get_jvm_type gotype = match gotype with
 | GoInt -> JInt
@@ -89,7 +90,7 @@ let rec get_jvm_type gotype = match gotype with
 | GoStruct(sflist) -> JRef(!(scmap) sflist)
 | GoFunction(_) -> raise (InternalError("Trick question - functions don't have types in jvm.")) 
 | GoCustom(_, t) -> get_jvm_type t
-| GoSlice(_) -> raise NotImplemented
+| GoSlice(_) -> JRef(jc_list_class)
 | NewType(t) -> raise (InternalError("Custom types suffer from existential crisis in jvm bytecode."))
 
 let struct_cname_of_expression (Expression(e, topref)) = match !topref with 
@@ -180,7 +181,13 @@ let rec type_init_exps gotype = match gotype with
       JInst(Goto(comp_label));
       JLabel(end_label);
       JInst(Pop) ]
-| GoSlice _ -> raise NotImplemented
+| GoSlice _ -> 
+    [ JInst(New(jc_list_class));
+      JInst(Dup);
+      JInst(InvokeSpecial({ 
+        method_name = flstring jc_list_class "<init>";
+        arg_types = []; return_type = JVoid; })); ] 
+
 | GoFunction _ | NewType _ -> raise (InternalError("You shouldn't have to do initilize these types"))
 
 let get_local_var_decl_mappings next_index mvd_list = 
@@ -306,7 +313,7 @@ let process_literal = function
 
 (*this function assumes e1 e2 are computed and results are on top of the stack.
 It leaves a 0 or 1 on stack depending on the result. *)
-let compare_expressions t = 
+let rec compare_expressions t = 
   let label_serial = next_bool_exp_count () in 
   let true_label = "True_" ^ (string_of_int label_serial) in
   let false_label = "False_" ^ (string_of_int label_serial) in 
@@ -332,11 +339,14 @@ let compare_expressions t =
    | GoBool -> 
       [JInst(Ixor);
        JInst(Ifeq(true_label));] @ true_false_boilerplate
-   | GoArray(e, t) -> [JInst(IACmpeq(true_label))] @ true_false_boilerplate
-   | GoStruct(l) -> raise NotImplemented
-   | GoCustom(n, t) -> raise NotImplemented
-   | NewType(t) -> raise NotImplemented 
-   | _ -> raise NotImplemented  
+   | GoArray _ | GoSlice _ -> [JInst(InvokeVirtual( { 
+        method_name = flstring jc_list_class "equals";
+        arg_types = [JRef(jc_object)]; return_type = JBool; })) ]
+   | GoStruct(l) -> [JInst(InvokeVirtual( { 
+        method_name = flstring (!scmap l) "equals";
+        arg_types = [JRef(jc_object)]; return_type = JBool; })) ]
+   | GoCustom(n, t) -> compare_expressions t
+   | GoFunction _ | NewType _  -> invalid_arg "This type is not comaparable"  
   )
 
 let rec process_expression exp = 
@@ -390,7 +400,20 @@ let Expression(e, t) = exp in match e with
     (process_expression lexp) @ (process_expression inte) @ 
     [  JInst(InvokeVirtual({ method_name = flstring jc_list_class "get";
          arg_types = [JInt]; return_type = JRef(jc_object); })) ] @ (unwrap_type (exp_type exp))
-| _ -> print_string "expression not implemented"; raise (InternalError("expression not matched in process_expression"))
+| AppendExp(slice_var, new_elm_exp) -> 
+    let _, _, var_num = id_info slice_var in 
+      [ PS(LoadVar(var_num));
+        JInst(InvokeVirtual({ 
+              method_name = flstring jc_list_class jc_clone;
+              arg_types = []; return_type = JRef(jc_object); }));
+        JInst(CheckCast(jc_list_class));
+        JInst(Dup); ]
+     @ (process_exp_for_assignment new_elm_exp) 
+     @ (wrap_type (exp_type new_elm_exp)) @ 
+     [ JInst(InvokeVirtual({
+        method_name = flstring jc_list_class "add";
+        arg_types = [JRef(jc_object)]; return_type = JBool; })); 
+       JInst(Pop)]
 
 
 
@@ -436,19 +459,26 @@ and process_binary_expression op e1 e2 =
   | GoBool -> e1_insts @ e2_insts @ (process_binary_bool_expr op true_label true2_label 
                                       false_label false2_label end_label true_false_boilerplate)
   | GoString -> process_binary_string_expr op (exp_type e1) e1_insts e2_insts true_label true_false_boilerplate
-  | GoArray(i, t) ->
+  | (GoArray _) as t -> e1_insts @ e2_insts @
     (match op with
-      | BinEq -> e1_insts @ e2_insts @ [JInst(IACmpeq(true_label))] @ true_false_boilerplate
-      | BinNotEq -> e1_insts @ e2_insts @ [JInst(IACmpne(true_label))] @ true_false_boilerplate
-      | _ -> raise NotImplemented (*not needed*)
+      | BinEq -> compare_expressions t
+      | BinNotEq -> (compare_expressions t) @ (negate_boolean ())
+      | _ -> raise (InternalError("This binary op not valid for arrays"))
     )
-  | GoStruct(fl) ->
+  | (GoSlice _) as t -> e1_insts @ e2_insts @
     (match op with
-      | BinEq -> raise NotImplemented (* TO DO*)
-      | BinNotEq -> raise NotImplemented (* TO DO*)
-      | _ -> raise NotImplemented (*not needed*)
+      | BinEq -> compare_expressions t
+      | BinNotEq -> (compare_expressions t) @ (negate_boolean ())
+      | _ -> raise (InternalError("This binary op not valid for slices"))
     )
-  | _ -> print_string "Unimplemented binary operation"; raise NotImplemented
+  | GoStruct(fl) as t -> e1_insts @ e2_insts @
+    (match op with
+      | BinEq -> compare_expressions t
+      | BinNotEq -> (compare_expressions t) @ (negate_boolean ())
+      | _ -> raise (InternalError("This binary op not valid for structs"))
+    )
+  | GoCustom _ -> raise (InternalError("To handle custom types, call base_type on the type."))
+  | GoFunction _ | NewType _  -> raise (InternalError("These types cannot be used in binary expressions."))
 
 (*BinEq is not extracted to compare_expressions before it requires typ argument.
 and also because instructions are very short. *)
@@ -480,7 +510,7 @@ and process_binary_int_expr op true_label true_false_boilerplate = (match op wit
          JInst(Ixor);
          JInst(Iand);
         ]
-      | BinOr|BinAnd-> raise NotImplemented
+      | BinOr|BinAnd-> raise (InternalError("int type is not valid for or and and. Typecheck fail"))
     )
 
 (*BinEq is not extracted to compare_expressions before it requires typ argument.
@@ -524,7 +554,7 @@ and process_binary_float_expr op true_label true_false_boilerplate = (match op w
       | BinShiftLeft
       | BinShiftRight
       | BinBitAnd
-      | BinOr|BinAnd| BinBitAndNot -> raise NotImplemented (*not needed*)
+      | BinOr|BinAnd| BinBitAndNot -> raise (InternalError("float type is not valid for this binary operation. Typecheck fail"))
     )
 and process_binary_bool_expr op true_label true2_label false_label false2_label end_label true_false_boilerplate =
    (match op with
@@ -556,7 +586,7 @@ and process_binary_bool_expr op true_label true2_label false_label false2_label 
           JInst(Iconst_0);
           JLabel(end_label);
         ]
-      | _ -> raise NotImplemented (*not needed*)
+      | _ -> raise (InternalError("bool type is not valid for this operation. Typecheck fail"))
     )
 (* typ argument is added so it can use compare_expression function *)
 and process_binary_string_expr op typ e1_insts e2_insts true_label true_false_boilerplate = 
@@ -619,7 +649,7 @@ and process_binary_string_expr op typ e1_insts e2_insts true_label true_false_bo
             arg_types = [];
             return_type = JRef(jc_string); } ) );
           ]
-      | _ -> raise NotImplemented (*not needed*)
+      | _ -> raise (InternalError("Not a valid string operation. Typecheck fail")) (*not needed*)
     )
 
 and process_unary_expression op e = 
@@ -642,28 +672,30 @@ and process_unary_expression op e =
     (match op with 
     | UPlus -> []
     | UMinus -> [JInst(Ineg);]
-    | UNot -> raise NotImplemented (*not needed*)
+    | UNot -> raise (InternalError("Not a valid int unary op. Typecheck fail"))
     | UCaret -> [JInst(Iconst_m1);JInst(Ixor);]
     )
   | GoFloat ->
     (match op with 
     | UPlus -> []
     | UMinus -> [JInst(Dneg);]
-    | UNot | UCaret -> raise NotImplemented (*not needed*)
+    | UNot | UCaret -> raise (InternalError("Not a valid float64 unary op. Typecheck fail"))
     )
   | GoRune ->
     (match op with 
     | UPlus -> []
     | UMinus -> [JInst(Ineg);]
-    | UNot -> raise NotImplemented (*not needed*)
+    | UNot -> raise (InternalError("Not a valid rune unary op. Typecheck fail"))
     | UCaret -> [JInst(Iconst_m1);JInst(Ixor);]
     )
   | GoBool ->
     (match op with  
     | UNot -> [JInst(Ifeq(true_label));] @ true_false_boilerplate
-    | UPlus | UMinus | UCaret -> raise NotImplemented (*not needed*)
+    | UPlus | UMinus | UCaret -> raise (InternalError("Not a valid rune unary op. Typecheck fail"))
     )
-  | _ -> print_string "Unimplemented unary operation"; raise (InternalError("Unimplemented unary operation"))
+  | GoString | GoArray _ | GoSlice _ | GoStruct _ | GoFunction _ | NewType _ 
+       -> raise (InternalError("No unary operatino supported on this type"))
+  | GoCustom _ -> raise (InternalError "Call base_type to handle custom type")
 
 (* Assume target type and origin type are GoType reduced to base type.
 this function supports more types then types allowed in type_cast_expressions 
@@ -688,14 +720,13 @@ and process_type_cast target_t origin_t = (match target_t with
       | GoInt -> raise (TypeCastError ("Cannot type cast from int to boolean. "))
       | _ -> raise (TypeCastError ("Cannot type cast to boolean "))
   )
-  | GoArray(i, t) -> raise NotImplemented
-  | GoSlice(t) -> raise NotImplemented
-  | GoStruct(gs)-> raise NotImplemented
-  | _ -> raise (InternalError ("should not be allowed in type checking"))
+  | GoArray _ | GoSlice _ | GoStruct _ | GoFunction _ | NewType _
+      -> raise (InternalError("Typecast is only supported for basic types. Typecheck fail"))
+  | GoString -> raise (InternalError("String typecast not supported. Typecheck fail"))
+  | GoCustom _ -> invalid_arg "Reduce to base type before processing type cast"
 )
 
-
-let process_exp_for_assignment e = 
+and process_exp_for_assignment e = 
   let exp_eval = process_expression e in 
   let jt = get_jvm_type (exp_type e) in 
   let clone_instructions = match jt with
@@ -706,7 +737,7 @@ let process_exp_for_assignment e =
               arg_types = []; return_type = JRef(jc_object); }));
             JInst(CheckCast(class_name)); ]
     | JVoid | JInt | JDouble | JBool -> []
-    | JArray _ -> raise NotImplemented
+    | JArray _ -> raise (InternalError("JArray should not be used for any go data structure. Use GoLiteList instead."))
   in
   exp_eval @ clone_instructions
 
@@ -937,7 +968,6 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     | Some s -> process_statement s) in 
     let case_inst = process_case_list exp case_list in 
     init_inst @ case_inst 
- (* | _ -> print_string "statement not implemented"; raise NotImplemented  *)
 
 
 and process_case_list switch_exp case_list = 

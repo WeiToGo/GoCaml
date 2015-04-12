@@ -128,12 +128,7 @@ let quote_string s = "\"" ^ s ^ "\""
 
 let rec string_of_jtype = function
 | JVoid -> "V"
-(* | JByte -> raise NotImplemented *)
-(* | JChar -> "C" *)
-(* | JShort -> raise NotImplemented *)
 | JInt -> "I"
-(* | JLong -> "J" *)
-(* | JFloat -> "F" *)
 | JDouble -> "D"
 | JBool -> "Z"
 | JRef(s) -> "L" ^ s ^ ";"
