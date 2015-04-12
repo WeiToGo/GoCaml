@@ -26,7 +26,10 @@ let calculate_stack_height (Program(_,ldl)) =
 				max (e1_height +1) (e2_height + 1)
 			(*most Invoke_ instructions = object ref + list of argument, 
 			for foo(a1, a2, a3) -> max of (count_a1 + 1, count_a2 +2, count_a3+3)*)
-			| FunctionCallExp(e, exp_list) -> max_of_list (calculate_max_list exp_list calculate_expression)
+			| FunctionCallExp(e, exp_list) -> 
+				let len = List.length exp_list in
+				if len > 0 then max_of_list (calculate_max_list exp_list calculate_expression)	
+				else 1		
 			| AppendExp(id, exp) -> calculate_expression exp (* to check*)
 			| TypeCastExp(ts, exp) -> calculate_expression exp
 			| IndexExp(e1, e2) ->
