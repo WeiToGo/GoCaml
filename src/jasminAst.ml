@@ -43,6 +43,7 @@ and jinstruction =
   (* | Ldcw of string *)
   | Ldc2w of string
   | Dup
+  | Dup2
   | Dup2_x1
   | Dup2_x2
   | Swap
@@ -151,9 +152,9 @@ let string_of_jinst = function
 | Iconst_3 -> "iconst_3"
 | Iconst_m1 -> "iconst_m1"
 | Ldc(s) -> "ldc " ^ s
-(* | Ldcw(s) -> "ldc_w " ^ s *)
 | Ldc2w(s) -> "ldc2_w " ^ s 
 | Dup -> "dup"
+| Dup2 -> "dup2"
 | Dup2_x1 -> "dup2_x1"
 | Dup2_x2 -> "dup2_x2"
 | Swap -> "swap"
@@ -242,6 +243,9 @@ let jc_append = flstring jc_string_build "append"
 let jc_sb_init = flstring jc_string_build "<init>"
 let jc_sb_toString = flstring jc_string_build "toString"
 let jc_clone = "clone"
+let jc_list_class = "GoLiteList"
+let jc_integer = "java/lang/Integer"
+let jc_double = "java/lang/Double"
 
 (* Runtime method sigs *)
 let jcr_booltostring = {
