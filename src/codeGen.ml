@@ -836,7 +836,7 @@ let is_exp_void_fun_call exp =
         | _ -> raise (InternalError("Typechecker - you had one job.")) )
       | _ -> raise (InternalError("Life is so void of meaning."))
 
-let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = match s with
+let rec process_statement bl cl (LinedStatement(_, s)) = match s with
 | PrintlnStatement(exp_list) -> 
     (* get instructions for each expression *)
     let print_instructions = 
@@ -857,7 +857,7 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     if is_exp_void_fun_call e then exp_insts @ [JInst(Pop)]
     else exp_insts @ (dummy_pop_instruction_of_type (exp_type e))
 | EmptyStatement -> []
-| BlockStatement(stmt_list) -> List.flatten (List.map process_statement stmt_list)
+| BlockStatement(stmt_list) -> List.flatten (List.map (process_statement bl cl) stmt_list)
 | ReturnStatement(e_op) -> (match e_op with
     | None -> [JInst(Return)];
     | Some e -> (process_expression e) @ (match get_jvm_type (exp_type e) with
@@ -876,17 +876,17 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     let loop_end_label = "LoopEnd_" ^ count in   
     let init_instructions = match init_stmt_op with
     | None -> []
-    | Some s -> process_statement s in 
+    | Some s -> process_statement bl cl s in 
     let post_instructions = match post_stmt_op with
     | None -> []
-    | Some s -> process_statement s in 
+    | Some s -> process_statement bl cl s in 
     let cond_statements = match loop_cond_op with
     | None -> [ JInst(Iconst_1) ]  (* This while true block *)
     | Some(e) -> process_expression e in 
     let body_instructions = 
       List.flatten 
         (List.map 
-          (process_statement ~break_label:loop_end_label ~continue_label:loop_post_label)
+          (process_statement (Some(loop_end_label)) (Some(loop_post_label)))
           stmt_list)
     in 
     init_instructions @ 
@@ -949,10 +949,10 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
         (List.map (fun (l, r) -> single_store_instruction l r)  (List.rev ass_list))
     in
     exp_instructions @ store_instructions
-| BreakStatement -> ( match break_label with
+| BreakStatement -> ( match bl with
   | None -> raise (InternalError("I know not whence to break"))
   | Some l -> [ JInst(Goto(l)) ] )
-| ContinueStatement -> ( match continue_label with
+| ContinueStatement -> ( match cl with
   | None -> raise (InternalError("I know not whence to continue"))
   | Some l -> [ JInst(Goto(l)) ] )
 | IfStatement(init_stmt_op, expr_cond, then_list, else_list_op) ->
@@ -961,12 +961,12 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     let else_label = "Else_" ^ count in
     let init_inst = match init_stmt_op with
     | None -> []
-    | Some s -> process_statement s in 
+    | Some s -> process_statement bl cl s in 
     let exp_inst = process_expression expr_cond in
-    let then_inst = List.flatten (List.map process_statement then_list) in
+    let then_inst = List.flatten (List.map (process_statement bl cl) then_list) in
     let else_inst = (match else_list_op with
       | None -> []
-      | Some (sl) -> List.flatten (List.map process_statement sl) )
+      | Some (sl) -> List.flatten (List.map (process_statement bl cl) sl) )
     in
     init_inst @ exp_inst @
     [JInst(Ifeq(else_label))] @
@@ -974,16 +974,16 @@ let rec process_statement ?break_label ?continue_label (LinedStatement(_, s)) = 
     [JInst(Goto(end_label));
      JLabel(else_label)] @
     else_inst @
-    [JLabel(end_label)]
+    [JLabel(end_label); JInst(Nop)]
 | SwitchStatement (stmt_op, exp, case_list) -> 
     let init_inst = (match stmt_op with
     | None -> []
-    | Some s -> process_statement s) in 
-    let case_inst = process_case_list exp case_list in 
+    | Some s -> (process_statement bl cl) s) in 
+    let case_inst = process_case_list bl cl exp case_list in 
     init_inst @ case_inst 
 
 
-and process_case_list switch_exp case_list = 
+and process_case_list bl cl switch_exp case_list = 
   let count = string_of_int (switch_count ()) in
   let end_label = "EndSwitch_" ^ count in 
 (*   let case_label = "Case_" ^ count in  *)
@@ -995,7 +995,7 @@ and process_case_list switch_exp case_list =
     )
   in 
   let get_default_inst df = (match df with
-    | DefaultCase(sl) -> let stmt_list_inst = List.flatten (List.map process_statement sl) in
+    | DefaultCase(sl) -> let stmt_list_inst = List.flatten (List.map (process_statement bl cl) sl) in
       [ JLabel(default_label)] @ stmt_list_inst @
       [ JInst(Goto(end_label))]
     | _ -> raise (InternalError ("shouldn't get here"))
@@ -1027,7 +1027,7 @@ and process_case_list switch_exp case_list =
     let evaluation_inst = List.flatten (List.map get_one_case_inst exp_list) in
     let label_stmt_inst = 
       [JLabel(c_label)] @
-      List.flatten (List.map process_statement sl) @ [JInst(Goto(end_label))] in
+      List.flatten (List.map (process_statement bl cl) sl) @ [JInst(Goto(end_label))] in
     evaluation_inst, label_stmt_inst
   | _ -> ([JInst(Nop)] , [JInst(Nop)]) (* don't need to generate anything for default case here.*)
   )
@@ -1091,7 +1091,7 @@ let process_func_decl id funsig stmt_list =
           (get_mapping_from_stmt prev_map next_index stmt) ) 
       map_with_args
       stmt_list in
-  let stmt_code = List.flatten (List.map process_statement stmt_list) in
+  let stmt_code = List.flatten (List.map (process_statement None None) stmt_list) in
   let code = if signature.return_type = JVoid then stmt_code @ [JInst(Return)] else stmt_code in (* PerfPenalty *)
   { signature; code; local_mapping; }
 
