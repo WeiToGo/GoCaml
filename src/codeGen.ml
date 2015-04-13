@@ -898,7 +898,7 @@ let rec process_statement bl cl (LinedStatement(_, s)) = match s with
     [ JLabel(loop_post_label) ] @
     post_instructions @ 
     [ JInst(Goto(loop_check_label));
-      JLabel(loop_end_label) ]
+      JLabel(loop_end_label); JInst(Nop) ]
 | ShortVarDeclStatement(shortvd_list) -> 
     (* first evaluate all the arguments, then store them *)
     let exps = List.map (fun (ShortVarDecl(id, e)) -> e) shortvd_list in 
