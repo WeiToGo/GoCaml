@@ -758,6 +758,7 @@ and process_exp_for_assignment e =
   let clone_instructions = match jt with
     | JRef(class_name) ->
         if class_name = jc_string then [] else 
+        if ((function GoSlice _ -> true | _ -> false) (exp_type e)) then [] else (* Slices are passed by reference *)
           [ JInst(InvokeVirtual({ 
               method_name = flstring class_name jc_clone;
               arg_types = []; return_type = JRef(jc_object); }));
