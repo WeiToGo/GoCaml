@@ -54,7 +54,7 @@ compile_file () {
 	cd $file_dirname
 	java -jar $JASMIN_JAR_PATH *.j >/dev/null
 	echo "----------------"
-	echo "Comilation success :)"
+	echo "Compilation success :)"
 	echo "Compiled files generated in $file_dirname"
 	echo "Run \`java GeneratedBytecode\` in that directory to run the code."
 	exit 0
