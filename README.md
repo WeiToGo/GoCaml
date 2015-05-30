@@ -1,4 +1,5 @@
- 
+# GoCaml
+
 
 This compiler compiles Go-Lite (a subset of Go) to Java bytecode. 
 
@@ -41,4 +42,3 @@ There is a test script in the `tests/` directory that compiles a suite of test g
     ./run_code_gen_suite.sh "$(dirname $(pwd))/jasmin.jar" -all  # The second argument is absolute path to jasmin jar.
 
 If the gocaml god is feeling generous, all tests should pass.
-
