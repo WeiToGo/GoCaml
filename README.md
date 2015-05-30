@@ -1,10 +1,4 @@
-cs520: Group 9
-==============
-
-Group Members
-Wei Gao (#260356731)
-Omar Gonzalez (#260427991)
-Deepanjan Roy (#260469677)
+ 
 
 This compiler compiles Go-Lite (a subset of Go) to Java bytecode. 
 
@@ -48,5 +42,3 @@ There is a test script in the `tests/` directory that compiles a suite of test g
 
 If the gocaml god is feeling generous, all tests should pass.
 
-
-_files in ./dev directory are stuff used in development process. Not for grading._
